@@ -125,6 +125,7 @@ export default function ExportDropdown({
         if (textareaFallbackSucceeded) {
           setCopying(format)
           setCopyStatus({ text: `Clipboard access failed, but copied ${format} using fallback.`, tone: 'success' })
+          setTimeout(() => setCopyStatus(null), 3000)
           setTimeout(() => setCopying(null), 1500)
           setOpen(false)
           return
