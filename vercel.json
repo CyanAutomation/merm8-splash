@@ -1,0 +1,7 @@
+{
+  "buildCommand": "next build",
+  "outputDirectory": "out",
+  "env": {
+    "NEXT_PUBLIC_MERM8_API_URL": "@merm8_api_url"
+  }
+}
