@@ -39,7 +39,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
             background: '#1e1e1e',
             mainBkg: '#2a2a2a',
           },
-          securityLevel: 'loose',
+          securityLevel: 'strict',
         })
 
         const id = `mermaid-${++idCounterRef.current}`
