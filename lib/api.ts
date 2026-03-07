@@ -42,17 +42,52 @@ export interface HealthzResponse {
 export function resolveApiEndpoint(): string {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search)
-    if (params.has('api')) return params.get('api') ?? ''
+    if (params.has('api')) {
+      const url = params.get('api') ?? ''
+      if (!isValidEndpoint(url)) {
+        console.warn('Invalid API endpoint from URL parameter, using default')
+        return ''
+      }
+      return url
+    }
 
     const stored = localStorage.getItem('merm8_api_endpoint')
-    if (stored) return stored
+    if (stored && isValidEndpoint(stored)) return stored
   }
 
   if (process.env.NEXT_PUBLIC_MERM8_API_URL) {
     return process.env.NEXT_PUBLIC_MERM8_API_URL
   }
 
-  return 'https://api.merm8.app'
+  return ''
+}
+
+function isValidEndpoint(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    // Only allow http/https protocols
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return false
+    }
+    // Reject localhost and internal IPs in production
+    if (process.env.NODE_ENV === 'production') {
+      const hostname = parsed.hostname.toLowerCase()
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '0.0.0.0' ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('172.16.') ||
+        hostname.startsWith('169.254.')
+      ) {
+        return false
+      }
+    }
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function createApiClient(endpoint: string): AxiosInstance {
