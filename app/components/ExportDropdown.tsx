@@ -116,6 +116,7 @@ export default function ExportDropdown({
         await navigator.clipboard.writeText(text)
         setCopying(format)
         setCopyStatus({ text: `Copied ${format} to clipboard.`, tone: 'success' })
+        setTimeout(() => setCopyStatus(null), 3000)
         setTimeout(() => setCopying(null), 1500)
         setOpen(false)
         return
