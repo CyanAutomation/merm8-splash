@@ -40,8 +40,14 @@ export default function ExportDropdown({
     const a = document.createElement('a')
     a.href = url
     a.download = filename
+    a.style.display = 'none'
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(url)
+
+    setTimeout(() => {
+      URL.revokeObjectURL(url)
+      a.remove()
+    }, 100)
   }
 
   const exportJson = () => {
