@@ -200,8 +200,8 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((v) => {
-                  const key = violationKey(v);
+                {filtered.map((v, i) => {
+                  const key = violationKey(v, i);
 
                   return (
                     <tr
