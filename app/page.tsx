@@ -42,6 +42,7 @@ export default function Home() {
   const [rules, setRules] = useState<Rule[]>([])
   const [enabledRules, setEnabledRules] = useState<string[]>([])
   const [rulesLoading, setRulesLoading] = useState(false)
+  const [rulesLoadedEndpoint, setRulesLoadedEndpoint] = useState<string | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
@@ -60,6 +61,7 @@ export default function Home() {
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
         setRules(fetched)
         setEnabledRules(fetched.map((r) => r.id))
+        setRulesLoadedEndpoint(requestEndpoint)
       }
     } catch {
       // Rules may not be available until API is tested
@@ -76,6 +78,7 @@ export default function Home() {
     setRules([])
     setEnabledRules([])
     setRulesLoading(false)
+    setRulesLoadedEndpoint(null)
   }, [endpoint])
 
   useEffect(() => {
@@ -86,10 +89,34 @@ export default function Home() {
 
   // Trigger analysis when code, endpoint, or rules change
   useEffect(() => {
-    if (endpoint && code) {
-      triggerAnalysis(endpoint, code, enabledRules, rules)
+    if (!code) {
+      return
     }
-  }, [code, endpoint, enabledRules, rules, triggerAnalysis])
+
+    if (!endpoint) {
+      triggerAnalysis('', code, [], [])
+      return
+    }
+
+    const connectedEndpoint = connectionStatus === 'connected'
+    const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
+    const canAnalyze = connectedEndpoint ? !rulesLoading && rulesReadyForEndpoint : true
+
+    if (!canAnalyze) {
+      return
+    }
+
+    triggerAnalysis(endpoint, code, enabledRules, rules)
+  }, [
+    code,
+    endpoint,
+    connectionStatus,
+    rulesLoading,
+    rulesLoadedEndpoint,
+    enabledRules,
+    rules,
+    triggerAnalysis,
+  ])
 
   const handleTestConnection = useCallback(async () => {
     await testConnection()
