@@ -39,12 +39,18 @@ export interface HealthzResponse {
   status: string
 }
 
+export interface EndpointValidationResult {
+  valid: boolean
+  message?: string
+}
+
 export function resolveApiEndpoint(): string {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search)
     if (params.has('api')) {
       const url = params.get('api') ?? ''
-      if (!isValidEndpoint(url)) {
+      const validation = validateApiEndpoint(url)
+      if (!validation.valid) {
         console.warn('Invalid API endpoint from URL parameter, using default')
         return ''
       }
@@ -52,7 +58,7 @@ export function resolveApiEndpoint(): string {
     }
 
     const stored = localStorage.getItem('merm8_api_endpoint')
-    if (stored && isValidEndpoint(stored)) return stored
+    if (stored && validateApiEndpoint(stored).valid) return stored
   }
 
   if (process.env.NEXT_PUBLIC_MERM8_API_URL) {
@@ -62,12 +68,16 @@ export function resolveApiEndpoint(): string {
   return ''
 }
 
-function isValidEndpoint(url: string): boolean {
+export function validateApiEndpoint(url: string): EndpointValidationResult {
+  if (!url.trim()) {
+    return { valid: false, message: 'Endpoint is required.' }
+  }
+
   try {
     const parsed = new URL(url)
     // Only allow http/https protocols
     if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return false
+      return { valid: false, message: 'Endpoint must start with http:// or https://.' }
     }
     // Reject localhost and internal IPs in production
     if (process.env.NODE_ENV === 'production') {
@@ -81,13 +91,20 @@ function isValidEndpoint(url: string): boolean {
         hostname.startsWith('172.16.') ||
         hostname.startsWith('169.254.')
       ) {
-        return false
+        return {
+          valid: false,
+          message: 'Local/private network endpoints are not allowed in production.',
+        }
       }
     }
-    return true
+    return { valid: true }
   } catch {
-    return false
+    return { valid: false, message: 'Enter a valid URL (example: https://api.merm8.app).' }
   }
+}
+
+export function isValidEndpoint(url: string): boolean {
+  return validateApiEndpoint(url).valid
 }
 
 export function createApiClient(endpoint: string): AxiosInstance {
