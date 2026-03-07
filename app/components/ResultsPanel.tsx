@@ -81,7 +81,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
             gap: "4px",
           }}
         >
-          <div className="panel-title" style={{ marginBottom: 0 }}>
+          <div className="panel-heading" style={{ marginBottom: 0 }}>
             ▦ Results{" "}
             {results.length > 0 && (
               <span
@@ -91,8 +91,8 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                     : "var(--color-warning)",
                   color: "var(--color-bg-primary)",
                   padding: "0 6px",
-                  fontSize: "10px",
-                  borderRadius: "2px",
+                  fontSize: "12px",
+                  borderRadius: "8px",
                   marginLeft: "4px",
                 }}
               >
@@ -109,9 +109,10 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                 background: "var(--color-bg-primary)",
                 border: "1px solid var(--color-border)",
                 color: "var(--color-text-secondary)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "11px",
-                padding: "2px 4px",
+                fontFamily: "var(--font-sans)",
+                fontSize: "12px",
+                padding: "4px 8px",
+                borderRadius: "8px",
               }}
             >
               <option value="all">All</option>
@@ -127,9 +128,10 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                 background: "var(--color-bg-primary)",
                 border: "1px solid var(--color-border)",
                 color: "var(--color-text-secondary)",
-                fontFamily: "var(--font-mono)",
-                fontSize: "11px",
-                padding: "2px 4px",
+                fontFamily: "var(--font-sans)",
+                fontSize: "12px",
+                padding: "4px 8px",
+                borderRadius: "8px",
               }}
             >
               <option value="severity">Sort: Severity</option>
@@ -227,9 +229,9 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                           style={{
                             color: severityColor(v.severity),
                             border: `1px solid ${severityColor(v.severity)}`,
-                            padding: "1px 4px",
-                            fontSize: "10px",
-                            borderRadius: "2px",
+                            padding: "2px 8px",
+                            fontSize: "12px",
+                            borderRadius: "8px",
                             whiteSpace: "nowrap",
                           }}
                         >

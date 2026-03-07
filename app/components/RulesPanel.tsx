@@ -49,15 +49,15 @@ export default function RulesPanel({
         }}
         onClick={() => setCollapsed(!collapsed)}
       >
-        <div className="panel-title" style={{ marginBottom: 0 }}>
+        <div className="panel-heading" style={{ marginBottom: 0 }}>
           {collapsed ? '▸' : '▾'} Rules{' '}
           <span
             style={{
               background: 'var(--color-accent-primary)',
               color: 'var(--color-bg-primary)',
-              padding: '0 6px',
-              fontSize: '10px',
-              borderRadius: '2px',
+              padding: '0 8px',
+              fontSize: '12px',
+              borderRadius: '8px',
               marginLeft: '4px',
             }}
           >
@@ -68,14 +68,14 @@ export default function RulesPanel({
           <div style={{ display: 'flex', gap: '4px' }} onClick={(e) => e.stopPropagation()}>
             <button
               className="btn"
-              style={{ fontSize: '10px', padding: '2px 6px' }}
+              style={{ fontSize: '12px', padding: '4px 12px' }}
               onClick={enableAll}
             >
               All
             </button>
             <button
               className="btn"
-              style={{ fontSize: '10px', padding: '2px 6px' }}
+              style={{ fontSize: '12px', padding: '4px 12px' }}
               onClick={disableAll}
             >
               None
@@ -120,7 +120,7 @@ export default function RulesPanel({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span
                       style={{
-                        fontSize: '11px',
+                        fontSize: '12px',
                         color: 'var(--color-text-primary)',
                         fontWeight: 600,
                       }}
@@ -129,11 +129,11 @@ export default function RulesPanel({
                     </span>
                     <span
                       style={{
-                        fontSize: '10px',
+                        fontSize: '12px',
                         color: severityColor(rule.severity),
                         border: `1px solid ${severityColor(rule.severity)}`,
-                        padding: '0 4px',
-                        borderRadius: '2px',
+                        padding: '2px 8px',
+                        borderRadius: '8px',
                       }}
                     >
                       {rule.severity}
@@ -141,7 +141,7 @@ export default function RulesPanel({
                   </div>
                   <div
                     style={{
-                      fontSize: '11px',
+                      fontSize: '12px',
                       color: 'var(--color-text-secondary)',
                       marginTop: '2px',
                     }}
