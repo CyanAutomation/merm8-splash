@@ -48,6 +48,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           abortControllerRef.current?.abort()
           abortControllerRef.current = null
           setViolations([])
+          setAnalyzeError(null)
+          setDiagramType(null)
+          setIsAnalyzing(false)
           return
         }
 
