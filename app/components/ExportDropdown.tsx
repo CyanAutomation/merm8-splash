@@ -145,7 +145,8 @@ export default function ExportDropdown({
     const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
     if (textareaFallbackSucceeded) {
       setCopying(format)
-      setCopyStatus({ text: `Clipboard API unavailable; copied ${format} using fallback.`, tone: 'success' })
+          setCopyStatus({ text: `Clipboard API unavailable; copied ${format} using fallback.`, tone: 'success' })
+          setTimeout(() => setCopyStatus(null), 3000)
       setTimeout(() => setCopying(null), 1500)
       setOpen(false)
       return
