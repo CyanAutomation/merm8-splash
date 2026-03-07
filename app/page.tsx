@@ -26,6 +26,7 @@ export default function Home() {
     testConnection,
     saveEndpoint,
     configSource,
+    statusMessage,
   } = useApiEndpoint()
 
   const {
@@ -153,6 +154,7 @@ export default function Home() {
             onTestConnection={handleTestConnection}
             onSave={saveEndpoint}
             configSource={configSource}
+            statusMessage={statusMessage}
           />
         </ErrorBoundary>
       </div>
