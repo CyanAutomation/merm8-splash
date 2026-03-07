@@ -1,6 +1,6 @@
 # merm8-splash
 
-A modern, interactive frontend for the **merm8 API**—bringing real-time Mermaid diagram linting to your terminal-inspired workflow. Write, analyze, and validate your diagrams with a beautiful Bubble Tea-aesthetic UI, whether you're using the cloud-hosted API or self-hosting your own instance.
+An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagram linting to your terminal-inspired workflow. Write, analyze, and validate your diagrams with a beautiful Bubble Tea-aesthetic UI, whether you're using the cloud-hosted API or self-hosting your own instance.
 
 ## Features
 
