@@ -20,6 +20,7 @@ export default function ExportDropdown({
 }: ExportDropdownProps) {
   const [open, setOpen] = useState(false)
   const [copying, setCopying] = useState<string | null>(null)
+  const [copyStatus, setCopyStatus] = useState<{ text: string; tone: 'success' | 'error' } | null>(null)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -68,10 +69,7 @@ export default function ExportDropdown({
     }
 
     const text = lines.join('\n')
-    await navigator.clipboard.writeText(text)
-    setCopying('markdown')
-    setTimeout(() => setCopying(null), 1500)
-    setOpen(false)
+    await handleCopyExport(text, 'markdown', 'merm8-analysis.md', 'text/markdown')
   }
 
   const exportText = async () => {
@@ -80,9 +78,81 @@ export default function ExportDropdown({
         `[${v.severity.toUpperCase()}] ${v.rule_id}: ${v.message}${v.line ? ` (line ${v.line})` : ''}`
     )
     const text = lines.join('\n') || 'No violations found'
-    await navigator.clipboard.writeText(text)
-    setCopying('text')
-    setTimeout(() => setCopying(null), 1500)
+    await handleCopyExport(text, 'text', 'merm8-analysis.txt', 'text/plain')
+  }
+
+  const fallbackCopyWithTextarea = (text: string): boolean => {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', '')
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    textarea.style.left = '-9999px'
+    document.body.appendChild(textarea)
+    textarea.select()
+
+    let success = false
+    try {
+      success = document.execCommand('copy')
+    } catch {
+      success = false
+    } finally {
+      document.body.removeChild(textarea)
+    }
+
+    return success
+  }
+
+  const handleCopyExport = async (
+    text: string,
+    format: 'markdown' | 'text',
+    fallbackFilename: string,
+    fallbackMime: string
+  ) => {
+    const hasClipboardApi = typeof navigator !== 'undefined' && !!navigator.clipboard?.writeText
+
+    if (hasClipboardApi) {
+      try {
+        await navigator.clipboard.writeText(text)
+        setCopying(format)
+        setCopyStatus({ text: `Copied ${format} to clipboard.`, tone: 'success' })
+        setTimeout(() => setCopying(null), 1500)
+        setOpen(false)
+        return
+      } catch {
+        const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
+        if (textareaFallbackSucceeded) {
+          setCopying(format)
+          setCopyStatus({ text: `Clipboard access failed, but copied ${format} using fallback.`, tone: 'success' })
+          setTimeout(() => setCopying(null), 1500)
+          setOpen(false)
+          return
+        }
+
+        downloadFile(text, fallbackFilename, fallbackMime)
+        setCopyStatus({
+          text: `Clipboard access failed. Downloaded ${fallbackFilename} instead.`,
+          tone: 'error',
+        })
+        setOpen(false)
+        return
+      }
+    }
+
+    const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
+    if (textareaFallbackSucceeded) {
+      setCopying(format)
+      setCopyStatus({ text: `Clipboard API unavailable; copied ${format} using fallback.`, tone: 'success' })
+      setTimeout(() => setCopying(null), 1500)
+      setOpen(false)
+      return
+    }
+
+    downloadFile(text, fallbackFilename, fallbackMime)
+    setCopyStatus({
+      text: `Clipboard unavailable. Downloaded ${fallbackFilename} instead.`,
+      tone: 'error',
+    })
     setOpen(false)
   }
 
@@ -167,6 +237,19 @@ export default function ExportDropdown({
               {item.label}
             </button>
           ))}
+        </div>
+      )}
+
+      {copyStatus && (
+        <div
+          style={{
+            marginTop: '6px',
+            fontSize: '11px',
+            color: copyStatus.tone === 'error' ? 'var(--color-error)' : 'var(--color-text-secondary)',
+            maxWidth: '260px',
+          }}
+        >
+          {copyStatus.text}
         </div>
       )}
     </div>
