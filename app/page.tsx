@@ -100,7 +100,7 @@ export default function Home() {
 
     const connectedEndpoint = connectionStatus === 'connected'
     const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
-    const canAnalyze = connectedEndpoint ? !rulesLoading && rulesReadyForEndpoint : true
+    const canAnalyze = !rulesLoading && rulesReadyForEndpoint
 
     if (!canAnalyze) {
       return
