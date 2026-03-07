@@ -97,7 +97,7 @@ export default function ExportDropdown({
     } catch {
       success = false
     } finally {
-      document.body.removeChild(textarea)
+      setTimeout(() => document.body.removeChild(textarea), 0)
     }
 
     return success
