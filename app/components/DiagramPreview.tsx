@@ -32,12 +32,12 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
           theme: 'dark',
           darkMode: true,
           themeVariables: {
-            primaryColor: '#7571f9',
-            primaryTextColor: '#a0a0a0',
+            primaryColor: '#0a84ff',
+            primaryTextColor: '#e1e1e1',
             primaryBorderColor: '#444444',
-            lineColor: '#707070',
-            background: '#1e1e1e',
-            mainBkg: '#2a2a2a',
+            lineColor: '#a0a0a0',
+            background: '#1c1c1e',
+            mainBkg: '#2c2c2e',
           },
           securityLevel: 'strict',
         })
@@ -76,9 +76,9 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
   return (
     <div className="panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <div className="panel-title" style={{ marginBottom: 0 }}>◈ Diagram Preview</div>
+        <div className="panel-heading" style={{ marginBottom: 0 }}>◈ Diagram Preview</div>
         {isRendering && (
-          <span style={{ fontSize: '11px', color: 'var(--color-accent-primary)' }}>
+          <span style={{ fontSize: '12px', color: 'var(--color-accent-primary)' }}>
             ⠋ Rendering...
           </span>
         )}

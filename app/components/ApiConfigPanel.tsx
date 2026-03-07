@@ -49,7 +49,7 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
 
     return (
       <div className="panel" style={{ borderColor: 'var(--color-border)' }}>
-        <div className="panel-title">⚙ API Configuration</div>
+        <div className="panel-heading">⚙ API Configuration</div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flex: 1, minWidth: '200px' }}>
             <span
@@ -71,9 +71,10 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
                 background: 'var(--color-bg-primary)',
                 border: isEndpointInvalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
                 color: 'var(--color-text-primary)',
-                fontFamily: 'var(--font-mono)',
+                fontFamily: 'var(--font-sans)',
                 fontSize: '12px',
-                padding: '4px 8px',
+                padding: '6px 8px',
+                borderRadius: '8px',
                 outline: 'none',
               }}
             />
@@ -87,9 +88,10 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
                 background: 'var(--color-bg-primary)',
                 border: isEndpointInvalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
                 color: 'var(--color-text-secondary)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '11px',
-                padding: '4px 6px',
+                fontFamily: 'var(--font-sans)',
+                fontSize: '12px',
+                padding: '6px 8px',
+                borderRadius: '8px',
                 cursor: 'pointer',
               }}
             >

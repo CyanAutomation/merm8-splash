@@ -144,7 +144,7 @@ export default function Home() {
       <div
         style={{
           padding: '8px 16px',
-          borderBottom: '2px solid var(--color-accent-primary)',
+          borderBottom: '1px solid var(--color-accent-primary)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -165,7 +165,7 @@ export default function Home() {
             Mermaid Linter Interface
           </span>
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)' }}>
+        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
           Ctrl+K · Ctrl+E · Ctrl+R
         </div>
       </div>

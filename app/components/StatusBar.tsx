@@ -34,7 +34,7 @@ export default function StatusBar({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        fontSize: '11px',
+        fontSize: '12px',
         color: 'var(--color-text-secondary)',
         flexWrap: 'wrap',
         gap: '8px',

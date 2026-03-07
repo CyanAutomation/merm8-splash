@@ -25,18 +25,18 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     return (
       <div className="panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <div className="panel-title" style={{ marginBottom: 0 }}>✎ Diagram Editor</div>
+          <div className="panel-heading" style={{ marginBottom: 0 }}>✎ Diagram Editor</div>
           <div style={{ display: 'flex', gap: '4px' }}>
             <button
               className="btn"
-              style={{ fontSize: '11px', padding: '2px 8px' }}
+              style={{ fontSize: '12px', padding: '4px 12px' }}
               onClick={() => onChange(EXAMPLE_DIAGRAM)}
             >
               Example
             </button>
             <button
               className="btn"
-              style={{ fontSize: '11px', padding: '2px 8px' }}
+              style={{ fontSize: '12px', padding: '4px 12px' }}
               onClick={() => onChange('')}
             >
               Clear
@@ -46,7 +46,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
 
         <div
           style={{
-            fontSize: '11px',
+            fontSize: '12px',
             color: 'var(--color-text-secondary)',
             marginBottom: '6px',
           }}
@@ -70,6 +70,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
             fontSize: '13px',
             lineHeight: '1.5',
             padding: '12px',
+            borderRadius: '8px',
             resize: 'vertical',
             outline: 'none',
             tabSize: 2,
