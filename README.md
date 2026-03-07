@@ -4,15 +4,15 @@ A modern, interactive frontend for the **merm8 API**—bringing real-time Mermai
 
 ## Features
 
-- 🎨 **Interactive Diagram Editor** — Real-time syntax highlighting and code editing for Mermaid diagrams
-- ✅ **Real-time Linting** — Instant feedback on diagram violations with configurable rule severity levels (error, warning, info)
-- ⚡ **Fast Analysis** — Debounced, optimized API calls for responsive user experience
-- 🎯 **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
-- 🎨 **Multiple Diagram Types** — Full support for all Mermaid diagram formats
-- ⌨️ **Keyboard Shortcuts** — Navigate efficiently with intuitive shortcuts
-- 📤 **Export Support** — Export analyzed diagrams in multiple formats
-- 🔒 **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
-- 📱 **Responsive Design** — Clean, modern UI built with Tailwind CSS
+- **Interactive Diagram Editor** — Real-time syntax highlighting and code editing for Mermaid diagrams
+- **Real-time Linting** — Instant feedback on diagram violations with configurable rule severity levels (error, warning, info)
+- **Fast Analysis** — Debounced, optimized API calls for responsive user experience
+- **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
+- **Multiple Diagram Types** — Full support for all Mermaid diagram formats
+- **Keyboard Shortcuts** — Navigate efficiently with intuitive shortcuts
+- **Export Support** — Export analyzed diagrams in multiple formats
+- **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
+- **Responsive Design** — Clean, modern UI built with Tailwind CSS
 
 ## Quick Start
 
@@ -243,6 +243,6 @@ MIT © 2026 [CyanAutomation](https://github.com/CyanAutomation)
 
 ## Support
 
-- 📖 Check the [Setup](#development) section for common issues
-- 🐛 [Search existing issues](https://github.com/CyanAutomation/merm8-splash/issues) for solutions
-- 💬 Open a new issue if you need help
+- Check the [Setup](#development) section for common issues
+- [Search existing issues](https://github.com/CyanAutomation/merm8-splash/issues) for solutions
+- Open a new issue if you need help
