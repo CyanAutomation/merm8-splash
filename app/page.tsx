@@ -51,6 +51,7 @@ export default function Home() {
 
     const requestId = ++rulesRequestRef.current
     const requestEndpoint = endpoint
+    latestEndpointRef.current = endpoint
 
     setRulesLoading(true)
     try {
@@ -67,7 +68,6 @@ export default function Home() {
       }
     }
   }, [endpoint])
-
 
   useEffect(() => {
     latestEndpointRef.current = endpoint
