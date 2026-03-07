@@ -87,7 +87,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         } finally {
           if (seq === requestSeqRef.current) {
             setIsAnalyzing(false)
-            abortControllerRef.current = null
+            if (abortControllerRef.current === controller) {
+              abortControllerRef.current = null
+            }
           }
         }
       }, DEBOUNCE_MS)
