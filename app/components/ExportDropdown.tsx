@@ -20,6 +20,7 @@ export default function ExportDropdown({
 }: ExportDropdownProps) {
   const [open, setOpen] = useState(false)
   const [copying, setCopying] = useState<string | null>(null)
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -147,26 +148,20 @@ export default function ExportDropdown({
             <button
               key={item.label}
               onClick={item.action}
+              onMouseEnter={() => setHoveredItem(item.label)}
+              onMouseLeave={() => setHoveredItem(null)}
               style={{
                 display: 'block',
                 width: '100%',
                 textAlign: 'left',
-                background: 'none',
+                background: hoveredItem === item.label ? 'var(--color-bg-primary)' : 'none',
                 border: 'none',
                 borderBottom: '1px solid rgba(68,68,68,0.3)',
                 padding: '8px 12px',
-                color: 'var(--color-text-primary)',
+                color: hoveredItem === item.label ? 'var(--color-accent-primary)' : 'var(--color-text-primary)',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '12px',
                 cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                ;(e.target as HTMLButtonElement).style.background = 'var(--color-bg-primary)'
-                ;(e.target as HTMLButtonElement).style.color = 'var(--color-accent-primary)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.target as HTMLButtonElement).style.background = 'none'
-                ;(e.target as HTMLButtonElement).style.color = 'var(--color-text-primary)'
               }}
             >
               {item.label}

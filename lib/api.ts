@@ -42,7 +42,7 @@ export interface HealthzResponse {
 export function resolveApiEndpoint(): string {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search)
-    if (params.has('api')) return params.get('api')!
+    if (params.has('api')) return params.get('api') ?? ''
 
     const stored = localStorage.getItem('merm8_api_endpoint')
     if (stored) return stored

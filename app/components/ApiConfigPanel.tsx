@@ -77,8 +77,8 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
 
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             <select
-              onChange={(e) => onEndpointChange(e.target.value)}
-              value=""
+              onChange={(e) => { if (e.target.value) onEndpointChange(e.target.value) }}
+              defaultValue=""
               style={{
                 background: 'var(--color-bg-primary)',
                 border: '1px solid var(--color-border)',
