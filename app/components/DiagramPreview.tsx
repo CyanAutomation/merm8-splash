@@ -11,6 +11,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
   const [isRendering, setIsRendering] = useState(false)
+  const idCounterRef = useRef(0)
 
   useEffect(() => {
     if (!code.trim()) {
@@ -41,7 +42,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
           securityLevel: 'loose',
         })
 
-        const id = `mermaid-${Date.now()}`
+        const id = `mermaid-${++idCounterRef.current}`
         const { svg } = await mermaid.render(id, code)
 
         if (!cancelled && containerRef.current) {

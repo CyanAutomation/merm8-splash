@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { analyzeCode, Violation, Rule } from './api'
 import { DEFAULT_DIAGRAM } from './constants'
 
@@ -64,6 +64,12 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     },
     []
   )
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const setCode = useCallback((newCode: string) => {
     setCodeState(newCode)
