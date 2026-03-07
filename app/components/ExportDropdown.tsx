@@ -136,6 +136,7 @@ export default function ExportDropdown({
           text: `Clipboard access failed. Downloaded ${fallbackFilename} instead.`,
           tone: 'error',
         })
+        setTimeout(() => setCopyStatus(null), 3000)
         setOpen(false)
         return
       }
