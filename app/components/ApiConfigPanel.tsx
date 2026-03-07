@@ -95,7 +95,12 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
               ))}
             </select>
 
-            <button className="btn" onClick={onTestConnection} title="Ctrl+K to focus">
+            <button
+              className="btn"
+              onClick={onTestConnection}
+              title="Ctrl+K to focus"
+              disabled={connectionStatus === 'checking'}
+            >
               Test
             </button>
             <button className="btn" onClick={onSave}>

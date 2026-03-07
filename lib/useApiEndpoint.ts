@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { resolveApiEndpoint } from './api'
 
 export type ConnectionStatus = 'connected' | 'checking' | 'error' | 'disconnected'
@@ -18,6 +18,12 @@ export function useApiEndpoint(): UseApiEndpointReturn {
   const [endpoint, setEndpointState] = useState<string>('')
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected')
   const [configSource, setConfigSource] = useState<string>('default')
+  const endpointRef = useRef<string>('')
+  const latestRequestIdRef = useRef<number>(0)
+
+  useEffect(() => {
+    endpointRef.current = endpoint
+  }, [endpoint])
 
   useEffect(() => {
     const resolved = resolveApiEndpoint()
@@ -44,12 +50,30 @@ export function useApiEndpoint(): UseApiEndpointReturn {
 
   const testConnection = useCallback(async () => {
     if (!endpoint) return
+
+    const endpointAtStart = endpoint
+    const requestId = ++latestRequestIdRef.current
+
     setConnectionStatus('checking')
+
+    const isCurrentRequest = () => {
+      return latestRequestIdRef.current === requestId && endpointRef.current === endpointAtStart
+    }
+
     try {
       const { fetchHealthz } = await import('./api')
-      await fetchHealthz(endpoint)
+      await fetchHealthz(endpointAtStart)
+
+      if (!isCurrentRequest()) {
+        return
+      }
+
       setConnectionStatus('connected')
     } catch {
+      if (!isCurrentRequest()) {
+        return
+      }
+
       setConnectionStatus('error')
     }
   }, [endpoint])
