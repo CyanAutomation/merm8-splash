@@ -27,9 +27,9 @@ const severityColor = (severity: string) => {
   }
 };
 
-const violationKey = (violation: Violation): string => {
+const violationKey = (violation: Violation, index: number): string => {
   const { rule_id, severity, message, line, node_id } = violation;
-  return [rule_id, severity, message, line ?? "", node_id ?? ""].join("::");
+  return [rule_id, severity, message, line ?? "", node_id ?? "", index].join("::");
 };
 
 const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
