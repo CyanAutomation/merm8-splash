@@ -42,20 +42,39 @@ export default function Home() {
   const [enabledRules, setEnabledRules] = useState<string[]>([])
   const [rulesLoading, setRulesLoading] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  const rulesRequestRef = useRef(0)
+  const latestEndpointRef = useRef(endpoint)
 
   // Load rules when connected
   const loadRules = useCallback(async () => {
     if (!endpoint) return
+
+    const requestId = ++rulesRequestRef.current
+    const requestEndpoint = endpoint
+
     setRulesLoading(true)
     try {
-      const fetched = await fetchRules(endpoint)
-      setRules(fetched)
-      setEnabledRules(fetched.map((r) => r.id))
+      const fetched = await fetchRules(requestEndpoint)
+      if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
+        setRules(fetched)
+        setEnabledRules(fetched.map((r) => r.id))
+      }
     } catch {
       // Rules may not be available until API is tested
     } finally {
-      setRulesLoading(false)
+      if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
+        setRulesLoading(false)
+      }
     }
+  }, [endpoint])
+
+
+  useEffect(() => {
+    latestEndpointRef.current = endpoint
+    rulesRequestRef.current += 1
+    setRules([])
+    setEnabledRules([])
+    setRulesLoading(false)
   }, [endpoint])
 
   useEffect(() => {
