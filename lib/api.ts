@@ -116,7 +116,8 @@ export async function analyzeCode(
   endpoint: string,
   code: string,
   enabledRules: string[],
-  rulesMetadata: Rule[]
+  rulesMetadata: Rule[],
+  signal?: AbortSignal
 ): Promise<AnalyzeResponse> {
   const client = createApiClient(endpoint)
   const rulesConfig: RulesConfig = {}
@@ -134,7 +135,9 @@ export async function analyzeCode(
     },
   }
 
-  const response = await client.post<AnalyzeResponse>('/v1/analyze', request)
+  const response = await client.post<AnalyzeResponse>('/v1/analyze', request, {
+    signal,
+  })
   return response.data
 }
 
