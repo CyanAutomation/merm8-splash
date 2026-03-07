@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { resolveApiEndpoint } from './api'
+import { resolveApiEndpoint, validateApiEndpoint } from './api'
 
 export type ConnectionStatus = 'connected' | 'checking' | 'error' | 'disconnected'
 
@@ -12,12 +12,14 @@ export interface UseApiEndpointReturn {
   testConnection: () => Promise<void>
   saveEndpoint: () => void
   configSource: string
+  statusMessage: string
 }
 
 export function useApiEndpoint(): UseApiEndpointReturn {
   const [endpoint, setEndpointState] = useState<string>('')
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected')
   const [configSource, setConfigSource] = useState<string>('default')
+  const [statusMessage, setStatusMessage] = useState<string>('')
   const endpointRef = useRef<string>('')
   const latestRequestIdRef = useRef<number>(0)
 
@@ -46,15 +48,22 @@ export function useApiEndpoint(): UseApiEndpointReturn {
   const setEndpoint = useCallback((url: string) => {
     setEndpointState(url)
     setConnectionStatus('disconnected')
+    setStatusMessage('')
   }, [])
 
   const testConnection = useCallback(async () => {
-    if (!endpoint) return
+    const validation = validateApiEndpoint(endpoint)
+    if (!validation.valid) {
+      setConnectionStatus('error')
+      setStatusMessage(validation.message ?? 'Invalid endpoint.')
+      return
+    }
 
     const endpointAtStart = endpoint
     const requestId = ++latestRequestIdRef.current
 
     setConnectionStatus('checking')
+    setStatusMessage('')
 
     const isCurrentRequest = () => {
       return latestRequestIdRef.current === requestId && endpointRef.current === endpointAtStart
@@ -69,18 +78,28 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       }
 
       setConnectionStatus('connected')
+      setStatusMessage('Connection successful.')
     } catch {
       if (!isCurrentRequest()) {
         return
       }
 
       setConnectionStatus('error')
+      setStatusMessage('Could not reach endpoint. Check URL and server status.')
     }
   }, [endpoint])
 
   const saveEndpoint = useCallback(() => {
-    if (typeof window !== 'undefined' && endpoint) {
+    const validation = validateApiEndpoint(endpoint)
+    if (!validation.valid) {
+      setConnectionStatus('error')
+      setStatusMessage(validation.message ?? 'Invalid endpoint.')
+      return
+    }
+
+    if (typeof window !== 'undefined') {
       localStorage.setItem('merm8_api_endpoint', endpoint)
+      setStatusMessage('Endpoint saved to localStorage.')
     }
   }, [endpoint])
 
@@ -91,5 +110,6 @@ export function useApiEndpoint(): UseApiEndpointReturn {
     testConnection,
     saveEndpoint,
     configSource,
+    statusMessage,
   }
 }

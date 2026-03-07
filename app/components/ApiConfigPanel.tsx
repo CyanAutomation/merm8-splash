@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useImperativeHandle, forwardRef } from 'react'
+import { validateApiEndpoint } from '@/lib/api'
 import { ConnectionStatus } from '@/lib/useApiEndpoint'
 import clsx from 'clsx'
 
@@ -11,6 +12,7 @@ interface ApiConfigPanelProps {
   onTestConnection: () => void
   onSave: () => void
   configSource: string
+  statusMessage: string
 }
 
 export interface ApiConfigPanelRef {
@@ -32,7 +34,7 @@ const PRESETS = [
 
 const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
   (
-    { endpoint, onEndpointChange, connectionStatus, onTestConnection, onSave, configSource },
+    { endpoint, onEndpointChange, connectionStatus, onTestConnection, onSave, configSource, statusMessage },
     ref
   ) => {
     const inputRef = useRef<HTMLInputElement>(null)
@@ -40,6 +42,10 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
     useImperativeHandle(ref, () => ({
       focusInput: () => inputRef.current?.focus(),
     }))
+
+    const endpointValidation = validateApiEndpoint(endpoint)
+    const isEndpointInvalid = !endpointValidation.valid
+    const endpointFeedback = isEndpointInvalid ? endpointValidation.message : statusMessage
 
     return (
       <div className="panel" style={{ borderColor: 'var(--color-border)' }}>
@@ -63,15 +69,13 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
               style={{
                 flex: 1,
                 background: 'var(--color-bg-primary)',
-                border: '1px solid var(--color-border)',
+                border: isEndpointInvalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
                 color: 'var(--color-text-primary)',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '12px',
                 padding: '4px 8px',
                 outline: 'none',
               }}
-              onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent-secondary)')}
-              onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
             />
           </div>
 
@@ -81,7 +85,7 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
               defaultValue=""
               style={{
                 background: 'var(--color-bg-primary)',
-                border: '1px solid var(--color-border)',
+                border: isEndpointInvalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
                 color: 'var(--color-text-secondary)',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '11px',
@@ -99,15 +103,27 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
               className="btn"
               onClick={onTestConnection}
               title="Ctrl+K to focus"
-              disabled={connectionStatus === 'checking'}
+              disabled={connectionStatus === 'checking' || !endpointValidation.valid}
             >
               Test
             </button>
-            <button className="btn" onClick={onSave}>
+            <button className="btn" onClick={onSave} disabled={!endpointValidation.valid}>
               Save
             </button>
           </div>
         </div>
+
+        {endpointFeedback && (
+          <div
+            style={{
+              marginTop: '6px',
+              fontSize: '11px',
+              color: connectionStatus === 'error' || isEndpointInvalid ? 'var(--color-error)' : 'var(--color-text-secondary)',
+            }}
+          >
+            {endpointFeedback}
+          </div>
+        )}
 
         <div
           style={{
