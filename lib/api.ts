@@ -44,6 +44,15 @@ export interface EndpointValidationResult {
   message?: string
 }
 
+/**
+ * Resolve API endpoint precedence as:
+ * 1) `?api=` query param when present and valid.
+ * 2) `localStorage.merm8_api_endpoint` when present and valid.
+ * 3) `NEXT_PUBLIC_MERM8_API_URL`.
+ *
+ * Invalid query-param values are ignored (with a warning) and resolution continues
+ * through the remaining fallbacks.
+ */
 export function resolveApiEndpoint(): string {
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search)
@@ -52,9 +61,9 @@ export function resolveApiEndpoint(): string {
       const validation = validateApiEndpoint(url)
       if (!validation.valid) {
         console.warn('Invalid API endpoint from URL parameter, using default')
-        return ''
+      } else {
+        return url
       }
-      return url
     }
 
     const stored = localStorage.getItem('merm8_api_endpoint')
