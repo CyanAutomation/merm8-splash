@@ -11,6 +11,16 @@ interface ExportDropdownProps {
   rulesMetadata: Rule[]
 }
 
+const escapeMarkdownCell = (text: string): string => {
+  if (text == null) {
+    return ''
+  }
+  return text
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .replace(/\r\n|\r|\n/g, '<br>')
+    .replace(/\|/g, '\\|')
+}
+
 export default function ExportDropdown({
   results,
   code,
@@ -157,7 +167,10 @@ export default function ExportDropdown({
       lines.push('| Rule | Severity | Message | Line |')
       lines.push('|------|----------|---------|------|')
       results.forEach((v) => {
-        lines.push(`| ${v.rule_id} | ${v.severity} | ${v.message} | ${v.line ?? '—'} |`)
+        const ruleId = escapeMarkdownCell(v.rule_id)
+        const severity = escapeMarkdownCell(v.severity)
+        const message = escapeMarkdownCell(v.message)
+        lines.push(`| ${ruleId} | ${severity} | ${message} | ${v.line ?? '—'} |`)
       })
     }
 
