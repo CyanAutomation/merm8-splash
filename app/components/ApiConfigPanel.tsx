@@ -2,7 +2,7 @@
 
 import { useRef, useImperativeHandle, forwardRef, useState } from 'react'
 import { validateApiEndpoint } from '@/lib/api'
-import { ConnectionStatus } from '@/lib/useApiEndpoint'
+import { ConfigSource, ConnectionStatus } from '@/lib/useApiEndpoint'
 import clsx from 'clsx'
 
 interface ApiConfigPanelProps {
@@ -11,7 +11,7 @@ interface ApiConfigPanelProps {
   connectionStatus: ConnectionStatus
   onTestConnection: () => void
   onSave: () => void
-  configSource: string
+  configSource: ConfigSource
   statusMessage: string
 }
 
@@ -24,6 +24,14 @@ const STATUS_LABELS: Record<ConnectionStatus, string> = {
   checking: 'Checking...',
   error: 'Unreachable',
   disconnected: 'Not tested',
+}
+
+const SOURCE_LABELS: Record<ConfigSource, string> = {
+  default: 'Default',
+  'URL parameter': 'URL parameter',
+  localStorage: 'localStorage',
+  'environment variable': 'Environment variable',
+  manual: 'Manual input',
 }
 
 const PRESETS = [
@@ -160,7 +168,7 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
               {STATUS_LABELS[connectionStatus]}
             </span>
           </span>
-          <span>Source: {configSource}</span>
+          <span>Source: {SOURCE_LABELS[configSource]}</span>
           <span style={{ color: 'var(--color-text-secondary)' }}>
             Ctrl+K to focus
           </span>
