@@ -98,7 +98,6 @@ export default function Home() {
       return
     }
 
-    const connectedEndpoint = connectionStatus === 'connected'
     const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
     const canAnalyze = !rulesLoading && rulesReadyForEndpoint
 
@@ -127,6 +126,22 @@ export default function Home() {
     onFocusEditor: () => editorRef.current?.focus(),
     onFocusResults: () => resultsRef.current?.focus(),
   })
+
+  const toggleRule = useCallback((ruleId: string) => {
+    setEnabledRules((prev) =>
+      prev.includes(ruleId)
+        ? prev.filter((r) => r !== ruleId)
+        : [...prev, ruleId]
+    )
+  }, [])
+
+  const enableAllRules = useCallback(() => {
+    setEnabledRules(() => rules.map((r) => r.id))
+  }, [rules])
+
+  const disableAllRules = useCallback(() => {
+    setEnabledRules(() => [])
+  }, [])
 
   const parseStatus: 'idle' | 'valid' | 'error' =
     parseError ? 'error' : code.trim() ? 'valid' : 'idle'
@@ -226,7 +241,9 @@ export default function Home() {
               <RulesPanel
                 rules={rules}
                 enabledRules={enabledRules}
-                onRulesChange={setEnabledRules}
+                onToggleRule={toggleRule}
+                onEnableAll={enableAllRules}
+                onDisableAll={disableAllRules}
                 isLoading={rulesLoading}
               />
             </ErrorBoundary>
