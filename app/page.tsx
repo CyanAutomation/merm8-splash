@@ -136,7 +136,7 @@ export default function Home() {
   }, [])
 
   const enableAllRules = useCallback(() => {
-    setEnabledRules(() => rules.map((r) => r.id))
+    setEnabledRules(rules.map((r) => r.id))
   }, [rules])
 
   const disableAllRules = useCallback(() => {
