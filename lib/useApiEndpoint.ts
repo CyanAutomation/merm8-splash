@@ -41,6 +41,8 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       const validatedStored =
         storedValue && validateApiEndpoint(storedValue).valid ? storedValue : undefined
       const envValue = process.env.NEXT_PUBLIC_MERM8_API_URL
+      const validatedEnv =
+        envValue && validateApiEndpoint(envValue).valid ? envValue : undefined
 
       if (validatedParam && resolved === validatedParam) {
         setConfigSource('URL parameter')
