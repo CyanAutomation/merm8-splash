@@ -137,10 +137,6 @@ export default function ExportDropdown({
   }
 
   const exportJson = () => {
-    if (isExporting) {
-      return
-    }
-
     const data = JSON.stringify({ results, code }, null, 2)
     downloadFile(data, 'merm8-analysis.json', 'application/json')
     setOpen(false)
