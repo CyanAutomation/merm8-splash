@@ -84,8 +84,7 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
       const hostname = parsed.hostname.toLowerCase()
       const normalizedHostname = hostname.replace(/^[\[]|[\]]$/g, '').split('%')[0]
       const isBlockedIpv6Host =
-        normalizedHostname === '::1' ||
-        normalizedHostname === '0:0:0:0:0:0:0:1' ||
+        /^(0{0,4}:){0,7}(0{0,4})?:0{0,3}1$/.test(normalizedHostname) ||
         /^f[cd][0-9a-f]{0,2}:/.test(normalizedHostname) ||
         /^fe[89ab][0-9a-f]:/i.test(normalizedHostname)
 
