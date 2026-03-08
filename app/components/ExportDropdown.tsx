@@ -90,7 +90,7 @@ export default function ExportDropdown({
 
     return () => {
       isMountedRef.current = false
-      setIsExporting(false)
+      isMountedRef.current = false
       copyStatusCancelRef.current?.()
       copyStatusCancelRef.current = null
       copyingCancelRef.current?.()
