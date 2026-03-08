@@ -6,28 +6,21 @@ import { Rule } from '@/lib/api'
 interface RulesPanelProps {
   rules: Rule[]
   enabledRules: string[]
-  onRulesChange: (rules: string[]) => void
+  onToggleRule: (ruleId: string) => void
+  onEnableAll: () => void
+  onDisableAll: () => void
   isLoading: boolean
 }
 
 export default function RulesPanel({
   rules,
   enabledRules,
-  onRulesChange,
+  onToggleRule,
+  onEnableAll,
+  onDisableAll,
   isLoading,
 }: RulesPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
-
-  const toggleRule = (ruleId: string) => {
-    if (enabledRules.includes(ruleId)) {
-      onRulesChange(enabledRules.filter((r) => r !== ruleId))
-    } else {
-      onRulesChange([...enabledRules, ruleId])
-    }
-  }
-
-  const enableAll = () => onRulesChange(rules.map((r) => r.id))
-  const disableAll = () => onRulesChange([])
 
   const severityColor = (severity: string) => {
     switch (severity) {
@@ -69,14 +62,14 @@ export default function RulesPanel({
             <button
               className="btn"
               style={{ fontSize: '12px', padding: '4px 12px' }}
-              onClick={enableAll}
+              onClick={onEnableAll}
             >
               All
             </button>
             <button
               className="btn"
               style={{ fontSize: '12px', padding: '4px 12px' }}
-              onClick={disableAll}
+              onClick={onDisableAll}
             >
               None
             </button>
@@ -110,7 +103,7 @@ export default function RulesPanel({
                   type="checkbox"
                   id={`rule-${rule.id}`}
                   checked={enabledRules.includes(rule.id)}
-                  onChange={() => toggleRule(rule.id)}
+                  onChange={() => onToggleRule(rule.id)}
                   style={{ marginTop: '2px', cursor: 'pointer', accentColor: 'var(--color-accent-primary)' }}
                 />
                 <label
