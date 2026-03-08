@@ -79,6 +79,17 @@ export default function RulesPanel({
         )}
       </div>
 
+
+      {!collapsed && !isLoading && (
+        <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '8px' }}>
+          {isUnavailable
+            ? 'Analysis uses server defaults for linting.'
+            : rules.length > 0
+              ? 'Analysis uses your selected rules.'
+              : 'Connect and test API to fetch rules metadata.'}
+        </div>
+      )}
+
       {!collapsed && (
         <div style={{ overflow: 'auto', maxHeight: '250px' }}>
           {isLoading ? (
@@ -87,7 +98,7 @@ export default function RulesPanel({
             </div>
           ) : isUnavailable ? (
             <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>
-              Rules endpoint unavailable for this API endpoint. Analysis will run without rule metadata.
+              Rules metadata unavailable for this API endpoint.
             </div>
           ) : rules.length === 0 ? (
             <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>
