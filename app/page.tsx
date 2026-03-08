@@ -37,6 +37,7 @@ export default function Home() {
     analyzeError,
     diagramType,
     triggerAnalysis,
+    cancelAnalysis,
   } = useDiagramAnalysis()
 
   const [rules, setRules] = useState<Rule[]>([])
@@ -117,12 +118,12 @@ export default function Home() {
   // Trigger analysis when code, endpoint, or rules change
   useEffect(() => {
     if (!code.trim()) {
-      triggerAnalysis('', code, [], [])
+      cancelAnalysis()
       return
     }
 
     if (!endpoint) {
-      triggerAnalysis('', code, [], [])
+      cancelAnalysis()
       return
     }
 
@@ -132,8 +133,8 @@ export default function Home() {
     const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
 
     if (!canAnalyze) {
-      // Intentionally route through empty-endpoint handling to cancel in-flight analysis and ignore stale responses.
-      triggerAnalysis('', code, [], [])
+      // Cancel immediately so delayed debounce callbacks cannot abort a newer valid analysis.
+      cancelAnalysis()
       return
     }
 
@@ -148,6 +149,7 @@ export default function Home() {
     enabledRules,
     rules,
     triggerAnalysis,
+    cancelAnalysis,
   ])
 
   const handleTestConnection = useCallback(async () => {
