@@ -29,6 +29,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
 
   useEffect(() => {
     const resolved = resolveApiEndpoint()
+    endpointRef.current = resolved
     setEndpointState(resolved)
 
     if (typeof window !== 'undefined') {
@@ -46,20 +47,22 @@ export function useApiEndpoint(): UseApiEndpointReturn {
   }, [])
 
   const setEndpoint = useCallback((url: string) => {
+    endpointRef.current = url
+    latestRequestIdRef.current += 1
     setEndpointState(url)
     setConnectionStatus('disconnected')
     setStatusMessage('')
   }, [])
 
   const testConnection = useCallback(async () => {
-    const validation = validateApiEndpoint(endpoint)
+    const endpointAtStart = endpointRef.current
+    const validation = validateApiEndpoint(endpointAtStart)
     if (!validation.valid) {
       setConnectionStatus('error')
       setStatusMessage(validation.message ?? 'Invalid endpoint.')
       return
     }
 
-    const endpointAtStart = endpoint
     const requestId = ++latestRequestIdRef.current
 
     setConnectionStatus('checking')
@@ -87,7 +90,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       setConnectionStatus('error')
       setStatusMessage('Could not reach endpoint. Check URL and server status.')
     }
-  }, [endpoint])
+  }, [])
 
   const saveEndpoint = useCallback(() => {
     const validation = validateApiEndpoint(endpoint)
