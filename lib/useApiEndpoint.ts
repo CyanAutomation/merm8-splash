@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { resolveApiEndpoint, validateApiEndpoint } from './api'
 
 export type ConnectionStatus = 'connected' | 'checking' | 'error' | 'disconnected'
+export type ConfigSource = 'default' | 'URL parameter' | 'localStorage' | 'environment variable' | 'manual'
 
 export interface UseApiEndpointReturn {
   endpoint: string
@@ -11,14 +12,14 @@ export interface UseApiEndpointReturn {
   connectionStatus: ConnectionStatus
   testConnection: () => Promise<void>
   saveEndpoint: () => void
-  configSource: string
+  configSource: ConfigSource
   statusMessage: string
 }
 
 export function useApiEndpoint(): UseApiEndpointReturn {
   const [endpoint, setEndpointState] = useState<string>('')
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected')
-  const [configSource, setConfigSource] = useState<string>('default')
+  const [configSource, setConfigSource] = useState<ConfigSource>('default')
   const [statusMessage, setStatusMessage] = useState<string>('')
   const endpointRef = useRef<string>('')
   const latestRequestIdRef = useRef<number>(0)
@@ -60,6 +61,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
     endpointRef.current = url
     latestRequestIdRef.current += 1
     setEndpointState(url)
+    setConfigSource('manual')
     setConnectionStatus('disconnected')
     setStatusMessage('')
   }, [])
@@ -112,6 +114,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
 
     if (typeof window !== 'undefined') {
       localStorage.setItem('merm8_api_endpoint', endpoint)
+      setConfigSource('localStorage')
       setStatusMessage('Endpoint saved to localStorage.')
     }
   }, [endpoint])
