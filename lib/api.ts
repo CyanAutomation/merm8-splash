@@ -99,7 +99,7 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
         value.startsWith('10.') ||
         /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(value) ||
         value.startsWith('169.254.')
-      const mappedIpv4Match = normalizedHostname.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/)
+      const mappedIpv4Match = normalizedHostname.match(/^::ffff:((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)
       const mappedIpv4 = mappedIpv4Match?.[1]
       const isBlockedIpv6Host =
         /^(0{0,4}:){0,7}(0{0,4})?:0{0,3}1$/.test(normalizedHostname) ||
