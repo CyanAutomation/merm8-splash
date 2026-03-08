@@ -38,6 +38,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     const [filter, setFilter] = useState<SeverityFilter>("all");
     const [sortBy, setSortBy] = useState<"severity" | "line">("severity");
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
+    const [copyErrorKey, setCopyErrorKey] = useState<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       focus: () => panelRef.current?.focus(),
@@ -51,12 +52,54 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
         return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
       });
 
-    const copyViolation = (v: Violation, key: string) => {
+    const fallbackCopyWithTextarea = (text: string): boolean => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      let success = false;
+      try {
+        success = document.execCommand("copy");
+      } catch {
+        success = false;
+      } finally {
+        document.body.removeChild(textarea);
+      }
+
+      return success;
+    };
+
+    const copyViolation = async (v: Violation, key: string) => {
       const text = `[${v.severity}] ${v.rule_id}: ${v.message}${v.line ? ` (line ${v.line})` : ""}`;
-      navigator.clipboard.writeText(text).then(() => {
+
+      const hasClipboardApi = typeof navigator !== "undefined" && !!navigator.clipboard?.writeText;
+      let copied = false;
+
+      if (hasClipboardApi) {
+        try {
+          await navigator.clipboard.writeText(text);
+          copied = true;
+        } catch {
+          copied = fallbackCopyWithTextarea(text);
+        }
+      } else {
+        copied = fallbackCopyWithTextarea(text);
+      }
+
+      if (copied) {
         setCopiedKey(key);
+        setCopyErrorKey(null);
         setTimeout(() => setCopiedKey(null), 1500);
-      });
+        return;
+      }
+
+      setCopyErrorKey(key);
+      setTimeout(() => setCopyErrorKey(null), 2000);
     };
 
     return (
@@ -265,7 +308,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                           }}
                           title="Copy"
                         >
-                          {copiedKey === key ? "✓" : "⎘"}
+                          {copiedKey === key ? "✓" : copyErrorKey === key ? "⚠" : "⎘"}
                         </button>
                       </td>
                     </tr>
