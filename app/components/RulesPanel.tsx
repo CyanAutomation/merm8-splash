@@ -12,7 +12,7 @@ interface RulesPanelProps {
   onDisableAll: () => void
   isLoading: boolean
   isUnavailable: boolean
-  diagramType?: string | null
+  diagramType: string | null
 }
 
 export default function RulesPanel({
