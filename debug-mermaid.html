@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mermaid SVG Debug</title>
+</head>
+<body>
+    <div id="container" style="width: 600px; height: 400px; border: 1px solid black; overflow: auto;">
+        <div id="diagram"></div>
+    </div>
+    <pre id="debug"></pre>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.0/dist/mermaid.min.js"></script>
+    <script>
+        async function testMermaid() {
+            const mermaid = window.mermaid;
+            
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'dark',
+                darkMode: true,
+            });
+
+            const code = 'graph TD\n    A[Start] --> B[Process]\n    B --> C[End]';
+            const { svg } = await mermaid.render('test-diagram', code);
+
+            const container = document.getElementById('diagram');
+            container.innerHTML = svg;
+            
+            const svgEl = container.querySelector('svg');
+            
+            let debug = 'SVG Element Attributes:\n';
+            debug += `- viewBox: ${svgEl.getAttribute('viewBox')}\n`;
+            debug += `- width: ${svgEl.getAttribute('width')}\n`;
+            debug += `- height: ${svgEl.getAttribute('height')}\n`;
+            debug += `- style.width: ${svgEl.style.width}\n`;
+            debug += `- style.height: ${svgEl.style.height}\n`;
+            
+            const bbox = svgEl.getBBox();
+            debug += `\nBBox (getBBox()):\n`;
+            debug += `- x: ${bbox.x}\n`;
+            debug += `- y: ${bbox.y}\n`;
+            debug += `- width: ${bbox.width}\n`;
+            debug += `- height: ${bbox.height}\n`;
+            
+            debug += `\nContainer:\n`;
+            debug += `- clientWidth: ${container.clientWidth}\n`;
+            debug += `- clientHeight: ${container.clientHeight}\n`;
+            
+            // Parse viewBox
+            const vb = svgEl.getAttribute('viewBox');
+            if (vb) {
+                const parts = vb.split(/[\s,]+/).map(Number);
+                debug += `\nParsed viewBox: [${parts.join(', ')}]\n`;
+                debug += `- viewBox dimensions: ${parts[2]}x${parts[3]}\n`;
+            }
+
+            document.getElementById('debug').textContent = debug;
+            
+            console.log(debug);
+        }
+
+        testMermaid().catch(console.error);
+    </script>
+</body>
+</html>

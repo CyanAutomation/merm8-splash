@@ -9,9 +9,85 @@ interface DiagramPreviewProps {
 
 export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
   const [isRendering, setIsRendering] = useState(false)
   const idCounterRef = useRef(0)
+
+  // Fit diagram to container dimensions
+  const fitDiagramToContainer = () => {
+    if (!svgRef.current || !containerRef.current) return
+
+    try {
+      const svg = svgRef.current
+      const container = containerRef.current
+
+      // Get container's actual rendered dimensions
+      const containerWidth = container.clientWidth
+      const containerHeight = container.clientHeight
+
+      if (containerWidth === 0 || containerHeight === 0) {
+        console.debug('Container has no dimensions yet')
+        return
+      }
+
+      let svgWidth: number
+      let svgHeight: number
+
+      // Try to get SVG's viewBox first
+      const viewBoxAttr = svg.getAttribute('viewBox')
+      if (viewBoxAttr) {
+        // Parse viewBox: "x y width height" (may be space or comma separated)
+        const viewBoxParts = viewBoxAttr.split(/[\s,]+/).map(Number)
+        svgWidth = viewBoxParts[2]
+        svgHeight = viewBoxParts[3]
+
+        if (!svgWidth || !svgHeight) {
+          console.debug('Invalid viewBox, falling back to getBBox')
+          const bbox = svg.getBBox()
+          svgWidth = bbox.width
+          svgHeight = bbox.height
+        }
+      } else {
+        // No viewBox, use getBBox
+        console.debug('No viewBox attribute, using getBBox')
+        const bbox = svg.getBBox()
+        svgWidth = bbox.width
+        svgHeight = bbox.height
+      }
+
+      if (svgWidth === 0 || svgHeight === 0 || !svgWidth || !svgHeight) {
+        console.debug(`Invalid SVG dimensions: ${svgWidth}x${svgHeight}`)
+        return
+      }
+
+      // Calculate available space (accounting for padding)
+      const padding = 16 * 2 // 16px on each side
+      const availWidth = containerWidth - padding
+      const availHeight = containerHeight - padding
+
+      // Calculate scale to fit both dimensions while preserving aspect ratio
+      const scaleX = availWidth / svgWidth
+      const scaleY = availHeight / svgHeight
+      const scale = Math.min(scaleX, scaleY, 1) // Don't enlarge small diagrams
+
+      // Calculate final dimensions
+      const finalWidth = svgWidth * scale
+      const finalHeight = svgHeight * scale
+
+      console.debug(
+        `Auto-fit: container=${containerWidth}x${containerHeight}, svg=${svgWidth.toFixed(1)}x${svgHeight.toFixed(1)}, scale=${scale.toFixed(3)}, final=${finalWidth.toFixed(0)}x${finalHeight.toFixed(0)}`
+      )
+
+      // Apply dimensions directly to SVG element as inline styles
+      // Using !important to ensure they override any CSS rules
+      svg.style.setProperty('width', `${finalWidth}px`, 'important')
+      svg.style.setProperty('height', `${finalHeight}px`, 'important')
+      svg.style.setProperty('display', 'block', 'important')
+    } catch (err) {
+      console.debug('Auto-fit calculation error:', err instanceof Error ? err.message : err)
+    }
+  }
 
   useEffect(() => {
     if (!code.trim()) {
@@ -49,8 +125,14 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
           containerRef.current.innerHTML = svg
           const svgEl = containerRef.current.querySelector('svg')
           if (svgEl) {
-            svgEl.style.maxWidth = '100%'
-            svgEl.style.height = 'auto'
+            svgRef.current = svgEl as SVGSVGElement
+            // Apply auto-fit after SVG is in the DOM
+            // Use requestAnimationFrame twice to ensure layout has settled
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                fitDiagramToContainer()
+              })
+            })
           }
           setRenderError(null)
           onError?.(null)
@@ -77,11 +159,39 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
     <div className="panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <div className="panel-heading" style={{ marginBottom: 0 }}>◈ Diagram Preview</div>
-        {isRendering && (
-          <span style={{ fontSize: '12px', color: 'var(--color-accent-primary)' }}>
-            ⠋ Rendering...
-          </span>
-        )}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {!renderError && code.trim() !== '' && (
+            <button
+              onClick={fitDiagramToContainer}
+              title="Reset zoom to fit diagram in view"
+              style={{
+                padding: '4px 8px',
+                fontSize: '12px',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-primary)'
+                ;(e.currentTarget as HTMLButtonElement).style.color = '#000'
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg-secondary)'
+                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'
+              }}
+            >
+              ↔ Fit
+            </button>
+          )}
+          {isRendering && (
+            <span style={{ fontSize: '12px', color: 'var(--color-accent-primary)' }}>
+              ⠋ Rendering...
+            </span>
+          )}
+        </div>
       </div>
 
       {renderError ? (
