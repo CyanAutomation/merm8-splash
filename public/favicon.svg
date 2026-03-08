@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" fill="#0f172a" rx="6"/>
+  <!-- Diagram nodes and connections - simple mermaid-like symbol -->
+  <circle cx="8" cy="8" r="2.5" fill="#7c3aed"/>
+  <circle cx="24" cy="8" r="2.5" fill="#7c3aed"/>
+  <circle cx="16" cy="24" r="2.5" fill="#7c3aed"/>
+  <!-- Connecting lines -->
+  <line x1="10" y1="8" x2="14" y2="20" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="22" y1="8" x2="18" y2="20" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
