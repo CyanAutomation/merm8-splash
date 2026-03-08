@@ -65,6 +65,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
     endpointRef.current = url
     latestRequestIdRef.current += 1
     setEndpointState(url)
+    setConfigSource('manual')
     setConnectionStatus('disconnected')
     setStatusMessage('')
   }, [])
@@ -118,6 +119,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
     if (typeof window !== 'undefined') {
       const didSave = safeSetLocalStorage('merm8_api_endpoint', endpoint)
       if (didSave) {
+        setConfigSource('localStorage')
         setStatusMessage('Endpoint saved to localStorage.')
       } else {
         setStatusMessage('Could not save endpoint in this browser context.')

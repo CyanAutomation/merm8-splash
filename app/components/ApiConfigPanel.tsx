@@ -26,6 +26,15 @@ const STATUS_LABELS: Record<ConnectionStatus, string> = {
   disconnected: 'Not tested',
 }
 
+
+const SOURCE_LABELS: Record<string, string> = {
+  'URL parameter': 'URL parameter',
+  localStorage: 'localStorage',
+  'environment variable': 'environment variable',
+  manual: 'manual',
+  default: 'default',
+}
+
 const PRESETS = [
   { label: 'Official API', value: 'https://api.merm8.app' },
   { label: 'Localhost 8080', value: 'http://localhost:8080' },
@@ -160,7 +169,7 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
               {STATUS_LABELS[connectionStatus]}
             </span>
           </span>
-          <span>Source: {configSource}</span>
+          <span>Source: {SOURCE_LABELS[configSource] ?? configSource}</span>
           <span style={{ color: 'var(--color-text-secondary)' }}>
             Ctrl+K to focus
           </span>
