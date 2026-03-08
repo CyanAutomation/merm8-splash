@@ -131,7 +131,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
         clearTimeout(copyErrorTimeoutRef.current);
       }
 
-      setCopiedKey(null);
+      // Removed setCopiedKey(null) to avoid clearing other rows' success indicators
       setCopyErrorKey(key);
       copyErrorTimeoutRef.current = setTimeout(() => {
         setCopyErrorKey((current) => (current === key ? null : current));
