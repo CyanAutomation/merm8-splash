@@ -20,9 +20,11 @@ export default function ExportDropdown({
 }: ExportDropdownProps) {
   const [open, setOpen] = useState(false)
   const [copying, setCopying] = useState<string | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
   const [copyStatus, setCopyStatus] = useState<{ text: string; tone: 'success' | 'error' } | null>(null)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const isMountedRef = useRef(true)
   const timeoutCancelsRef = useRef<Set<() => void>>(new Set())
   const copyStatusCancelRef = useRef<(() => void) | null>(null)
   const copyingCancelRef = useRef<(() => void) | null>(null)
@@ -82,9 +84,13 @@ export default function ExportDropdown({
   }, [])
 
   useEffect(() => {
+    isMountedRef.current = true
+
     const timeoutCancels = timeoutCancelsRef.current
 
     return () => {
+      isMountedRef.current = false
+      isMountedRef.current = false
       copyStatusCancelRef.current?.()
       copyStatusCancelRef.current = null
       copyingCancelRef.current?.()
@@ -93,6 +99,26 @@ export default function ExportDropdown({
       timeoutCancels.clear()
     }
   }, [])
+
+  const setExportingSafely = (exporting: boolean) => {
+    if (!isMountedRef.current) {
+      return
+    }
+    setIsExporting(exporting)
+  }
+
+  const runExportAction = async (action: () => Promise<void> | void) => {
+    if (isExporting) {
+      return
+    }
+
+    setExportingSafely(true)
+    try {
+      await action()
+    } finally {
+      setExportingSafely(false)
+    }
+  }
 
   const downloadFile = (content: string, filename: string, mime: string) => {
     const blob = new Blob([content], { type: mime })
@@ -117,6 +143,7 @@ export default function ExportDropdown({
   }
 
   const exportMarkdown = async () => {
+
     const lines = [
       '# merm8 Analysis Results',
       '',
@@ -139,6 +166,7 @@ export default function ExportDropdown({
   }
 
   const exportText = async () => {
+
     const lines = results.map(
       (v) =>
         `[${v.severity.toUpperCase()}] ${v.rule_id}: ${v.message}${v.line ? ` (line ${v.line})` : ''}`
@@ -230,6 +258,7 @@ export default function ExportDropdown({
   }
 
   const exportSarif = async () => {
+
     try {
       const sarif = await analyzeCodeSarif(endpoint, code, enabledRules, rulesMetadata)
       downloadFile(JSON.stringify(sarif, null, 2), 'merm8-analysis.sarif.json', 'application/json')
@@ -284,14 +313,15 @@ export default function ExportDropdown({
           }}
         >
           {[
-            { label: '↓ SARIF JSON', action: exportSarif },
-            { label: '↓ JSON', action: exportJson },
-            { label: '⎘ Markdown', action: exportMarkdown },
-            { label: '⎘ Plain Text', action: exportText },
+            { label: '↓ SARIF JSON', action: () => runExportAction(exportSarif) },
+            { label: '↓ JSON', action: () => runExportAction(exportJson) },
+            { label: '⎘ Markdown', action: () => runExportAction(exportMarkdown) },
+            { label: '⎘ Plain Text', action: () => runExportAction(exportText) },
           ].map((item) => (
             <button
               key={item.label}
               onClick={item.action}
+              disabled={isExporting}
               onMouseEnter={() => setHoveredItem(item.label)}
               onMouseLeave={() => setHoveredItem(null)}
               style={{
@@ -305,10 +335,11 @@ export default function ExportDropdown({
                 color: hoveredItem === item.label ? 'var(--color-accent-primary)' : 'var(--color-text-primary)',
                 fontFamily: 'var(--font-sans)',
                 fontSize: '12px',
-                cursor: 'pointer',
+                cursor: isExporting ? 'not-allowed' : 'pointer',
+                opacity: isExporting ? 0.65 : 1,
               }}
             >
-              {item.label}
+              {isExporting ? 'Exporting…' : item.label}
             </button>
           ))}
         </div>
