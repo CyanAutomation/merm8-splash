@@ -82,6 +82,13 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
     // Reject localhost and internal IPs in production
     if (process.env.NODE_ENV === 'production') {
       const hostname = parsed.hostname.toLowerCase()
+      const normalizedHostname = hostname.replace(/^[\[]|[\]]$/g, '').split('%')[0]
+      const isBlockedIpv6Host =
+        normalizedHostname === '::1' ||
+        normalizedHostname === '0:0:0:0:0:0:0:1' ||
+        /^f[cd][0-9a-f]{0,2}:/.test(normalizedHostname) ||
+        /^fe[89ab][0-9a-f]{0,1}:/.test(normalizedHostname)
+
       if (
         hostname === 'localhost' ||
         hostname === '127.0.0.1' ||
@@ -89,7 +96,8 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
         hostname.startsWith('192.168.') ||
         hostname.startsWith('10.') ||
         /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
-        hostname.startsWith('169.254.')
+        hostname.startsWith('169.254.') ||
+        isBlockedIpv6Host
       ) {
         return {
           valid: false,
