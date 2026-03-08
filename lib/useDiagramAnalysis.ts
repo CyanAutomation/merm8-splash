@@ -18,6 +18,7 @@ export interface UseDiagramAnalysisReturn {
     enabledRules: string[],
     rulesMetadata: Rule[]
   ) => void
+  cancelAnalysis: () => void
 }
 
 const DEBOUNCE_MS = 500
@@ -32,6 +33,20 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const requestSeqRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
 
+  const cancelAnalysis = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+    setViolations([])
+    setAnalyzeError(null)
+    setDiagramType(null)
+    setIsAnalyzing(false)
+  }, [])
+
   const triggerAnalysis = useCallback(
     (
       endpoint: string,
@@ -45,12 +60,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
 
       debounceRef.current = setTimeout(async () => {
         if (!endpoint || !newCode.trim()) {
-          abortControllerRef.current?.abort()
-          abortControllerRef.current = null
-          setViolations([])
-          setAnalyzeError(null)
-          setDiagramType(null)
-          setIsAnalyzing(false)
+          cancelAnalysis()
           return
         }
 
@@ -98,7 +108,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         }
       }, DEBOUNCE_MS)
     },
-    []
+    [cancelAnalysis]
   )
 
   useEffect(() => {
@@ -120,5 +130,6 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     analyzeError,
     diagramType,
     triggerAnalysis,
+    cancelAnalysis,
   }
 }
