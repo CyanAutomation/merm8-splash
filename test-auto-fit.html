@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Fit Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1c1c1e;
+            color: #e1e1e1;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .test-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #0a84ff;
+            margin-bottom: 20px;
+        }
+        
+        .test-case {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #444444;
+            border-radius: 4px;
+        }
+        
+        .test-case h3 {
+            margin: 0 0 10px 0;
+            color: #0a84ff;
+        }
+        
+        .diagram-wrapper {
+            border: 1px solid #666;
+            background: #0a1428;
+            padding: 16px;
+            margin: 10px 0;
+            height: 300px;
+            width: 600px;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .button {
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid #444444;
+            background: #2c2c2e;
+            color: #e1e1e1;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .button:hover {
+            background: #0a84ff;
+            color: #000;
+        }
+        
+        .debug-output {
+            background: #2c2c2e;
+            border: 1px solid #444444;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 11px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow: auto;
+        }
+        
+        svg {
+            border: 1px dashed #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Auto-Fit Diagram Test</h1>
+        
+        <div class="test-case">
+            <h3>Test 1: Simple Small Diagram (should scale up)</h3>
+            <div class="diagram-wrapper" id="test1-container"></div>
+            <button class="button" onclick="testFit('test1')">Test Fit</button>
+            <div class="debug-output" id="test1-debug"></div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 2: Large Diagram (should scale down)</h3>
+            <div class="diagram-wrapper" id="test2-container"></div>
+            <button class="button" onclick="testFit('test2')">Test Fit</button>
+            <div class="debug-output" id="test2-debug"></div>
+        </div>
+        
+        <div class="test-case">
+            <h3>Test 3: Multiple Diagrams (reset via button)</h3>
+            <div class="diagram-wrapper" id="test3-container"></div>
+            <button class="button" onclick="testFit('test3')">Test Fit</button>
+            <div class="debug-output" id="test3-debug"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.0/dist/mermaid.min.js"></script>
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            darkMode: true,
+            themeVariables: {
+                primaryColor: '#0a84ff',
+                primaryTextColor: '#e1e1e1',
+                primaryBorderColor: '#444444',
+                lineColor: '#a0a0a0',
+                background: '#1c1c1e',
+                mainBkg: '#2c2c2e',
+            },
+            securityLevel: 'strict',
+        });
+
+        // Test data
+        const tests = {
+            test1: {
+                code: 'graph LR\n    A[Start] --> B[End]',
+                name: 'Small diagram'
+            },
+            test2: {
+                code: 'graph TD\n    A[1] --> B[2]\n    B --> C[3]\n    C --> D[4]\n    D --> E[5]\n    E --> F[6]\n    F --> G[7]\n    G --> H[8]\n    H --> I[9]\n    I --> J[10]',
+                name: 'Large diagram'
+            },
+            test3: {
+                code: 'graph LR\n    A[Input] --> B[Process] --> C[Output]\n    D[Data] -.-> B',
+                name: 'Standard diagram'
+            }
+        };
+
+        // The actual fit function (matching the React implementation)
+        function fitDigramToContainerImpl(svgElement, containerElement, debugId) {
+            const debug = [];
+            
+            try {
+                if (!svgElement || !containerElement) {
+                    debug.push('Error: SVG or container not found');
+                    return debug;
+                }
+
+                const containerWidth = containerElement.clientWidth;
+                const containerHeight = containerElement.clientHeight;
+
+                if (containerWidth === 0 || containerHeight === 0) {
+                    debug.push('Error: Container has no dimensions');
+                    return debug;
+                }
+
+                debug.push(`Container: ${containerWidth}x${containerHeight}`);
+
+                let svgWidth, svgHeight;
+
+                // Try viewBox first
+                const viewBoxAttr = svgElement.getAttribute('viewBox');
+                if (viewBoxAttr) {
+                    const parts = viewBoxAttr.split(/[\s,]+/).map(Number);
+                    svgWidth = parts[2];
+                    svgHeight = parts[3];
+                    debug.push(`ViewBox: ${viewBoxAttr}`);
+                    debug.push(`Parsed SVG dimensions: ${svgWidth}x${svgHeight}`);
+                } else {
+                    const bbox = svgElement.getBBox();
+                    svgWidth = bbox.width;
+                    svgHeight = bbox.height;
+                    debug.push(`Using getBBox: ${svgWidth}x${svgHeight}`);
+                }
+
+                if (svgWidth === 0 || svgHeight === 0 || !svgWidth || !svgHeight) {
+                    debug.push(`Error: Invalid SVG dimensions: ${svgWidth}x${svgHeight}`);
+                    return debug;
+                }
+
+                const padding = 16 * 2;
+                const availWidth = containerWidth - padding;
+                const availHeight = containerHeight - padding;
+
+                const scaleX = availWidth / svgWidth;
+                const scaleY = availHeight / svgHeight;
+                const scale = Math.min(scaleX, scaleY, 1);
+
+                const finalWidth = svgWidth * scale;
+                const finalHeight = svgHeight * scale;
+
+                debug.push(`Scale: ${scale.toFixed(3)}`);
+                debug.push(`Final dimensions: ${finalWidth.toFixed(0)}x${finalHeight.toFixed(0)}`);
+
+                // Apply the fit
+                svgElement.style.setProperty('width', `${finalWidth}px`, 'important');
+                svgElement.style.setProperty('height', `${finalHeight}px`, 'important');
+                svgElement.style.setProperty('display', 'block', 'important');
+
+                debug.push('✓ Fit applied successfully');
+            } catch (err) {
+                debug.push(`Error: ${err.message}`);
+            }
+
+            return debug;
+        }
+
+        // Render a test diagram
+        async function renderTest(testId) {
+            const test = tests[testId];
+            const container = document.getElementById(`${testId}-container`);
+            const debugDiv = document.getElementById(`${testId}-debug`);
+            
+            try {
+                const { svg } = await mermaid.render(`${testId}-diagram`, test.code);
+                container.innerHTML = svg;
+                debugDiv.textContent = `Diagram rendered: ${test.name}`;
+            } catch (err) {
+                debugDiv.textContent = `Error rendering diagram: ${err.message}`;
+            }
+        }
+
+        // Test the fit function
+        function testFit(testId) {
+            const container = document.getElementById(`${testId}-container`);
+            const svg = container.querySelector('svg');
+            const debugDiv = document.getElementById(`${testId}-debug`);
+            
+            if (!svg) {
+                debugDiv.textContent = 'Error: No SVG found';
+                return;
+            }
+
+            const debug = fitDigramToContainerImpl(svg, container, testId);
+            debugDiv.textContent = debug.join('\n');
+        }
+
+        // Auto-fit on render (simulating requestAnimationFrame behavior)
+        async function initTests() {
+            for (const testId of Object.keys(tests)) {
+                await renderTest(testId);
+                // Simulate the double requestAnimationFrame
+                await new Promise(resolve => {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            testFit(testId);
+                            resolve();
+                        });
+                    });
+                });
+            }
+        }
+
+        // Run tests on page load
+        window.addEventListener('DOMContentLoaded', initTests);
+    </script>
+</body>
+</html>
