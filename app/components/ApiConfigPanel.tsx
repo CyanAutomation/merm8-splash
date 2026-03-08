@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useImperativeHandle, forwardRef } from 'react'
+import { useRef, useImperativeHandle, forwardRef, useState } from 'react'
 import { validateApiEndpoint } from '@/lib/api'
 import { ConnectionStatus } from '@/lib/useApiEndpoint'
 import clsx from 'clsx'
@@ -38,6 +38,7 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
     ref
   ) => {
     const inputRef = useRef<HTMLInputElement>(null)
+    const [selectedPreset, setSelectedPreset] = useState('')
 
     useImperativeHandle(ref, () => ({
       focusInput: () => inputRef.current?.focus(),
@@ -82,8 +83,14 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
 
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             <select
-              onChange={(e) => { if (e.target.value) onEndpointChange(e.target.value) }}
-              defaultValue=""
+              value={selectedPreset}
+              onChange={(e) => {
+                const { value } = e.target
+                if (value) {
+                  onEndpointChange(value)
+                }
+                setSelectedPreset('')
+              }}
               style={{
                 background: 'var(--color-bg-primary)',
                 border: isEndpointInvalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
