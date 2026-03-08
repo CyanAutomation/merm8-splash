@@ -23,3 +23,11 @@ From `package.json`:
 ## Change management
 - Keep changes **minimal and localized** to the task.
 - Avoid broad refactors unless explicitly requested.
+
+## Coding conventions
+- Prefer function components and React hooks (`useCallback`, `useEffect`, `useRef`) over class-based patterns, and use explicit TypeScript interfaces/types for component props and API data shapes.
+- Keep API integration logic centralized in `lib/api.ts`; avoid duplicating `fetch` request/response handling directly inside UI components.
+- Preserve existing cancellation and race-safety patterns (for example, `AbortController` plus request-id guards) in hooks and page state flows.
+- Reuse shared constants from `lib/constants.ts` and theme tokens from CSS variables and `lib/theme.ts` instead of introducing one-off values.
+- Keep imports consistent with the `@/` alias in areas where that alias is already the established convention.
+- Avoid introducing unnecessary dependencies when the current Next.js/React/TypeScript stack already provides the needed functionality.
