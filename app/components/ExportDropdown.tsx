@@ -23,6 +23,20 @@ export default function ExportDropdown({
   const [copyStatus, setCopyStatus] = useState<{ text: string; tone: 'success' | 'error' } | null>(null)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const timeoutIdsRef = useRef<Set<ReturnType<typeof window.setTimeout>>>(new Set())
+
+  const scheduleTimeout = (callback: () => void, delay: number) => {
+    const timeoutId = window.setTimeout(() => {
+      timeoutIdsRef.current.delete(timeoutId)
+      callback()
+    }, delay)
+
+    timeoutIdsRef.current.add(timeoutId)
+    return timeoutId
+  }
+
+  const scheduleCopyStatusReset = () => scheduleTimeout(() => setCopyStatus(null), 3000)
+  const scheduleCopyingReset = () => scheduleTimeout(() => setCopying(null), 1500)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -32,6 +46,15 @@ export default function ExportDropdown({
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current
+
+    return () => {
+      timeoutIds.forEach((timeoutId) => clearTimeout(timeoutId))
+      timeoutIds.clear()
+    }
   }, [])
 
   const downloadFile = (content: string, filename: string, mime: string) => {
@@ -44,7 +67,7 @@ export default function ExportDropdown({
     document.body.appendChild(a)
     a.click()
 
-    setTimeout(() => {
+    scheduleTimeout(() => {
       URL.revokeObjectURL(url)
       a.remove()
     }, 100)
@@ -103,7 +126,7 @@ export default function ExportDropdown({
     } catch {
       success = false
     } finally {
-      setTimeout(() => document.body.removeChild(textarea), 0)
+      scheduleTimeout(() => document.body.removeChild(textarea), 0)
     }
 
     return success
@@ -122,8 +145,8 @@ export default function ExportDropdown({
         await navigator.clipboard.writeText(text)
         setCopying(format)
         setCopyStatus({ text: `Copied ${format} to clipboard.`, tone: 'success' })
-        setTimeout(() => setCopyStatus(null), 3000)
-        setTimeout(() => setCopying(null), 1500)
+        scheduleCopyStatusReset()
+        scheduleCopyingReset()
         setOpen(false)
         return
       } catch {
@@ -131,8 +154,8 @@ export default function ExportDropdown({
         if (textareaFallbackSucceeded) {
           setCopying(format)
           setCopyStatus({ text: `Clipboard access failed, but copied ${format} using fallback.`, tone: 'success' })
-          setTimeout(() => setCopyStatus(null), 3000)
-          setTimeout(() => setCopying(null), 1500)
+          scheduleCopyStatusReset()
+          scheduleCopyingReset()
           setOpen(false)
           return
         }
@@ -142,7 +165,7 @@ export default function ExportDropdown({
           text: `Clipboard access failed. Downloaded ${fallbackFilename} instead.`,
           tone: 'error',
         })
-        setTimeout(() => setCopyStatus(null), 3000)
+        scheduleCopyStatusReset()
         setOpen(false)
         return
       }
@@ -151,9 +174,9 @@ export default function ExportDropdown({
     const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
     if (textareaFallbackSucceeded) {
       setCopying(format)
-          setCopyStatus({ text: `Clipboard API unavailable; copied ${format} using fallback.`, tone: 'success' })
-          setTimeout(() => setCopyStatus(null), 3000)
-      setTimeout(() => setCopying(null), 1500)
+      setCopyStatus({ text: `Clipboard API unavailable; copied ${format} using fallback.`, tone: 'success' })
+      scheduleCopyStatusReset()
+      scheduleCopyingReset()
       setOpen(false)
       return
     }
@@ -163,7 +186,7 @@ export default function ExportDropdown({
       text: `Clipboard unavailable. Downloaded ${fallbackFilename} instead.`,
       tone: 'error',
     })
-    setTimeout(() => setCopyStatus(null), 3000)
+    scheduleCopyStatusReset()
     setOpen(false)
   }
 
