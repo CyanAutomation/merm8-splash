@@ -144,9 +144,9 @@ export async function fetchHealthz(endpoint: string): Promise<HealthzResponse> {
   return response.data
 }
 
-export async function fetchRules(endpoint: string): Promise<Rule[]> {
+export async function fetchRules(endpoint: string, signal?: AbortSignal): Promise<Rule[]> {
   const client = createApiClient(endpoint)
-  const response = await client.get<{ rules: Rule[] }>('/v1/rules')
+  const response = await client.get<{ rules: Rule[] }>('/v1/rules', { signal })
   return response.data.rules
 }
 

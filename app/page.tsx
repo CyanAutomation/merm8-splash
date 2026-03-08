@@ -47,10 +47,15 @@ export default function Home() {
   const [parseError, setParseError] = useState<string | null>(null)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
+  const rulesAbortControllerRef = useRef<AbortController | null>(null)
 
   // Load rules when connected
   const loadRules = useCallback(async () => {
     if (!endpoint) return
+
+    rulesAbortControllerRef.current?.abort()
+    const controller = new AbortController()
+    rulesAbortControllerRef.current = controller
 
     const requestId = ++rulesRequestRef.current
     const requestEndpoint = endpoint
@@ -59,7 +64,7 @@ export default function Home() {
     setRulesLoading(true)
     setRulesUnavailableEndpoint(null)
     try {
-      const fetched = await fetchRules(requestEndpoint)
+      const fetched = await fetchRules(requestEndpoint, controller.signal)
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
         setRules(fetched)
         setEnabledRules(fetched.map((r) => r.id))
@@ -67,6 +72,10 @@ export default function Home() {
         setRulesUnavailableEndpoint(null)
       }
     } catch {
+      if (controller.signal.aborted) {
+        return
+      }
+
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
         setRules([])
         setEnabledRules([])
@@ -81,6 +90,8 @@ export default function Home() {
   }, [endpoint])
 
   useEffect(() => {
+    rulesAbortControllerRef.current?.abort()
+    rulesAbortControllerRef.current = null
     latestEndpointRef.current = endpoint
     rulesRequestRef.current += 1
     setRules([])
@@ -89,6 +100,13 @@ export default function Home() {
     setRulesLoadedEndpoint(null)
     setRulesUnavailableEndpoint(null)
   }, [endpoint])
+
+  useEffect(() => {
+    return () => {
+      rulesAbortControllerRef.current?.abort()
+      rulesAbortControllerRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     if (connectionStatus === 'connected') {
