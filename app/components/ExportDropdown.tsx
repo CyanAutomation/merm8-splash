@@ -143,9 +143,6 @@ export default function ExportDropdown({
   }
 
   const exportMarkdown = async () => {
-    if (isExporting) {
-      return
-    }
 
     const lines = [
       '# merm8 Analysis Results',
