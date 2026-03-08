@@ -38,3 +38,9 @@ From `package.json`:
 - Keep UI changes consistent with current panel, button, and text patterns defined in `app/globals.css`.
 - Avoid introducing generic dashboard motifs or palette shifts that conflict with the design guidance document.
 - For UI changes, include before/after validation notes and add screenshots when tooling is available.
+
+## Validation
+- For `lib/api.ts` request-shaping logic changes, update or add tests in `tests/analyze-request.test.cjs` (or an adjacent request-analysis test file).
+- For UI-only changes, run `npm run lint` and perform manual interaction checks in dev mode.
+- Keep change summaries concise and explicitly list what was validated and what was not run.
+- In constrained or read-only environments, perform static analysis and clearly mark unexecuted checks.
