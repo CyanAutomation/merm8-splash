@@ -35,6 +35,7 @@ export default function ExportDropdown({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const isMountedRef = useRef(true)
+  const isExportingRef = useRef(false)
   const timeoutCancelsRef = useRef<Set<() => void>>(new Set())
   const copyStatusCancelRef = useRef<(() => void) | null>(null)
   const copyingCancelRef = useRef<(() => void) | null>(null)
@@ -85,6 +86,9 @@ export default function ExportDropdown({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
+      if (isExportingRef.current) {
+        return
+      }
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false)
       }
@@ -118,14 +122,16 @@ export default function ExportDropdown({
   }
 
   const runExportAction = async (action: () => Promise<void> | void) => {
-    if (isExporting) {
+    if (isExportingRef.current) {
       return
     }
 
+    isExportingRef.current = true
     setExportingSafely(true)
     try {
       await action()
     } finally {
+      isExportingRef.current = false
       setExportingSafely(false)
     }
   }
@@ -303,7 +309,12 @@ export default function ExportDropdown({
     <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <button
         className="btn btn-primary"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (isExportingRef.current) {
+            return
+          }
+          setOpen(!open)
+        }}
         style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
       >
         {copying ? `✓ Copied (${copying})` : '↓ Export'}
