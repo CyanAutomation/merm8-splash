@@ -70,8 +70,14 @@ export function resolveApiEndpoint(): string {
     if (stored && validateApiEndpoint(stored).valid) return stored
   }
 
-  if (process.env.NEXT_PUBLIC_MERM8_API_URL) {
-    return process.env.NEXT_PUBLIC_MERM8_API_URL
+  const envValue = process.env.NEXT_PUBLIC_MERM8_API_URL ?? ''
+  if (envValue) {
+    const validation = validateApiEndpoint(envValue)
+    if (!validation.valid) {
+      console.warn('Invalid API endpoint from NEXT_PUBLIC_MERM8_API_URL, using default')
+    } else {
+      return envValue
+    }
   }
 
   return ''
