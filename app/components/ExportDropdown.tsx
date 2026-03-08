@@ -258,9 +258,6 @@ export default function ExportDropdown({
   }
 
   const exportSarif = async () => {
-    if (isExporting) {
-      return
-    }
 
     try {
       const sarif = await analyzeCodeSarif(endpoint, code, enabledRules, rulesMetadata)
