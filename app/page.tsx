@@ -20,7 +20,7 @@ export default function Home() {
   const editorRef = useRef<DiagramEditorRef>(null)
   const resultsRef = useRef<ResultsPanelRef>(null)
 
-  const { prefs, savePrefs, isMobile } = useLayoutPreferences()
+  const { prefs, savePrefs, resetPrefs, isMobile } = useLayoutPreferences()
 
   const {
     endpoint,
