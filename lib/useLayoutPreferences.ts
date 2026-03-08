@@ -18,7 +18,6 @@ const STORAGE_KEY = 'merm8-layout-prefs'
 
 export function useLayoutPreferences() {
   const [prefs, setPrefs] = useState<LayoutPreferences>(DEFAULT_PREFS)
-  const [isMounted, setIsMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
   // Load preferences from localStorage on mount
@@ -32,7 +31,6 @@ export function useLayoutPreferences() {
     } catch (err) {
       console.debug('Failed to load layout preferences:', err)
     }
-    setIsMounted(true)
   }, [])
 
   // Detect mobile breakpoint
@@ -41,7 +39,10 @@ export function useLayoutPreferences() {
       setIsMobile(window.innerWidth < 768)
     }
 
+    // Set initial state
     handleResize()
+    
+    // Listen for resize
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
@@ -71,7 +72,6 @@ export function useLayoutPreferences() {
     prefs,
     savePrefs,
     resetPrefs,
-    isMounted,
     isMobile,
   }
 }

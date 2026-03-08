@@ -21,7 +21,7 @@ export default function Home() {
   const editorRef = useRef<DiagramEditorRef>(null)
   const resultsRef = useRef<ResultsPanelRef>(null)
 
-  const { prefs, savePrefs, isMounted, isMobile } = useLayoutPreferences()
+  const { prefs, savePrefs, isMobile } = useLayoutPreferences()
 
   const {
     endpoint,
@@ -247,16 +247,15 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      {isMounted && (
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <PanelGroup
-            direction={isMobile ? 'vertical' : 'horizontal'}
-            onLayout={(sizes) => {
-              if (!isMobile && sizes.length >= 1) {
-                savePrefs({ leftPanelSize: sizes[0] })
-              }
-            }}
-          >
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        <PanelGroup
+          direction={isMobile ? 'vertical' : 'horizontal'}
+          onLayout={(sizes) => {
+            if (!isMobile && sizes.length >= 1) {
+              savePrefs({ leftPanelSize: sizes[0] })
+            }
+          }}
+        >
             {/* Left Column - Editor & Rules */}
             <Panel
               defaultSize={isMobile ? 100 : prefs.leftPanelSize}
@@ -430,7 +429,6 @@ export default function Home() {
             </Panel>
           </PanelGroup>
         </div>
-      )}
 
       {/* Status Bar */}
       <ErrorBoundary>
