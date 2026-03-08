@@ -287,6 +287,7 @@ export default function Home() {
                 onDisableAll={disableAllRules}
                 isLoading={rulesLoading}
                 isUnavailable={rulesUnavailableEndpoint === endpoint}
+                diagramType={diagramType}
               />
             </ErrorBoundary>
           </div>
