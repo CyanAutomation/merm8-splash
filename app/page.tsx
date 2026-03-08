@@ -53,6 +53,7 @@ export default function Home() {
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
+  const dragCleanupFnsRef = useRef<Set<() => void>>(new Set())
 
   // Load rules when connected
   const loadRules = useCallback(async () => {
@@ -115,6 +116,15 @@ export default function Home() {
     return () => {
       rulesAbortControllerRef.current?.abort()
       rulesAbortControllerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const dragCleanupFns = dragCleanupFnsRef.current
+
+    return () => {
+      dragCleanupFns.forEach((cleanup) => cleanup())
+      dragCleanupFns.clear()
     }
   }, [])
 
@@ -322,9 +332,14 @@ export default function Home() {
                 const gridContainer = e.currentTarget.parentElement
                 if (!gridContainer) return
 
-                const handleMouseUp = () => {
+                const cleanupDrag = () => {
                   document.removeEventListener('mousemove', handleMouseMove)
                   document.removeEventListener('mouseup', handleMouseUp)
+                }
+
+                const handleMouseUp = () => {
+                  cleanupDrag()
+                  dragCleanupFnsRef.current.delete(cleanupDrag)
                 }
 
                 const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -336,6 +351,7 @@ export default function Home() {
 
                 document.addEventListener('mousemove', handleMouseMove)
                 document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(cleanupDrag)
               }}
             />
 
@@ -378,9 +394,14 @@ export default function Home() {
                 const gridContainer = e.currentTarget.parentElement
                 if (!gridContainer) return
 
-                const handleMouseUp = () => {
+                const cleanupDrag = () => {
                   document.removeEventListener('mousemove', handleMouseMove)
                   document.removeEventListener('mouseup', handleMouseUp)
+                }
+
+                const handleMouseUp = () => {
+                  cleanupDrag()
+                  dragCleanupFnsRef.current.delete(cleanupDrag)
                 }
 
                 const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -392,6 +413,7 @@ export default function Home() {
 
                 document.addEventListener('mousemove', handleMouseMove)
                 document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(cleanupDrag)
               }}
             />
 
@@ -425,9 +447,14 @@ export default function Home() {
                 const gridContainer = e.currentTarget.parentElement
                 if (!gridContainer) return
 
-                const handleMouseUp = () => {
+                const cleanupDrag = () => {
                   document.removeEventListener('mousemove', handleMouseMove)
                   document.removeEventListener('mouseup', handleMouseUp)
+                }
+
+                const handleMouseUp = () => {
+                  cleanupDrag()
+                  dragCleanupFnsRef.current.delete(cleanupDrag)
                 }
 
                 const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -439,6 +466,7 @@ export default function Home() {
 
                 document.addEventListener('mousemove', handleMouseMove)
                 document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(cleanupDrag)
               }}
             />
 
