@@ -11,11 +11,15 @@ interface ExportDropdownProps {
   rulesMetadata: Rule[]
 }
 
-const escapeMarkdownCell = (text: string): string =>
-  text
+const escapeMarkdownCell = (text: string): string => {
+  if (text == null) {
+    return ''
+  }
+  return text
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
     .replace(/\r\n|\r|\n/g, '<br>')
     .replace(/\|/g, '\\|')
+}
 
 export default function ExportDropdown({
   results,
