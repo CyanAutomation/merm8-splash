@@ -157,7 +157,7 @@ export default function DiagnosticLayout() {
 
       {/* Footer */}
       <div style={{ padding: '12px 16px', background: '#2c2c2e', borderTop: '1px solid #444', fontSize: '11px' }}>
-        <strong>Instructions:</strong> Try dragging the blue dashed divider between Panel A and Panel B. If you can't
+        <strong>Instructions:</strong> Try dragging the blue dashed divider between Panel A and Panel B. If you can&apos;t
         drag it, react-resizable-panels may not be working correctly.
       </div>
     </div>
