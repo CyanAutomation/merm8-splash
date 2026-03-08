@@ -44,6 +44,23 @@ export interface EndpointValidationResult {
   message?: string
 }
 
+export function safeGetLocalStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+export function safeSetLocalStorage(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * Resolve API endpoint precedence as:
  * 1) `?api=` query param when present and valid.
@@ -66,7 +83,7 @@ export function resolveApiEndpoint(): string {
       }
     }
 
-    const stored = localStorage.getItem('merm8_api_endpoint')
+    const stored = safeGetLocalStorage('merm8_api_endpoint')
     if (stored && validateApiEndpoint(stored).valid) return stored
   }
 
