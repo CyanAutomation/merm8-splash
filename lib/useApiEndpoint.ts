@@ -34,11 +34,21 @@ export function useApiEndpoint(): UseApiEndpointReturn {
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      if (params.has('api')) {
+      const paramValue = params.get('api')
+      const validatedParam =
+        paramValue && validateApiEndpoint(paramValue).valid ? paramValue : undefined
+      const storedValue = localStorage.getItem('merm8_api_endpoint')
+      const validatedStored =
+        storedValue && validateApiEndpoint(storedValue).valid ? storedValue : undefined
+      const envValue = process.env.NEXT_PUBLIC_MERM8_API_URL
+      const validatedEnv =
+        envValue && validateApiEndpoint(envValue).valid ? envValue : undefined
+
+      if (validatedParam && resolved === validatedParam) {
         setConfigSource('URL parameter')
-      } else if (localStorage.getItem('merm8_api_endpoint')) {
+      } else if (validatedStored && resolved === validatedStored) {
         setConfigSource('localStorage')
-      } else if (process.env.NEXT_PUBLIC_MERM8_API_URL) {
+      } else if (validatedEnv && resolved === validatedEnv) {
         setConfigSource('environment variable')
       } else {
         setConfigSource('default')
