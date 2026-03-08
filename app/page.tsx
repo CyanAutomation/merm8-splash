@@ -85,7 +85,6 @@ export default function Home() {
 
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
         setRules([])
-        setEnabledRules([])
         setRulesLoadedEndpoint(null)
         setRulesUnavailableEndpoint(requestEndpoint)
       }
@@ -136,6 +135,7 @@ export default function Home() {
     const isConnected = connectionStatus === 'connected'
     const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
     const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+    const useServerDefaultRules = rulesUnavailableForEndpoint
     const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
 
     if (!canAnalyze) {
@@ -144,7 +144,7 @@ export default function Home() {
       return
     }
 
-    triggerAnalysis(endpoint, code, enabledRules, rules)
+    triggerAnalysis(endpoint, code, enabledRules, rules, { useServerDefaults: useServerDefaultRules })
   }, [
     code,
     endpoint,
