@@ -1,7 +1,12 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { resolveApiEndpoint, validateApiEndpoint } from './api'
+import {
+  resolveApiEndpoint,
+  safeGetLocalStorage,
+  safeSetLocalStorage,
+  validateApiEndpoint,
+} from './api'
 
 export type ConnectionStatus = 'connected' | 'checking' | 'error' | 'disconnected'
 
@@ -37,7 +42,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       const paramValue = params.get('api')
       const validatedParam =
         paramValue && validateApiEndpoint(paramValue).valid ? paramValue : undefined
-      const storedValue = localStorage.getItem('merm8_api_endpoint')
+      const storedValue = safeGetLocalStorage('merm8_api_endpoint')
       const validatedStored =
         storedValue && validateApiEndpoint(storedValue).valid ? storedValue : undefined
       const envValue = process.env.NEXT_PUBLIC_MERM8_API_URL
@@ -111,8 +116,12 @@ export function useApiEndpoint(): UseApiEndpointReturn {
     }
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem('merm8_api_endpoint', endpoint)
-      setStatusMessage('Endpoint saved to localStorage.')
+      const didSave = safeSetLocalStorage('merm8_api_endpoint', endpoint)
+      if (didSave) {
+        setStatusMessage('Endpoint saved to localStorage.')
+      } else {
+        setStatusMessage('Could not save endpoint in this browser context.')
+      }
     }
   }, [endpoint])
 
