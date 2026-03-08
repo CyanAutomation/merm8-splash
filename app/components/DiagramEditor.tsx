@@ -61,7 +61,6 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
           spellCheck={false}
           style={{
             flex: 1,
-            minHeight: '300px',
             width: '100%',
             background: 'var(--color-bg-primary)',
             border: '1px solid var(--color-border)',
@@ -71,7 +70,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
             lineHeight: '1.5',
             padding: '12px',
             borderRadius: '8px',
-            resize: 'vertical',
+            resize: 'none',
             outline: 'none',
             tabSize: 2,
           }}

@@ -118,4 +118,27 @@ a {
     border-top: 1px solid var(--color-border);
     margin: 8px 0;
   }
+  
+  /* React Resizable Panels customization */
+  [data-panel-group-direction='horizontal'] > [data-panel-resize-handle-enabled] {
+    width: 4px;
+    background-color: var(--color-border);
+    cursor: col-resize;
+    transition: background-color 0.2s ease;
+  }
+  
+  [data-panel-group-direction='horizontal'] > [data-panel-resize-handle-enabled]:hover {
+    background-color: var(--color-accent-primary);
+  }
+  
+  [data-panel-group-direction='vertical'] > [data-panel-resize-handle-enabled] {
+    height: 4px;
+    background-color: var(--color-border);
+    cursor: row-resize;
+    transition: background-color 0.2s ease;
+  }
+  
+  [data-panel-group-direction='vertical'] > [data-panel-resize-handle-enabled]:hover {
+    background-color: var(--color-accent-primary);
+  }
 }

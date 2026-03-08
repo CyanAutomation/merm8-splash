@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect } from 'react'
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import ApiConfigPanel, { ApiConfigPanelRef } from './components/ApiConfigPanel'
 import DiagramEditor, { DiagramEditorRef } from './components/DiagramEditor'
 import DiagramPreview from './components/DiagramPreview'
@@ -12,12 +13,15 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { useApiEndpoint } from '@/lib/useApiEndpoint'
 import { useDiagramAnalysis } from '@/lib/useDiagramAnalysis'
 import { useKeyboardShortcuts } from '@/lib/keyboard'
+import { useLayoutPreferences } from '@/lib/useLayoutPreferences'
 import { fetchRules, Rule } from '@/lib/api'
 
 export default function Home() {
   const apiConfigRef = useRef<ApiConfigPanelRef>(null)
   const editorRef = useRef<DiagramEditorRef>(null)
   const resultsRef = useRef<ResultsPanelRef>(null)
+
+  const { prefs, savePrefs, isMounted, isMobile } = useLayoutPreferences()
 
   const {
     endpoint,
@@ -243,112 +247,190 @@ export default function Home() {
       </div>
 
       {/* Main Content */}
-      <div
-        style={{
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: '40% 60%',
-          gridTemplateRows: '1fr auto',
-          gap: '0',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Left Column */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            borderRight: '1px solid var(--color-border)',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Editor */}
-          <div style={{ flex: 1, padding: '8px', overflow: 'auto', minHeight: '300px' }}>
-            <ErrorBoundary>
-              <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
-            </ErrorBoundary>
-          </div>
-
-          {/* Rules Panel */}
-          <div
-            style={{
-              padding: '8px',
-              borderTop: '1px solid var(--color-border)',
-              maxHeight: '300px',
-              overflow: 'auto',
+      {isMounted && (
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <PanelGroup
+            direction={isMobile ? 'vertical' : 'horizontal'}
+            onLayout={(sizes) => {
+              if (!isMobile && sizes.length >= 1) {
+                savePrefs({ leftPanelSize: sizes[0] })
+              }
             }}
           >
-            <ErrorBoundary>
-              <RulesPanel
-                rules={rules}
-                enabledRules={enabledRules}
-                onToggleRule={toggleRule}
-                onEnableAll={enableAllRules}
-                onDisableAll={disableAllRules}
-                isLoading={rulesLoading}
-                isUnavailable={rulesUnavailableEndpoint === endpoint}
-                diagramType={diagramType}
-              />
-            </ErrorBoundary>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Preview */}
-          <div style={{ flex: '0 0 40%', padding: '8px', overflow: 'hidden', minHeight: '200px' }}>
-            <ErrorBoundary>
-              <DiagramPreview code={code} onError={setParseError} />
-            </ErrorBoundary>
-          </div>
-
-          {/* Results + Export */}
-          <div
-            style={{
-              flex: 1,
-              padding: '8px',
-              borderTop: '1px solid var(--color-border)',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                marginBottom: '4px',
-              }}
+            {/* Left Column - Editor & Rules */}
+            <Panel
+              defaultSize={isMobile ? 100 : prefs.leftPanelSize}
+              minSize={isMobile ? 50 : 25}
+              style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
             >
-              <ErrorBoundary>
-                <ExportDropdown
-                  results={violations}
-                  code={code}
-                  endpoint={endpoint}
-                  enabledRules={enabledRules}
-                  rulesMetadata={rules}
+              <PanelGroup
+                direction="vertical"
+                onLayout={(sizes) => {
+                  if (sizes.length >= 1) {
+                    savePrefs({ editorSize: sizes[0] })
+                  }
+                }}
+              >
+                {/* Editor */}
+                <Panel
+                  defaultSize={prefs.editorSize}
+                  minSize={30}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                    <ErrorBoundary>
+                      <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
+                    </ErrorBoundary>
+                  </div>
+                </Panel>
+
+                <PanelResizeHandle
+                  style={{
+                    height: '4px',
+                    background: 'var(--color-border)',
+                    cursor: 'row-resize',
+                    transition: 'background 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
+                  }}
+                  onMouseLeave={(e) => {
+                    ;(e.target as HTMLElement).style.background = 'var(--color-border)'
+                  }}
                 />
-              </ErrorBoundary>
-            </div>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <ErrorBoundary>
-                <ResultsPanel
-                  ref={resultsRef}
-                  results={violations}
-                  isAnalyzing={isAnalyzing}
-                  analyzeError={analyzeError}
+
+                {/* Rules Panel */}
+                <Panel
+                  defaultSize={100 - prefs.editorSize}
+                  minSize={15}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                    <ErrorBoundary>
+                      <RulesPanel
+                        rules={rules}
+                        enabledRules={enabledRules}
+                        onToggleRule={toggleRule}
+                        onEnableAll={enableAllRules}
+                        onDisableAll={disableAllRules}
+                        isLoading={rulesLoading}
+                        isUnavailable={rulesUnavailableEndpoint === endpoint}
+                        diagramType={diagramType}
+                      />
+                    </ErrorBoundary>
+                  </div>
+                </Panel>
+              </PanelGroup>
+            </Panel>
+
+            {!isMobile && (
+              <PanelResizeHandle
+                style={{
+                  width: '4px',
+                  background: 'var(--color-border)',
+                  cursor: 'col-resize',
+                  transition: 'background 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.target as HTMLElement).style.background = 'var(--color-border)'
+                }}
+              />
+            )}
+
+            {/* Right Column - Preview & Results */}
+            <Panel
+              defaultSize={isMobile ? 100 : 100 - prefs.leftPanelSize}
+              minSize={isMobile ? 50 : 25}
+              style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+            >
+              <PanelGroup
+                direction="vertical"
+                onLayout={(sizes) => {
+                  if (sizes.length >= 1) {
+                    savePrefs({ previewSize: sizes[0] })
+                  }
+                }}
+              >
+                {/* Preview */}
+                <Panel
+                  defaultSize={prefs.previewSize}
+                  minSize={25}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                    <ErrorBoundary>
+                      <DiagramPreview code={code} onError={setParseError} />
+                    </ErrorBoundary>
+                  </div>
+                </Panel>
+
+                <PanelResizeHandle
+                  style={{
+                    height: '4px',
+                    background: 'var(--color-border)',
+                    cursor: 'row-resize',
+                    transition: 'background 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
+                  }}
+                  onMouseLeave={(e) => {
+                    ;(e.target as HTMLElement).style.background = 'var(--color-border)'
+                  }}
                 />
-              </ErrorBoundary>
-            </div>
-          </div>
+
+                {/* Results Panel */}
+                <Panel
+                  defaultSize={100 - prefs.previewSize}
+                  minSize={20}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div
+                    style={{
+                      padding: '8px',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        marginBottom: '4px',
+                      }}
+                    >
+                      <ErrorBoundary>
+                        <ExportDropdown
+                          results={violations}
+                          code={code}
+                          endpoint={endpoint}
+                          enabledRules={enabledRules}
+                          rulesMetadata={rules}
+                        />
+                      </ErrorBoundary>
+                    </div>
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <ErrorBoundary>
+                        <ResultsPanel
+                          ref={resultsRef}
+                          results={violations}
+                          isAnalyzing={isAnalyzing}
+                          analyzeError={analyzeError}
+                        />
+                      </ErrorBoundary>
+                    </div>
+                  </div>
+                </Panel>
+              </PanelGroup>
+            </Panel>
+          </PanelGroup>
         </div>
-      </div>
+      )}
 
       {/* Status Bar */}
       <ErrorBoundary>
