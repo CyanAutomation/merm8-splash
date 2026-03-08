@@ -26,11 +26,11 @@ export default function ExportDropdown({
   const timeoutCancelsRef = useRef<Set<() => void>>(new Set())
 
   const scheduleTimeout = (callback: () => void, delay: number) => {
-    let timeoutId: ReturnType<typeof window.setTimeout> | null = null
+    let timeoutId: number | null = null
 
     const cancelTimeout = () => {
       if (timeoutId !== null) {
-        clearTimeout(timeoutId)
+        window.clearTimeout(timeoutId)
       }
       timeoutCancelsRef.current.delete(cancelTimeout)
     }
