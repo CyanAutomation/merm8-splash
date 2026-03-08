@@ -53,6 +53,7 @@ export default function Home() {
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
+  const dragCleanupFnsRef = useRef<Set<() => void>>(new Set())
 
   // Load rules when connected
   const loadRules = useCallback(async () => {
@@ -115,6 +116,15 @@ export default function Home() {
     return () => {
       rulesAbortControllerRef.current?.abort()
       rulesAbortControllerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    const dragCleanupFns = dragCleanupFnsRef.current
+
+    return () => {
+      dragCleanupFns.forEach((cleanup) => cleanup())
+      dragCleanupFns.clear()
     }
   }, [])
 
@@ -325,6 +335,7 @@ export default function Home() {
                 const handleMouseUp = () => {
                   document.removeEventListener('mousemove', handleMouseMove)
                   document.removeEventListener('mouseup', handleMouseUp)
+                  dragCleanupFnsRef.current.delete(handleMouseUp)
                 }
 
                 const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -336,6 +347,18 @@ export default function Home() {
 
                 document.addEventListener('mousemove', handleMouseMove)
                 document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(handleMouseUp)
+
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const delta = moveEvent.clientY - startY
+                  const containerHeight = gridContainer.clientHeight
+                  const newEditorSize = Math.max(30, Math.min(70, prefs.editorSize + (delta / containerHeight) * 100))
+                  savePrefs({ editorSize: Math.round(newEditorSize) })
+                }
+
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(cleanupDrag)
               }}
             />
 
@@ -381,6 +404,7 @@ export default function Home() {
                 const handleMouseUp = () => {
                   document.removeEventListener('mousemove', handleMouseMove)
                   document.removeEventListener('mouseup', handleMouseUp)
+                  dragCleanupFnsRef.current.delete(handleMouseUp)
                 }
 
                 const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -392,6 +416,18 @@ export default function Home() {
 
                 document.addEventListener('mousemove', handleMouseMove)
                 document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(handleMouseUp)
+
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const delta = moveEvent.clientX - startX
+                  const containerWidth = gridContainer.clientWidth
+                  const newLeftSize = Math.max(25, Math.min(75, prefs.leftPanelSize + (delta / containerWidth) * 100))
+                  savePrefs({ leftPanelSize: Math.round(newLeftSize) })
+                }
+
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(cleanupDrag)
               }}
             />
 
@@ -428,6 +464,7 @@ export default function Home() {
                 const handleMouseUp = () => {
                   document.removeEventListener('mousemove', handleMouseMove)
                   document.removeEventListener('mouseup', handleMouseUp)
+                  dragCleanupFnsRef.current.delete(handleMouseUp)
                 }
 
                 const handleMouseMove = (moveEvent: MouseEvent) => {
@@ -439,6 +476,18 @@ export default function Home() {
 
                 document.addEventListener('mousemove', handleMouseMove)
                 document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(handleMouseUp)
+
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const delta = moveEvent.clientY - startY
+                  const containerHeight = gridContainer.clientHeight
+                  const newPreviewSize = Math.max(25, Math.min(75, prefs.previewSize + (delta / containerHeight) * 100))
+                  savePrefs({ previewSize: Math.round(newPreviewSize) })
+                }
+
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(cleanupDrag)
               }}
             />
 
