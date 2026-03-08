@@ -18,8 +18,12 @@ export interface AnalyzeRequest {
   code: string
   config: {
     'schema-version': string
-    rules: RulesConfig
+    rules?: RulesConfig
   }
+}
+
+export interface AnalyzeRequestOptions {
+  useServerDefaults?: boolean
 }
 
 export interface Violation {
@@ -178,9 +182,25 @@ export async function analyzeCode(
   code: string,
   enabledRules: string[],
   rulesMetadata: Rule[],
+  options: AnalyzeRequestOptions = {},
   signal?: AbortSignal
 ): Promise<AnalyzeResponse> {
+  const request = buildAnalyzeRequest(code, enabledRules, rulesMetadata, options)
+
   const client = createApiClient(endpoint)
+  const response = await client.post<AnalyzeResponse>('/v1/analyze', request, {
+    signal,
+  })
+  return response.data
+}
+
+export function buildAnalyzeRequest(
+  code: string,
+  enabledRules: string[],
+  rulesMetadata: Rule[],
+  options: AnalyzeRequestOptions = {}
+): AnalyzeRequest {
+  const { useServerDefaults = false } = options
   const rulesConfig: RulesConfig = {}
   rulesMetadata.forEach((rule) => {
     rulesConfig[rule.id] = {
@@ -188,18 +208,18 @@ export async function analyzeCode(
     }
   })
 
-  const request: AnalyzeRequest = {
-    code,
-    config: {
-      'schema-version': 'v1',
-      rules: rulesConfig,
-    },
+  const config: AnalyzeRequest['config'] = {
+    'schema-version': 'v1',
   }
 
-  const response = await client.post<AnalyzeResponse>('/v1/analyze', request, {
-    signal,
-  })
-  return response.data
+  if (!useServerDefaults) {
+    config.rules = rulesConfig
+  }
+
+  return {
+    code,
+    config,
+  }
 }
 
 export async function analyzeCodeSarif(
@@ -209,20 +229,7 @@ export async function analyzeCodeSarif(
   rulesMetadata: Rule[]
 ): Promise<unknown> {
   const client = createApiClient(endpoint)
-  const rulesConfig: RulesConfig = {}
-  rulesMetadata.forEach((rule) => {
-    rulesConfig[rule.id] = {
-      enabled: enabledRules.includes(rule.id),
-    }
-  })
-
-  const request: AnalyzeRequest = {
-    code,
-    config: {
-      'schema-version': 'v1',
-      rules: rulesConfig,
-    },
-  }
+  const request = buildAnalyzeRequest(code, enabledRules, rulesMetadata)
 
   const response = await client.post('/v1/analyze/sarif', request)
   return response.data
