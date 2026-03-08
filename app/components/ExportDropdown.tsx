@@ -23,16 +23,26 @@ export default function ExportDropdown({
   const [copyStatus, setCopyStatus] = useState<{ text: string; tone: 'success' | 'error' } | null>(null)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
-  const timeoutIdsRef = useRef<Set<ReturnType<typeof window.setTimeout>>>(new Set())
+  const timeoutCancelsRef = useRef<Set<() => void>>(new Set())
 
   const scheduleTimeout = (callback: () => void, delay: number) => {
-    const timeoutId = window.setTimeout(() => {
-      timeoutIdsRef.current.delete(timeoutId)
+    let timeoutId: ReturnType<typeof window.setTimeout> | null = null
+
+    const cancelTimeout = () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId)
+      }
+      timeoutCancelsRef.current.delete(cancelTimeout)
+    }
+
+    timeoutCancelsRef.current.add(cancelTimeout)
+
+    timeoutId = window.setTimeout(() => {
+      timeoutCancelsRef.current.delete(cancelTimeout)
       callback()
     }, delay)
 
-    timeoutIdsRef.current.add(timeoutId)
-    return timeoutId
+    return cancelTimeout
   }
 
   const scheduleCopyStatusReset = () => scheduleTimeout(() => setCopyStatus(null), 3000)
@@ -49,11 +59,11 @@ export default function ExportDropdown({
   }, [])
 
   useEffect(() => {
-    const timeoutIds = timeoutIdsRef.current
+    const timeoutCancels = timeoutCancelsRef.current
 
     return () => {
-      timeoutIds.forEach((timeoutId) => clearTimeout(timeoutId))
-      timeoutIds.clear()
+      timeoutCancels.forEach((cancelTimeout) => cancelTimeout())
+      timeoutCancels.clear()
     }
   }, [])
 
