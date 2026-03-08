@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import axios from 'axios'
-import { analyzeCode, Violation, Rule } from './api'
+import { analyzeCode, AnalyzeRequestOptions, Violation, Rule } from './api'
 import { DEFAULT_DIAGRAM } from './constants'
 
 export interface UseDiagramAnalysisReturn {
@@ -16,7 +16,8 @@ export interface UseDiagramAnalysisReturn {
     endpoint: string,
     code: string,
     enabledRules: string[],
-    rulesMetadata: Rule[]
+    rulesMetadata: Rule[],
+    options?: AnalyzeRequestOptions
   ) => void
   cancelAnalysis: () => void
 }
@@ -52,7 +53,8 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       endpoint: string,
       newCode: string,
       enabledRules: string[],
-      rulesMetadata: Rule[]
+      rulesMetadata: Rule[],
+      options: AnalyzeRequestOptions = {}
     ) => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current)
@@ -79,6 +81,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             newCode,
             enabledRules,
             rulesMetadata,
+            options,
             controller.signal
           )
 
