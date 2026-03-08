@@ -132,6 +132,8 @@ export default function Home() {
     const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
 
     if (!canAnalyze) {
+      // Intentionally route through empty-endpoint handling to cancel in-flight analysis and ignore stale responses.
+      triggerAnalysis('', code, [], [])
       return
     }
 
