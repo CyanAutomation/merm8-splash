@@ -49,6 +49,7 @@ export default function Home() {
   const [rulesLoadedEndpoint, setRulesLoadedEndpoint] = useState<string | null>(null)
   const [rulesUnavailableEndpoint, setRulesUnavailableEndpoint] = useState<string | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
+  const [showResetConfirmation, setShowResetConfirmation] = useState(false)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
@@ -187,6 +188,11 @@ export default function Home() {
     setEnabledRules([])
   }, [])
 
+  const handleReset = useCallback(() => {
+    resetPrefs()
+    setShowResetConfirmation(false)
+  }, [resetPrefs])
+
   const parseStatus: 'idle' | 'valid' | 'error' =
     parseError ? 'error' : code.trim() ? 'valid' : 'idle'
 
@@ -224,8 +230,35 @@ export default function Home() {
             Mermaid Linter Interface
           </span>
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-          Ctrl+K · Ctrl+E · Ctrl+R
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+            Ctrl+K · Ctrl+E · Ctrl+R
+          </div>
+          <button
+            onClick={() => setShowResetConfirmation(true)}
+            style={{
+              padding: '4px 12px',
+              fontSize: '12px',
+              background: 'transparent',
+              color: 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              ;(e.target as HTMLElement).style.color = 'var(--color-accent-primary)'
+              ;(e.target as HTMLElement).style.borderColor = 'var(--color-accent-primary)'
+              ;(e.target as HTMLElement).style.background = 'rgba(10, 132, 255, 0.1)'
+            }}
+            onMouseLeave={(e) => {
+              ;(e.target as HTMLElement).style.color = 'var(--color-text-secondary)'
+              ;(e.target as HTMLElement).style.borderColor = 'var(--color-border)'
+              ;(e.target as HTMLElement).style.background = 'transparent'
+            }}
+          >
+            ↺ Reset
+          </button>
         </div>
       </div>
 
@@ -510,6 +543,107 @@ export default function Home() {
           diagramType={diagramType}
         />
       </ErrorBoundary>
+
+      {/* Reset Confirmation Dialog */}
+      {showResetConfirmation && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowResetConfirmation(false)}
+        >
+          <div
+            style={{
+              background: 'var(--color-bg-primary)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '8px',
+              padding: '24px',
+              minWidth: '320px',
+              maxWidth: '400px',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              style={{
+                margin: '0 0 8px 0',
+                fontSize: '16px',
+                fontWeight: 600,
+                color: 'var(--color-text-primary)',
+              }}
+            >
+              Reset Panel Sizes?
+            </h2>
+            <p
+              style={{
+                margin: '0 0 24px 0',
+                fontSize: '14px',
+                color: 'var(--color-text-secondary)',
+                lineHeight: '1.5',
+              }}
+            >
+              This will restore all panels to their default layout. Your diagram code and rules selection will not be affected.
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <button
+                onClick={() => setShowResetConfirmation(false)}
+                style={{
+                  padding: '6px 16px',
+                  fontSize: '12px',
+                  background: 'transparent',
+                  color: 'var(--color-text-secondary)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  ;(e.target as HTMLElement).style.background = 'var(--color-bg-secondary)'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.target as HTMLElement).style.background = 'transparent'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReset}
+                style={{
+                  padding: '6px 16px',
+                  fontSize: '12px',
+                  background: 'var(--color-accent-primary)',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  ;(e.target as HTMLElement).style.opacity = '0.9'
+                }}
+                onMouseLeave={(e) => {
+                  ;(e.target as HTMLElement).style.opacity = '1'
+                }}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
