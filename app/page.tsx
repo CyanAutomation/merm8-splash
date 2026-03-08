@@ -43,6 +43,7 @@ export default function Home() {
   const [enabledRules, setEnabledRules] = useState<string[]>([])
   const [rulesLoading, setRulesLoading] = useState(false)
   const [rulesLoadedEndpoint, setRulesLoadedEndpoint] = useState<string | null>(null)
+  const [rulesUnavailableEndpoint, setRulesUnavailableEndpoint] = useState<string | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
@@ -56,15 +57,22 @@ export default function Home() {
     latestEndpointRef.current = endpoint
 
     setRulesLoading(true)
+    setRulesUnavailableEndpoint(null)
     try {
       const fetched = await fetchRules(requestEndpoint)
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
         setRules(fetched)
         setEnabledRules(fetched.map((r) => r.id))
         setRulesLoadedEndpoint(requestEndpoint)
+        setRulesUnavailableEndpoint(null)
       }
     } catch {
-      // Rules may not be available until API is tested
+      if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
+        setRules([])
+        setEnabledRules([])
+        setRulesLoadedEndpoint(null)
+        setRulesUnavailableEndpoint(requestEndpoint)
+      }
     } finally {
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
         setRulesLoading(false)
@@ -79,6 +87,7 @@ export default function Home() {
     setEnabledRules([])
     setRulesLoading(false)
     setRulesLoadedEndpoint(null)
+    setRulesUnavailableEndpoint(null)
   }, [endpoint])
 
   useEffect(() => {
@@ -100,7 +109,8 @@ export default function Home() {
 
     const isConnected = connectionStatus === 'connected'
     const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
-    const canAnalyze = isConnected && !rulesLoading && rulesReadyForEndpoint
+    const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+    const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
 
     if (!canAnalyze) {
       return
@@ -113,6 +123,7 @@ export default function Home() {
     connectionStatus,
     rulesLoading,
     rulesLoadedEndpoint,
+    rulesUnavailableEndpoint,
     enabledRules,
     rules,
     triggerAnalysis,
@@ -246,6 +257,7 @@ export default function Home() {
                 onEnableAll={enableAllRules}
                 onDisableAll={disableAllRules}
                 isLoading={rulesLoading}
+                isUnavailable={rulesUnavailableEndpoint === endpoint}
               />
             </ErrorBoundary>
           </div>
