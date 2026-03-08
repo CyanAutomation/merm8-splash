@@ -140,7 +140,7 @@ export default function Home() {
   }, [rules])
 
   const disableAllRules = useCallback(() => {
-    setEnabledRules(() => [])
+    setEnabledRules([])
   }, [])
 
   const parseStatus: 'idle' | 'valid' | 'error' =
