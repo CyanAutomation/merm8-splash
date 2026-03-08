@@ -48,7 +48,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
         setConfigSource('URL parameter')
       } else if (validatedStored && resolved === validatedStored) {
         setConfigSource('localStorage')
-      } else if (envValue && resolved === envValue) {
+      } else if (validatedEnv && resolved === validatedEnv) {
         setConfigSource('environment variable')
       } else {
         setConfigSource('default')
