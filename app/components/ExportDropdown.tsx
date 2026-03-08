@@ -136,7 +136,9 @@ export default function ExportDropdown({
     } catch {
       success = false
     } finally {
-      scheduleTimeout(() => document.body.removeChild(textarea), 0)
+      if (textarea.parentNode) {
+        textarea.parentNode.removeChild(textarea)
+      }
     }
 
     return success
