@@ -31,3 +31,10 @@ From `package.json`:
 - Reuse shared constants from `lib/constants.ts` and theme tokens from CSS variables and `lib/theme.ts` instead of introducing one-off values.
 - Keep imports consistent with the `@/` alias in areas where that alias is already the established convention.
 - Avoid introducing unnecessary dependencies when the current Next.js/React/TypeScript stack already provides the needed functionality.
+
+## UI rules
+- Treat `design/frontend-design-guidance.md` as the authoritative visual guidance for UI work.
+- Reuse existing project color tokens and typography styles before introducing new visual tokens.
+- Keep UI changes consistent with current panel, button, and text patterns defined in `app/globals.css`.
+- Avoid introducing generic dashboard motifs or palette shifts that conflict with the design guidance document.
+- For UI changes, include before/after validation notes and add screenshots when tooling is available.
