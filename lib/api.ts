@@ -87,7 +87,7 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
         normalizedHostname === '::1' ||
         normalizedHostname === '0:0:0:0:0:0:0:1' ||
         /^f[cd][0-9a-f]{0,2}:/.test(normalizedHostname) ||
-        /^fe[89ab][0-9a-f]{0,1}:/.test(normalizedHostname)
+        /^fe[89ab][0-9a-f]:/i.test(normalizedHostname)
 
       if (
         hostname === 'localhost' ||
