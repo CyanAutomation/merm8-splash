@@ -1,7 +1,6 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect } from 'react'
-import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels'
 import ApiConfigPanel, { ApiConfigPanelRef } from './components/ApiConfigPanel'
 import DiagramEditor, { DiagramEditorRef } from './components/DiagramEditor'
 import DiagramPreview from './components/DiagramPreview'
@@ -246,189 +245,258 @@ export default function Home() {
         </ErrorBoundary>
       </div>
 
-      {/* Main Content */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <PanelGroup
-          direction={isMobile ? 'vertical' : 'horizontal'}
-          onLayout={(sizes) => {
-            if (!isMobile && sizes.length >= 1) {
-              savePrefs({ leftPanelSize: sizes[0] })
-            }
-          }}
-        >
-            {/* Left Column - Editor & Rules */}
-            <Panel
-              defaultSize={isMobile ? 100 : prefs.leftPanelSize}
-              minSize={isMobile ? 50 : 25}
-              style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-            >
-              <PanelGroup
-                direction="vertical"
-                onLayout={(sizes) => {
-                  if (sizes.length >= 1) {
-                    savePrefs({ editorSize: sizes[0] })
-                  }
-                }}
-              >
-                {/* Editor */}
-                <Panel
-                  defaultSize={prefs.editorSize}
-                  minSize={30}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                    <ErrorBoundary>
-                      <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
-                    </ErrorBoundary>
-                  </div>
-                </Panel>
+      {/* Main Content - Desktop & Mobile Layout */}
+      <div style={{ flex: 1, overflow: 'hidden', height: '100%' }}>
+        {!isMobile ? (
+          // Desktop: 2x2 grid layout
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `${prefs.leftPanelSize}% 4px 1fr`,
+              gridTemplateRows: `${prefs.editorSize}% 4px 1fr`,
+              height: '100%',
+              width: '100%',
+              gap: 0,
+            }}
+          >
+            {/* Editor Panel - Top Left */}
+            <div style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
+              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                <ErrorBoundary>
+                  <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
+                </ErrorBoundary>
+              </div>
+            </div>
 
-                <PanelResizeHandle
-                  style={{
-                    height: '4px',
-                    background: 'var(--color-border)',
-                    cursor: 'row-resize',
-                    transition: 'background 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.target as HTMLElement).style.background = 'var(--color-border)'
-                  }}
-                />
+            {/* Top Horizontal Divider - Left Side */}
+            <div
+              style={{
+                gridColumn: 1,
+                gridRow: 2,
+                background: 'var(--color-border)',
+                cursor: 'row-resize',
+                transition: 'background 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.target as HTMLElement).style.background = 'var(--color-border)'
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                const startY = e.clientY
+                const gridContainer = e.currentTarget.parentElement
+                if (!gridContainer) return
 
-                {/* Rules Panel */}
-                <Panel
-                  defaultSize={100 - prefs.editorSize}
-                  minSize={15}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                    <ErrorBoundary>
-                      <RulesPanel
-                        rules={rules}
-                        enabledRules={enabledRules}
-                        onToggleRule={toggleRule}
-                        onEnableAll={enableAllRules}
-                        onDisableAll={disableAllRules}
-                        isLoading={rulesLoading}
-                        isUnavailable={rulesUnavailableEndpoint === endpoint}
-                        diagramType={diagramType}
-                      />
-                    </ErrorBoundary>
-                  </div>
-                </Panel>
-              </PanelGroup>
-            </Panel>
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove)
+                  document.removeEventListener('mouseup', handleMouseUp)
+                }
 
-            {!isMobile && (
-              <PanelResizeHandle
-                style={{
-                  width: '4px',
-                  background: 'var(--color-border)',
-                  cursor: 'col-resize',
-                  transition: 'background 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.target as HTMLElement).style.background = 'var(--color-border)'
-                }}
-              />
-            )}
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const delta = moveEvent.clientY - startY
+                  const containerHeight = gridContainer.clientHeight
+                  const newEditorSize = Math.max(30, Math.min(70, prefs.editorSize + (delta / containerHeight) * 100))
+                  savePrefs({ editorSize: Math.round(newEditorSize) })
+                }
 
-            {/* Right Column - Preview & Results */}
-            <Panel
-              defaultSize={isMobile ? 100 : 100 - prefs.leftPanelSize}
-              minSize={isMobile ? 50 : 25}
-              style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-            >
-              <PanelGroup
-                direction="vertical"
-                onLayout={(sizes) => {
-                  if (sizes.length >= 1) {
-                    savePrefs({ previewSize: sizes[0] })
-                  }
-                }}
-              >
-                {/* Preview */}
-                <Panel
-                  defaultSize={prefs.previewSize}
-                  minSize={25}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                    <ErrorBoundary>
-                      <DiagramPreview code={code} onError={setParseError} />
-                    </ErrorBoundary>
-                  </div>
-                </Panel>
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+              }}
+            />
 
-                <PanelResizeHandle
-                  style={{
-                    height: '4px',
-                    background: 'var(--color-border)',
-                    cursor: 'row-resize',
-                    transition: 'background 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.target as HTMLElement).style.background = 'var(--color-border)'
-                  }}
-                />
+            {/* Rules Panel - Bottom Left */}
+            <div style={{ overflow: 'hidden', gridColumn: 1, gridRow: 3 }}>
+              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                <ErrorBoundary>
+                  <RulesPanel
+                    rules={rules}
+                    enabledRules={enabledRules}
+                    onToggleRule={toggleRule}
+                    onEnableAll={enableAllRules}
+                    onDisableAll={disableAllRules}
+                    isLoading={rulesLoading}
+                    isUnavailable={rulesUnavailableEndpoint === endpoint}
+                    diagramType={diagramType}
+                  />
+                </ErrorBoundary>
+              </div>
+            </div>
 
-                {/* Results Panel */}
-                <Panel
-                  defaultSize={100 - prefs.previewSize}
-                  minSize={20}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div
-                    style={{
-                      padding: '8px',
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'flex-end',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      <ErrorBoundary>
-                        <ExportDropdown
-                          results={violations}
-                          code={code}
-                          endpoint={endpoint}
-                          enabledRules={enabledRules}
-                          rulesMetadata={rules}
-                        />
-                      </ErrorBoundary>
-                    </div>
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                      <ErrorBoundary>
-                        <ResultsPanel
-                          ref={resultsRef}
-                          results={violations}
-                          isAnalyzing={isAnalyzing}
-                          analyzeError={analyzeError}
-                        />
-                      </ErrorBoundary>
-                    </div>
-                  </div>
-                </Panel>
-              </PanelGroup>
-            </Panel>
-          </PanelGroup>
-        </div>
+            {/* Vertical Divider */}
+            <div
+              style={{
+                gridColumn: 2,
+                gridRow: '1 / 4',
+                background: 'var(--color-border)',
+                cursor: 'col-resize',
+                transition: 'background 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.target as HTMLElement).style.background = 'var(--color-border)'
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                const startX = e.clientX
+                const gridContainer = e.currentTarget.parentElement
+                if (!gridContainer) return
+
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove)
+                  document.removeEventListener('mouseup', handleMouseUp)
+                }
+
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const delta = moveEvent.clientX - startX
+                  const containerWidth = gridContainer.clientWidth
+                  const newLeftSize = Math.max(25, Math.min(75, prefs.leftPanelSize + (delta / containerWidth) * 100))
+                  savePrefs({ leftPanelSize: Math.round(newLeftSize) })
+                }
+
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+              }}
+            />
+
+            {/* Preview Panel - Top Right */}
+            <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
+              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                <ErrorBoundary>
+                  <DiagramPreview code={code} onError={setParseError} />
+                </ErrorBoundary>
+              </div>
+            </div>
+
+            {/* Bottom Horizontal Divider - Right Side */}
+            <div
+              style={{
+                gridColumn: 3,
+                gridRow: 2,
+                background: 'var(--color-border)',
+                cursor: 'row-resize',
+                transition: 'background 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
+              }}
+              onMouseLeave={(e) => {
+                ;(e.target as HTMLElement).style.background = 'var(--color-border)'
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                const startY = e.clientY
+                const gridContainer = e.currentTarget.parentElement
+                if (!gridContainer) return
+
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove)
+                  document.removeEventListener('mouseup', handleMouseUp)
+                }
+
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const delta = moveEvent.clientY - startY
+                  const containerHeight = gridContainer.clientHeight
+                  const newPreviewSize = Math.max(25, Math.min(75, prefs.previewSize + (delta / containerHeight) * 100))
+                  savePrefs({ previewSize: Math.round(newPreviewSize) })
+                }
+
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+              }}
+            />
+
+            {/* Results Panel - Bottom Right */}
+            <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: 3 }}>
+              <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
+                  <ErrorBoundary>
+                    <ExportDropdown
+                      results={violations}
+                      code={code}
+                      endpoint={endpoint}
+                      enabledRules={enabledRules}
+                      rulesMetadata={rules}
+                    />
+                  </ErrorBoundary>
+                </div>
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  <ErrorBoundary>
+                    <ResultsPanel
+                      ref={resultsRef}
+                      results={violations}
+                      isAnalyzing={isAnalyzing}
+                      analyzeError={analyzeError}
+                    />
+                  </ErrorBoundary>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Mobile: Vertical stack
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '4px', padding: '4px' }}>
+            <div style={{ flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                <ErrorBoundary>
+                  <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
+                </ErrorBoundary>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                <ErrorBoundary>
+                  <RulesPanel
+                    rules={rules}
+                    enabledRules={enabledRules}
+                    onToggleRule={toggleRule}
+                    onEnableAll={enableAllRules}
+                    onDisableAll={disableAllRules}
+                    isLoading={rulesLoading}
+                    isUnavailable={rulesUnavailableEndpoint === endpoint}
+                    diagramType={diagramType}
+                  />
+                </ErrorBoundary>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
+              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+                <ErrorBoundary>
+                  <DiagramPreview code={code} onError={setParseError} />
+                </ErrorBoundary>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
+                  <ErrorBoundary>
+                    <ExportDropdown
+                      results={violations}
+                      code={code}
+                      endpoint={endpoint}
+                      enabledRules={enabledRules}
+                      rulesMetadata={rules}
+                    />
+                  </ErrorBoundary>
+                </div>
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  <ErrorBoundary>
+                    <ResultsPanel
+                      ref={resultsRef}
+                      results={violations}
+                      isAnalyzing={isAnalyzing}
+                      analyzeError={analyzeError}
+                    />
+                  </ErrorBoundary>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Status Bar */}
       <ErrorBoundary>
