@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
+import { parseDiagramType, filterRulesByDiagramType } from './diagramTypes'
 
 export interface Rule {
   id: string
@@ -201,10 +202,17 @@ export function buildAnalyzeRequest(
   options: AnalyzeRequestOptions = {}
 ): AnalyzeRequest {
   const { useServerDefaults = false } = options
+
+  // Parse diagram type from code to filter applicable rules
+  const detectedDiagramType = parseDiagramType(code)
+
+  // Filter enabledRules to only include those applicable to the detected diagram type
+  const filteredRules = filterRulesByDiagramType(enabledRules, detectedDiagramType)
+
   const rulesConfig: RulesConfig = {}
   rulesMetadata.forEach((rule) => {
     rulesConfig[rule.id] = {
-      enabled: enabledRules.includes(rule.id),
+      enabled: filteredRules.includes(rule.id),
     }
   })
 

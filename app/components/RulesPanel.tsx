@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Rule } from '@/lib/api'
+import { getApplicableRules } from '@/lib/diagramTypes'
 
 interface RulesPanelProps {
   rules: Rule[]
@@ -11,6 +12,7 @@ interface RulesPanelProps {
   onDisableAll: () => void
   isLoading: boolean
   isUnavailable: boolean
+  diagramType?: string | null
 }
 
 export default function RulesPanel({
@@ -21,8 +23,15 @@ export default function RulesPanel({
   onDisableAll,
   isLoading,
   isUnavailable,
+  diagramType,
 }: RulesPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
+
+  // Filter rules to only show those applicable to the detected diagram type
+  const allRuleIds = rules.map((r) => r.id)
+  const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
+  const displayedRules = rules.filter((rule) => applicableRuleIds.has(rule.id))
+  const applicableEnabledRules = enabledRules.filter((id) => applicableRuleIds.has(id))
 
   const severityColor = (severity: string) => {
     switch (severity) {
@@ -56,7 +65,7 @@ export default function RulesPanel({
               marginLeft: '4px',
             }}
           >
-            {enabledRules.length}/{rules.length}
+            {applicableEnabledRules.length}/{displayedRules.length}
           </span>
         </div>
         {!collapsed && (
@@ -84,7 +93,7 @@ export default function RulesPanel({
         <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '8px' }}>
           {isUnavailable
             ? 'Analysis uses server defaults for linting.'
-            : rules.length > 0
+            : displayedRules.length > 0
               ? 'Analysis uses your selected rules.'
               : 'Connect and test API to fetch rules metadata.'}
         </div>
@@ -100,12 +109,12 @@ export default function RulesPanel({
             <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>
               Rules metadata unavailable for this API endpoint.
             </div>
-          ) : rules.length === 0 ? (
+          ) : displayedRules.length === 0 ? (
             <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>
               No rules loaded yet. Connect and test API to fetch rules metadata.
             </div>
           ) : (
-            rules.map((rule) => (
+            displayedRules.map((rule) => (
               <div
                 key={rule.id}
                 style={{
