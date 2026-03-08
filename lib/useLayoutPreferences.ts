@@ -49,10 +49,16 @@ export function useLayoutPreferences() {
 
   // Save preferences to localStorage
   const savePrefs = (newPrefs: Partial<LayoutPreferences>) => {
-    const updated = { ...prefs, ...newPrefs }
-    setPrefs(updated)
+    setPrefs((prev) => {
+      const updated = { ...prev, ...newPrefs }
+      return updated
+    })
+
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+      setPrefs((prev) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(prev))
+        return prev
+      })
     } catch (err) {
       console.debug('Failed to save layout preferences:', err)
     }
