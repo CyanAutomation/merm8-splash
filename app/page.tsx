@@ -98,7 +98,8 @@ export default function Home() {
 
   // Trigger analysis when code, endpoint, or rules change
   useEffect(() => {
-    if (!code) {
+    if (!code.trim()) {
+      triggerAnalysis('', code, [], [])
       return
     }
 
