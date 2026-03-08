@@ -92,6 +92,15 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
     if (process.env.NODE_ENV === 'production') {
       const hostname = parsed.hostname.toLowerCase()
       const normalizedHostname = hostname.replace(/^[\[]|[\]]$/g, '').split('%')[0]
+      const isBlockedIpv4Host = (value: string): boolean =>
+        value === '127.0.0.1' ||
+        value === '0.0.0.0' ||
+        value.startsWith('192.168.') ||
+        value.startsWith('10.') ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(value) ||
+        value.startsWith('169.254.')
+      const mappedIpv4Match = normalizedHostname.match(/^::ffff:((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)
+      const mappedIpv4 = mappedIpv4Match?.[1]
       const isBlockedIpv6Host =
         /^(0{0,4}:){0,7}(0{0,4})?:0{0,3}1$/.test(normalizedHostname) ||
         /^f[cd][0-9a-f]{2}:/i.test(normalizedHostname) ||
@@ -99,12 +108,8 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
 
       if (
         hostname === 'localhost' ||
-        hostname === '127.0.0.1' ||
-        hostname === '0.0.0.0' ||
-        hostname.startsWith('192.168.') ||
-        hostname.startsWith('10.') ||
-        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname) ||
-        hostname.startsWith('169.254.') ||
+        isBlockedIpv4Host(normalizedHostname) ||
+        (mappedIpv4 !== undefined && isBlockedIpv4Host(mappedIpv4)) ||
         isBlockedIpv6Host
       ) {
         return {
