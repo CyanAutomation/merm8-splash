@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useImperativeHandle, forwardRef } from "react";
+import { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
 import { Violation } from "@/lib/api";
 
 interface ResultsPanelProps {
@@ -39,6 +39,20 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     const [sortBy, setSortBy] = useState<"severity" | "line">("severity");
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const [copyErrorKey, setCopyErrorKey] = useState<string | null>(null);
+    const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const copyErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(
+      () => () => {
+        if (copiedTimeoutRef.current) {
+          clearTimeout(copiedTimeoutRef.current);
+        }
+        if (copyErrorTimeoutRef.current) {
+          clearTimeout(copyErrorTimeoutRef.current);
+        }
+      },
+      [],
+    );
 
     useImperativeHandle(ref, () => ({
       focus: () => panelRef.current?.focus(),
@@ -92,14 +106,37 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
       }
 
       if (copied) {
+        if (copiedTimeoutRef.current) {
+          clearTimeout(copiedTimeoutRef.current);
+        }
+        if (copyErrorTimeoutRef.current) {
+          clearTimeout(copyErrorTimeoutRef.current);
+          copyErrorTimeoutRef.current = null;
+        }
+
         setCopiedKey(key);
         setCopyErrorKey(null);
-        setTimeout(() => setCopiedKey(null), 1500);
+        copiedTimeoutRef.current = setTimeout(() => {
+          setCopiedKey((current) => (current === key ? null : current));
+          copiedTimeoutRef.current = null;
+        }, 1500);
         return;
       }
 
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+        copiedTimeoutRef.current = null;
+      }
+      if (copyErrorTimeoutRef.current) {
+        clearTimeout(copyErrorTimeoutRef.current);
+      }
+
+      // Removed setCopiedKey(null) to avoid clearing other rows' success indicators
       setCopyErrorKey(key);
-      setTimeout(() => setCopyErrorKey(null), 2000);
+      copyErrorTimeoutRef.current = setTimeout(() => {
+        setCopyErrorKey((current) => (current === key ? null : current));
+        copyErrorTimeoutRef.current = null;
+      }, 2000);
     };
 
     return (
