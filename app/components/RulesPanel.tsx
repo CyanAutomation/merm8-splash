@@ -10,6 +10,7 @@ interface RulesPanelProps {
   onEnableAll: () => void
   onDisableAll: () => void
   isLoading: boolean
+  isUnavailable: boolean
 }
 
 export default function RulesPanel({
@@ -19,6 +20,7 @@ export default function RulesPanel({
   onEnableAll,
   onDisableAll,
   isLoading,
+  isUnavailable,
 }: RulesPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
 
@@ -83,9 +85,13 @@ export default function RulesPanel({
             <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>
               ⠋ Loading rules...
             </div>
+          ) : isUnavailable ? (
+            <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>
+              Rules endpoint unavailable for this API endpoint. Analysis will run without rule metadata.
+            </div>
           ) : rules.length === 0 ? (
             <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>
-              No rules loaded. Test API connection to fetch rules.
+              No rules loaded yet. Connect and test API to fetch rules metadata.
             </div>
           ) : (
             rules.map((rule) => (
