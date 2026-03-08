@@ -68,7 +68,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
       } catch {
         success = false;
       } finally {
-        setTimeout(() => document.body.removeChild(textarea), 0);
+        document.body.removeChild(textarea);
       }
 
       return success;
