@@ -401,15 +401,22 @@ export default function Home() {
                 const gridContainer = e.currentTarget.parentElement
                 if (!gridContainer) return
 
-                const cleanupDrag = () => {
+                const handleMouseUp = () => {
                   document.removeEventListener('mousemove', handleMouseMove)
                   document.removeEventListener('mouseup', handleMouseUp)
+                  dragCleanupFnsRef.current.delete(handleMouseUp)
                 }
 
-                const handleMouseUp = () => {
-                  cleanupDrag()
-                  dragCleanupFnsRef.current.delete(cleanupDrag)
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const delta = moveEvent.clientX - startX
+                  const containerWidth = gridContainer.clientWidth
+                  const newLeftSize = Math.max(25, Math.min(75, prefs.leftPanelSize + (delta / containerWidth) * 100))
+                  savePrefs({ leftPanelSize: Math.round(newLeftSize) })
                 }
+
+                document.addEventListener('mousemove', handleMouseMove)
+                document.addEventListener('mouseup', handleMouseUp)
+                dragCleanupFnsRef.current.add(handleMouseUp)
 
                 const handleMouseMove = (moveEvent: MouseEvent) => {
                   const delta = moveEvent.clientX - startX
