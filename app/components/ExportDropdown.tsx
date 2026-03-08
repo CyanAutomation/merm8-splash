@@ -24,6 +24,8 @@ export default function ExportDropdown({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const timeoutCancelsRef = useRef<Set<() => void>>(new Set())
+  const copyStatusCancelRef = useRef<(() => void) | null>(null)
+  const copyingCancelRef = useRef<(() => void) | null>(null)
 
   const scheduleTimeout = (callback: () => void, delay: number) => {
     let timeoutId: number | null = null
@@ -45,8 +47,29 @@ export default function ExportDropdown({
     return cancelTimeout
   }
 
-  const scheduleCopyStatusReset = () => scheduleTimeout(() => setCopyStatus(null), 3000)
-  const scheduleCopyingReset = () => scheduleTimeout(() => setCopying(null), 1500)
+  const scheduleCopyStatusReset = () => {
+    copyStatusCancelRef.current?.()
+    copyStatusCancelRef.current = null
+
+    const cancelTimeout = scheduleTimeout(() => {
+      copyStatusCancelRef.current = null
+      setCopyStatus(null)
+    }, 3000)
+
+    copyStatusCancelRef.current = cancelTimeout
+  }
+
+  const scheduleCopyingReset = () => {
+    copyingCancelRef.current?.()
+    copyingCancelRef.current = null
+
+    const cancelTimeout = scheduleTimeout(() => {
+      copyingCancelRef.current = null
+      setCopying(null)
+    }, 1500)
+
+    copyingCancelRef.current = cancelTimeout
+  }
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -62,6 +85,10 @@ export default function ExportDropdown({
     const timeoutCancels = timeoutCancelsRef.current
 
     return () => {
+      copyStatusCancelRef.current?.()
+      copyStatusCancelRef.current = null
+      copyingCancelRef.current?.()
+      copyingCancelRef.current = null
       timeoutCancels.forEach((cancelTimeout) => cancelTimeout())
       timeoutCancels.clear()
     }
