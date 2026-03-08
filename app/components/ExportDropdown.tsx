@@ -166,9 +166,6 @@ export default function ExportDropdown({
   }
 
   const exportText = async () => {
-    if (isExporting) {
-      return
-    }
 
     const lines = results.map(
       (v) =>
