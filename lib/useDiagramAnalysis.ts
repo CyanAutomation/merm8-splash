@@ -86,6 +86,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             const message = err instanceof Error ? err.message : 'Analysis failed'
             setAnalyzeError(message)
             setViolations([])
+            setDiagramType(null)
           }
         } finally {
           if (seq === requestSeqRef.current) {
