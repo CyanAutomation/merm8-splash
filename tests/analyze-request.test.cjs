@@ -320,3 +320,24 @@ test('analyzeCode normalizes missing data payload to UI-safe defaults', async ()
     axios.create = originalCreate
   }
 })
+
+test('validateApiEndpoint accepts endpoint without credentials', () => {
+  const { validateApiEndpoint } = loadApiModule()
+
+  const result = validateApiEndpoint('https://api.merm8.app/v1')
+
+  assert.equal(result.valid, true)
+  assert.equal(result.message, undefined)
+})
+
+test('validateApiEndpoint rejects endpoint with username/password credentials', () => {
+  const { validateApiEndpoint } = loadApiModule()
+
+  const usernamePasswordResult = validateApiEndpoint('https://user:secret@api.merm8.app')
+  const usernameOnlyResult = validateApiEndpoint('https://user@api.merm8.app')
+
+  assert.equal(usernamePasswordResult.valid, false)
+  assert.equal(usernamePasswordResult.message, 'Endpoint must not include credentials.')
+  assert.equal(usernameOnlyResult.valid, false)
+  assert.equal(usernameOnlyResult.message, 'Endpoint must not include credentials.')
+})
