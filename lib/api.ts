@@ -140,6 +140,11 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
 
   try {
     const parsed = new URL(url)
+
+    if (parsed.username || parsed.password) {
+      return { valid: false, message: 'Endpoint must not include credentials.' }
+    }
+
     // Only allow http/https protocols
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return { valid: false, message: 'Endpoint must start with http:// or https://.' }
