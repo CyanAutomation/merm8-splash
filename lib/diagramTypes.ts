@@ -48,7 +48,7 @@ export function parseDiagramType(code: string): string | null {
           if (normalized.startsWith('classdiagram')) return 'class'
           if (normalized.startsWith('erdiagram')) return 'er'
           if (isStateDiagramDeclaration(normalized)) return 'state'
-          if (normalized.startsWith('graph ') || normalized.startsWith('flowchart ')) return 'flowchart'
+          if (isFlowchartDeclaration(normalized)) return 'flowchart'
         }
       }
       continue
@@ -71,7 +71,7 @@ export function parseDiagramType(code: string): string | null {
       if (normalized.startsWith('classdiagram')) return 'class'
       if (normalized.startsWith('erdiagram')) return 'er'
       if (isStateDiagramDeclaration(normalized)) return 'state'
-      if (normalized.startsWith('graph ') || normalized.startsWith('flowchart ')) return 'flowchart'
+      if (isFlowchartDeclaration(normalized)) return 'flowchart'
       continue
     }
 
@@ -95,7 +95,7 @@ export function parseDiagramType(code: string): string | null {
       return 'state'
     }
     // Flowchart/Graph detection (graph TD, flowchart LR, etc.)
-    if (normalized.startsWith('graph ') || normalized.startsWith('flowchart ')) {
+    if (isFlowchartDeclaration(normalized)) {
       return 'flowchart'
     }
 
@@ -109,6 +109,10 @@ export function parseDiagramType(code: string): string | null {
 
 function isStateDiagramDeclaration(normalized: string): boolean {
   return /^statediagram(?:-v2)?(?:\s|$)/.test(normalized)
+}
+
+function isFlowchartDeclaration(normalized: string): boolean {
+  return /^(?:graph|flowchart)(?:\s|$)/.test(normalized)
 }
 
 /**
