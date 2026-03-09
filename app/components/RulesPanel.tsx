@@ -75,14 +75,14 @@ export default function RulesPanel({
               style={{ fontSize: '12px', padding: '4px 12px' }}
               onClick={onEnableAll}
             >
-              All
+              All visible
             </button>
             <button
               className="btn"
               style={{ fontSize: '12px', padding: '4px 12px' }}
               onClick={onDisableAll}
             >
-              None
+              None visible
             </button>
           </div>
         )}

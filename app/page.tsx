@@ -14,6 +14,7 @@ import { useDiagramAnalysis } from '@/lib/useDiagramAnalysis'
 import { useKeyboardShortcuts } from '@/lib/keyboard'
 import { useLayoutPreferences } from '@/lib/useLayoutPreferences'
 import { fetchRules, Rule } from '@/lib/api'
+import { getApplicableRules } from '@/lib/diagramTypes'
 
 export default function Home() {
   const apiConfigRef = useRef<ApiConfigPanelRef>(null)
@@ -191,12 +192,26 @@ export default function Home() {
   }, [])
 
   const enableAllRules = useCallback(() => {
-    setEnabledRules(rules.map((r) => r.id))
-  }, [rules])
+    const allRuleIds = rules.map((rule) => rule.id)
+    const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
+
+    setEnabledRules((prev) => {
+      const merged = new Set(prev)
+      allRuleIds.forEach((ruleId) => {
+        if (applicableRuleIds.has(ruleId)) {
+          merged.add(ruleId)
+        }
+      })
+      return Array.from(merged)
+    })
+  }, [diagramType, rules])
 
   const disableAllRules = useCallback(() => {
-    setEnabledRules([])
-  }, [])
+    const allRuleIds = rules.map((rule) => rule.id)
+    const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
+
+    setEnabledRules((prev) => prev.filter((ruleId) => !applicableRuleIds.has(ruleId)))
+  }, [diagramType, rules])
 
   const handleReset = useCallback(() => {
     resetPrefs()
