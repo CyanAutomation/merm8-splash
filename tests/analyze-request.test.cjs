@@ -215,3 +215,75 @@ test('buildAnalyzeRequest detects diagram type after multi-line Mermaid init blo
   assert.equal(request.config.rules['max-depth'].enabled, false)
   assert.equal(request.config.rules['no-empty-label'].enabled, true)
 })
+
+
+test('analyzeCode normalizes missing results to empty array', async () => {
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({
+      data: { diagram_type: 'flowchart' },
+    }),
+  })
+
+  try {
+    const { analyzeCode } = loadApiModule()
+    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+
+    assert.ok(Array.isArray(response.results))
+    assert.equal(response.results.length, 0)
+    assert.equal(response.diagram_type, 'flowchart')
+  } finally {
+    axios.create = originalCreate
+  }
+})
+
+test('analyzeCode normalizes null and non-array results without throwing', async () => {
+  const axios = require('axios')
+  const originalCreate = axios.create
+  const payloads = [
+    { data: { diagram_type: 'sequence', results: null } },
+    { data: { diagram_type: 'class', results: 'not-an-array' } },
+  ]
+  let index = 0
+
+  axios.create = () => ({
+    post: async () => payloads[index++],
+  })
+
+  try {
+    const { analyzeCode } = loadApiModule()
+
+    const first = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+    const second = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+
+    assert.equal(first.results.length, 0)
+    assert.equal(second.results.length, 0)
+    assert.ok(Array.isArray(first.results))
+    assert.ok(Array.isArray(second.results))
+  } finally {
+    axios.create = originalCreate
+  }
+})
+
+test('analyzeCode normalizes missing data payload to UI-safe defaults', async () => {
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({}),
+  })
+
+  try {
+    const { analyzeCode } = loadApiModule()
+    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+
+    assert.ok(Array.isArray(response.results))
+    assert.equal(response.results.length, 0)
+    assert.equal(response.diagram_type, '')
+    assert.equal(response.results.length, (Array.isArray(response.results) ? response.results.length : 0))
+  } finally {
+    axios.create = originalCreate
+  }
+})
