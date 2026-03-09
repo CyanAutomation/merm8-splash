@@ -332,17 +332,17 @@ export default function Home() {
                 const gridContainer = e.currentTarget.parentElement
                 if (!gridContainer) return
 
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove)
-                  document.removeEventListener('mouseup', handleMouseUp)
-                  dragCleanupFnsRef.current.delete(handleMouseUp)
-                }
-
                 const handleMouseMove = (moveEvent: MouseEvent) => {
                   const delta = moveEvent.clientY - startY
                   const containerHeight = gridContainer.clientHeight
                   const newEditorSize = Math.max(30, Math.min(70, prefs.editorSize + (delta / containerHeight) * 100))
                   savePrefs({ editorSize: Math.round(newEditorSize) })
+                }
+
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove)
+                  document.removeEventListener('mouseup', handleMouseUp)
+                  dragCleanupFnsRef.current.delete(handleMouseUp)
                 }
 
                 document.addEventListener('mousemove', handleMouseMove)
@@ -390,17 +390,17 @@ export default function Home() {
                 const gridContainer = e.currentTarget.parentElement
                 if (!gridContainer) return
 
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove)
-                  document.removeEventListener('mouseup', handleMouseUp)
-                  dragCleanupFnsRef.current.delete(handleMouseUp)
-                }
-
                 const handleMouseMove = (moveEvent: MouseEvent) => {
                   const delta = moveEvent.clientX - startX
                   const containerWidth = gridContainer.clientWidth
                   const newLeftSize = Math.max(25, Math.min(75, prefs.leftPanelSize + (delta / containerWidth) * 100))
                   savePrefs({ leftPanelSize: Math.round(newLeftSize) })
+                }
+
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove)
+                  document.removeEventListener('mouseup', handleMouseUp)
+                  dragCleanupFnsRef.current.delete(handleMouseUp)
                 }
 
                 document.addEventListener('mousemove', handleMouseMove)
@@ -439,17 +439,17 @@ export default function Home() {
                 const gridContainer = e.currentTarget.parentElement
                 if (!gridContainer) return
 
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove)
-                  document.removeEventListener('mouseup', handleMouseUp)
-                  dragCleanupFnsRef.current.delete(handleMouseUp)
-                }
-
                 const handleMouseMove = (moveEvent: MouseEvent) => {
                   const delta = moveEvent.clientY - startY
                   const containerHeight = gridContainer.clientHeight
                   const newPreviewSize = Math.max(25, Math.min(75, prefs.previewSize + (delta / containerHeight) * 100))
                   savePrefs({ previewSize: Math.round(newPreviewSize) })
+                }
+
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove)
+                  document.removeEventListener('mouseup', handleMouseUp)
+                  dragCleanupFnsRef.current.delete(handleMouseUp)
                 }
 
                 document.addEventListener('mousemove', handleMouseMove)
