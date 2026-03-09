@@ -89,7 +89,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     };
 
     const copyViolation = async (v: Violation, key: string) => {
-      const text = `[${v.severity}] ${v.rule_id}: ${v.message}${v.line ? ` (line ${v.line})` : ""}`;
+      const text = `[${v.severity}] ${v.rule_id}: ${v.message}${v.line != null ? ` (line ${v.line})` : ""}`;
 
       const hasClipboardApi = typeof navigator !== "undefined" && !!navigator.clipboard?.writeText;
       let copied = false;
@@ -290,9 +290,9 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                       key={key}
                       style={{
                         borderBottom: "1px solid rgba(68,68,68,0.3)",
-                        cursor: v.line ? "pointer" : "default",
+                        cursor: v.line != null ? "pointer" : "default",
                       }}
-                      onClick={() => v.line && onJumpToLine?.(v.line)}
+                      onClick={() => v.line != null && onJumpToLine?.(v.line)}
                     >
                       <td
                         style={{
