@@ -125,6 +125,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
       if (containerRef.current) containerRef.current.innerHTML = ''
       setRenderError(null)
       onError?.(null)
+      setIsRendering(false)
       return
     }
 
