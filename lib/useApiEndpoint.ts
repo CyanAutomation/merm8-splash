@@ -103,12 +103,12 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       setConnectionStatus('connected')
       setStatusMessage('Connection successful.')
     } catch {
-      if (controller.signal.aborted) {
-        return
-      }
-      if (!isCurrentRequest()) {
-        return
-      }
+    if (controller.signal.aborted) {
+      return
+    }
+    if (!isCurrentRequest()) {
+      return
+    }
 
       setConnectionStatus('error')
       setStatusMessage('Could not reach endpoint. Check URL and server status.')
