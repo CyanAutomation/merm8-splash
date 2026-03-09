@@ -17,6 +17,19 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
   const nestedRafIdRef = useRef<number | null>(null)
   const renderSequenceRef = useRef(0)
 
+  const removeMermaidFallbackNodes = (renderId?: string) => {
+    if (typeof document === 'undefined') return
+
+    const selectors = [
+      '[id^="dmermaid-"]',
+      renderId ? `#d${renderId}` : null,
+    ].filter(Boolean) as string[]
+
+    for (const selector of selectors) {
+      document.querySelectorAll(selector).forEach((node) => node.remove())
+    }
+  }
+
   const clearPendingFitRaf = () => {
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current)
@@ -123,6 +136,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
         const mermaid = (await import('mermaid')).default
         mermaid.initialize({
           startOnLoad: false,
+          suppressErrorRendering: true,
           theme: 'dark',
           darkMode: true,
           themeVariables: {
@@ -137,6 +151,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
         })
 
         const id = `mermaid-${++idCounterRef.current}`
+        removeMermaidFallbackNodes(id)
         const { svg } = await mermaid.render(id, code)
 
         if (!cancelled) {
@@ -164,6 +179,8 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
           const message = err instanceof Error ? err.message : 'Render error'
           setRenderError(message)
           onError?.(message)
+          removeMermaidFallbackNodes(`mermaid-${idCounterRef.current}`)
+          removeMermaidFallbackNodes()
           if (containerRef.current) containerRef.current.innerHTML = ''
         }
       } finally {
