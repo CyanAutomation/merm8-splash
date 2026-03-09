@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Violation, analyzeCodeSarif, Rule } from '@/lib/api'
+import { Violation, analyzeCodeSarif, Rule, validateApiEndpoint } from '@/lib/api'
 
 interface ExportDropdownProps {
   results: Violation[]
@@ -277,32 +277,42 @@ export default function ExportDropdown({
   }
 
   const exportSarif = async () => {
+    const fallback = {
+      version: '2.1.0',
+      $schema: 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0.json',
+      runs: [{
+        tool: { driver: { name: 'merm8', version: '1.0.0', rules: [] } },
+        results: results.map((v) => ({
+          ruleId: v.rule_id,
+          level: v.severity === 'error' ? 'error' : v.severity === 'warning' ? 'warning' : 'note',
+          message: { text: v.message },
+          locations: v.line ? [{
+            physicalLocation: {
+              artifactLocation: { uri: 'diagram.mmd' },
+              region: { startLine: v.line },
+            },
+          }] : [],
+        })),
+      }],
+    }
+
+    const endpointValidation = validateApiEndpoint(endpoint)
 
     try {
+      if (!endpointValidation.valid) {
+        downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
+        setCopyStatus({ text: 'Endpoint invalid; exported local fallback SARIF.', tone: 'success' })
+        scheduleCopyStatusReset()
+        return
+      }
+
       const sarif = await analyzeCodeSarif(endpoint, code, enabledRules, rulesMetadata)
       downloadFile(JSON.stringify(sarif, null, 2), 'merm8-analysis.sarif.json', 'application/json')
     } catch {
-      const fallback = {
-        version: '2.1.0',
-        $schema: 'https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0.json',
-        runs: [{
-          tool: { driver: { name: 'merm8', version: '1.0.0', rules: [] } },
-          results: results.map((v) => ({
-            ruleId: v.rule_id,
-            level: v.severity === 'error' ? 'error' : v.severity === 'warning' ? 'warning' : 'note',
-            message: { text: v.message },
-            locations: v.line ? [{
-              physicalLocation: {
-                artifactLocation: { uri: 'diagram.mmd' },
-                region: { startLine: v.line },
-              },
-            }] : [],
-          })),
-        }],
-      }
       downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
+    } finally {
+      setOpen(false)
     }
-    setOpen(false)
   }
 
   return (
