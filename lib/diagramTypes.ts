@@ -44,9 +44,23 @@ export function parseDiagramType(code: string): string | null {
     }
 
     if (trimmed.startsWith('%%{')) {
-      if (!trimmed.includes('}%%')) {
+      const directiveEndIndex = trimmed.indexOf('}%%')
+      if (directiveEndIndex === -1) {
         inDirectiveBlock = true
+        continue
       }
+      // Process content after single-line directive
+      const remaining = trimmed.substring(directiveEndIndex + 3).trim()
+      if (!remaining || remaining.startsWith('%%')) {
+        continue
+      }
+      // Check remaining content for diagram type
+      const normalized = remaining.toLowerCase()
+      if (normalized.startsWith('sequencediagram')) return 'sequence'
+      if (normalized.startsWith('classdiagram')) return 'class'
+      if (normalized.startsWith('erdiagram')) return 'er'
+      if (normalized.startsWith('statediagram')) return 'state'
+      if (normalized.startsWith('graph ') || normalized.startsWith('flowchart ')) return 'flowchart'
       continue
     }
 
