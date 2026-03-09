@@ -16,6 +16,29 @@ const DEFAULT_PREFS: LayoutPreferences = {
 
 const STORAGE_KEY = 'merm8-layout-prefs'
 
+function sanitizeLayoutPreferences(
+  values: Partial<LayoutPreferences>,
+): LayoutPreferences {
+  const sanitizeValue = (
+    value: unknown,
+    min: number,
+    max: number,
+    fallback: number,
+  ) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      return fallback
+    }
+
+    return Math.min(max, Math.max(min, value))
+  }
+
+  return {
+    leftPanelSize: sanitizeValue(values.leftPanelSize, 25, 75, DEFAULT_PREFS.leftPanelSize),
+    editorSize: sanitizeValue(values.editorSize, 30, 70, DEFAULT_PREFS.editorSize),
+    previewSize: sanitizeValue(values.previewSize, 25, 75, DEFAULT_PREFS.previewSize),
+  }
+}
+
 export function useLayoutPreferences() {
   const [prefs, setPrefs] = useState<LayoutPreferences>(DEFAULT_PREFS)
   const [isMobile, setIsMobile] = useState(false)
@@ -26,7 +49,7 @@ export function useLayoutPreferences() {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
         const parsed = JSON.parse(stored)
-        setPrefs({ ...DEFAULT_PREFS, ...parsed })
+        setPrefs(sanitizeLayoutPreferences({ ...DEFAULT_PREFS, ...parsed }))
       }
     } catch (err) {
       console.debug('Failed to load layout preferences:', err)
@@ -50,7 +73,7 @@ export function useLayoutPreferences() {
   // Save preferences to localStorage
   const savePrefs = (newPrefs: Partial<LayoutPreferences>) => {
     setPrefs((prev) => {
-      const updated = { ...prev, ...newPrefs }
+      const updated = sanitizeLayoutPreferences({ ...prev, ...newPrefs })
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
       } catch (err) {
