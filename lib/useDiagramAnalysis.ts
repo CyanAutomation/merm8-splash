@@ -40,6 +40,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       debounceRef.current = null
     }
 
+    if (abortControllerRef.current) {
+      requestSeqRef.current += 1
+    }
     abortControllerRef.current?.abort()
     abortControllerRef.current = null
     setViolations([])
