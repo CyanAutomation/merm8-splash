@@ -102,7 +102,14 @@ export function getApplicableRules(
     return new Set(allRuleIds)
   }
 
-  return applicableRules
+  const mappedRuleIds = new Set<string>()
+  Object.values(diagramTypeRuleMap).forEach((ruleSet) => {
+    ruleSet.forEach((ruleId) => mappedRuleIds.add(ruleId))
+  })
+
+  const universalRules = allRuleIds.filter((ruleId) => !mappedRuleIds.has(ruleId))
+
+  return new Set([...applicableRules, ...universalRules])
 }
 
 /**
