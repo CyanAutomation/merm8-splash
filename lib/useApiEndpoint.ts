@@ -27,6 +27,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
   const [statusMessage, setStatusMessage] = useState<string>('')
   const endpointRef = useRef<string>('')
   const latestRequestIdRef = useRef<number>(0)
+  const healthCheckAbortControllerRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     endpointRef.current = endpoint
@@ -71,6 +72,9 @@ export function useApiEndpoint(): UseApiEndpointReturn {
   }, [])
 
   const testConnection = useCallback(async () => {
+    healthCheckAbortControllerRef.current?.abort()
+    const controller = new AbortController()
+    healthCheckAbortControllerRef.current = controller
     const endpointAtStart = endpointRef.current
     const validation = validateApiEndpoint(endpointAtStart)
     if (!validation.valid) {
@@ -90,7 +94,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
 
     try {
       const { fetchHealthz } = await import('./api')
-      await fetchHealthz(endpointAtStart)
+      await fetchHealthz(endpointAtStart, controller.signal)
 
       if (!isCurrentRequest()) {
         return
@@ -99,12 +103,22 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       setConnectionStatus('connected')
       setStatusMessage('Connection successful.')
     } catch {
-      if (!isCurrentRequest()) {
-        return
-      }
+    if (controller.signal.aborted) {
+      return
+    }
+    if (!isCurrentRequest()) {
+      return
+    }
 
       setConnectionStatus('error')
       setStatusMessage('Could not reach endpoint. Check URL and server status.')
+    }
+  }, [])
+
+
+  useEffect(() => {
+    return () => {
+      healthCheckAbortControllerRef.current?.abort()
     }
   }, [])
 
