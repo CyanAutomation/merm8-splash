@@ -216,6 +216,39 @@ test('buildAnalyzeRequest detects diagram type after multi-line Mermaid init blo
   assert.equal(request.config.rules['no-empty-label'].enabled, true)
 })
 
+test('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filtering', () => {
+  const { buildAnalyzeRequest } = loadApiModule()
+
+  const request = buildAnalyzeRequest(
+    '%%{init: {"theme": "dark"}}%% stateDiagram-v2\n[*] --> Idle\nIdle --> Active',
+    ['state-no-unreachable-states', 'max-depth', 'no-empty-label'],
+    [
+      {
+        id: 'state-no-unreachable-states',
+        name: 'State No Unreachable States',
+        description: 'No unreachable states',
+        severity: 'warning',
+      },
+      {
+        id: 'max-depth',
+        name: 'Max Depth',
+        description: 'Limit depth',
+        severity: 'warning',
+      },
+      {
+        id: 'no-empty-label',
+        name: 'No Empty Label',
+        description: 'Prevent empty labels',
+        severity: 'warning',
+      },
+    ]
+  )
+
+  assert.equal(request.config.rules['state-no-unreachable-states'].enabled, true)
+  assert.equal(request.config.rules['max-depth'].enabled, false)
+  assert.equal(request.config.rules['no-empty-label'].enabled, true)
+})
+
 
 test('analyzeCode normalizes missing results to empty array', async () => {
   const axios = require('axios')
