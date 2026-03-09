@@ -13,6 +13,21 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
   const [renderError, setRenderError] = useState<string | null>(null)
   const [isRendering, setIsRendering] = useState(false)
   const idCounterRef = useRef(0)
+  const rafIdRef = useRef<number | null>(null)
+  const nestedRafIdRef = useRef<number | null>(null)
+  const renderSequenceRef = useRef(0)
+
+  const clearPendingFitRaf = () => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = null
+    }
+
+    if (nestedRafIdRef.current !== null) {
+      cancelAnimationFrame(nestedRafIdRef.current)
+      nestedRafIdRef.current = null
+    }
+  }
 
   // Fit diagram to container dimensions
   const fitDiagramToContainer = () => {
@@ -90,6 +105,9 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
   }
 
   useEffect(() => {
+    clearPendingFitRaf()
+    const renderSequence = ++renderSequenceRef.current
+
     if (!code.trim()) {
       if (containerRef.current) containerRef.current.innerHTML = ''
       setRenderError(null)
@@ -128,8 +146,9 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
             svgRef.current = svgEl as SVGSVGElement
             // Apply auto-fit after SVG is in the DOM
             // Use requestAnimationFrame twice to ensure layout has settled
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
+            rafIdRef.current = requestAnimationFrame(() => {
+              nestedRafIdRef.current = requestAnimationFrame(() => {
+                if (renderSequenceRef.current !== renderSequence) return
                 fitDiagramToContainer()
               })
             })
@@ -152,8 +171,15 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
     renderDiagram()
     return () => {
       cancelled = true
+      clearPendingFitRaf()
     }
   }, [code, onError])
+
+  useEffect(() => {
+    return () => {
+      clearPendingFitRaf()
+    }
+  }, [])
 
   return (
     <div className="panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
