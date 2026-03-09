@@ -148,3 +148,70 @@ test('buildAnalyzeRequest keeps universal rules enabled for known diagram types'
   assert.equal(request.config.rules['no-empty-label'].enabled, true)
   assert.equal(request.config.rules['sequence-max-participants'].enabled, false)
 })
+
+
+test('buildAnalyzeRequest detects diagram type after leading Mermaid comments and init block', () => {
+  const { buildAnalyzeRequest } = loadApiModule()
+
+  const request = buildAnalyzeRequest(
+    '%% this is a leading comment\n%%{init: {\"theme\": \"dark\"}}%%\nflowchart LR\nA-->B',
+    ['max-depth', 'sequence-max-participants', 'no-empty-label'],
+    [
+      {
+        id: 'max-depth',
+        name: 'Max Depth',
+        description: 'Limit depth',
+        severity: 'warning',
+      },
+      {
+        id: 'sequence-max-participants',
+        name: 'Sequence Max Participants',
+        description: 'Limit participants',
+        severity: 'warning',
+      },
+      {
+        id: 'no-empty-label',
+        name: 'No Empty Label',
+        description: 'Prevent empty labels',
+        severity: 'warning',
+      },
+    ]
+  )
+
+  assert.equal(request.config.rules['max-depth'].enabled, true)
+  assert.equal(request.config.rules['sequence-max-participants'].enabled, false)
+  assert.equal(request.config.rules['no-empty-label'].enabled, true)
+})
+
+test('buildAnalyzeRequest detects diagram type after multi-line Mermaid init block', () => {
+  const { buildAnalyzeRequest } = loadApiModule()
+
+  const request = buildAnalyzeRequest(
+    '%%{\ninit: {\"theme\": \"neutral\"}\n}%%\nsequenceDiagram\nAlice->>Bob: Hello',
+    ['sequence-max-participants', 'max-depth', 'no-empty-label'],
+    [
+      {
+        id: 'sequence-max-participants',
+        name: 'Sequence Max Participants',
+        description: 'Limit participants',
+        severity: 'warning',
+      },
+      {
+        id: 'max-depth',
+        name: 'Max Depth',
+        description: 'Limit depth',
+        severity: 'warning',
+      },
+      {
+        id: 'no-empty-label',
+        name: 'No Empty Label',
+        description: 'Prevent empty labels',
+        severity: 'warning',
+      },
+    ]
+  )
+
+  assert.equal(request.config.rules['sequence-max-participants'].enabled, true)
+  assert.equal(request.config.rules['max-depth'].enabled, false)
+  assert.equal(request.config.rules['no-empty-label'].enabled, true)
+})
