@@ -139,22 +139,25 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
         const id = `mermaid-${++idCounterRef.current}`
         const { svg } = await mermaid.render(id, code)
 
-        if (!cancelled && containerRef.current) {
-          containerRef.current.innerHTML = svg
-          const svgEl = containerRef.current.querySelector('svg')
-          if (svgEl) {
-            svgRef.current = svgEl as SVGSVGElement
-            // Apply auto-fit after SVG is in the DOM
-            // Use requestAnimationFrame twice to ensure layout has settled
-            rafIdRef.current = requestAnimationFrame(() => {
-              nestedRafIdRef.current = requestAnimationFrame(() => {
-                if (renderSequenceRef.current !== renderSequence) return
-                fitDiagramToContainer()
-              })
-            })
-          }
+        if (!cancelled) {
           setRenderError(null)
           onError?.(null)
+
+          if (containerRef.current) {
+            containerRef.current.innerHTML = svg
+            const svgEl = containerRef.current.querySelector('svg')
+            if (svgEl) {
+              svgRef.current = svgEl as SVGSVGElement
+              // Apply auto-fit after SVG is in the DOM
+              // Use requestAnimationFrame twice to ensure layout has settled
+              rafIdRef.current = requestAnimationFrame(() => {
+                nestedRafIdRef.current = requestAnimationFrame(() => {
+                  if (renderSequenceRef.current !== renderSequence) return
+                  fitDiagramToContainer()
+                })
+              })
+            }
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -220,7 +223,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
         </div>
       </div>
 
-      {renderError ? (
+      {renderError && (
         <div
           style={{
             padding: '12px',
@@ -228,34 +231,34 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
             background: 'rgba(255,85,85,0.05)',
             color: 'var(--color-error)',
             fontSize: '12px',
-            flex: 1,
+            marginBottom: '8px',
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: '4px' }}>⚠ Syntax Error</div>
           <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{renderError}</pre>
         </div>
-      ) : (
-        <div
-          ref={containerRef}
-          style={{
-            flex: 1,
-            overflow: 'auto',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '200px',
-            background: 'var(--color-bg-primary)',
-            border: '1px solid var(--color-border)',
-            padding: '16px',
-          }}
-        >
-          {!code.trim() && (
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-              No diagram code yet
-            </span>
-          )}
-        </div>
       )}
+
+      <div
+        ref={containerRef}
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '200px',
+          background: 'var(--color-bg-primary)',
+          border: '1px solid var(--color-border)',
+          padding: '16px',
+        }}
+      >
+        {!code.trim() && (
+          <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+            No diagram code yet
+          </span>
+        )}
+      </div>
     </div>
   )
 }
