@@ -37,8 +37,19 @@ export function parseDiagramType(code: string): string | null {
     }
 
     if (inDirectiveBlock) {
-      if (trimmed.includes('}%%')) {
+      const directiveEndIndex = trimmed.indexOf('}%%')
+      if (directiveEndIndex !== -1) {
         inDirectiveBlock = false
+        // Process content after directive closing on same line
+        const remaining = trimmed.substring(directiveEndIndex + 3).trim()
+        if (remaining && !remaining.startsWith('%%')) {
+          const normalized = remaining.toLowerCase()
+          if (normalized.startsWith('sequencediagram')) return 'sequence'
+          if (normalized.startsWith('classdiagram')) return 'class'
+          if (normalized.startsWith('erdiagram')) return 'er'
+          if (normalized.startsWith('statediagram')) return 'state'
+          if (normalized.startsWith('graph ') || normalized.startsWith('flowchart ')) return 'flowchart'
+        }
       }
       continue
     }
