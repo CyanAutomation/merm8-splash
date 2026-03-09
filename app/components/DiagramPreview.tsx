@@ -136,7 +136,6 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
         const mermaid = (await import('mermaid')).default
         mermaid.initialize({
           startOnLoad: false,
-          suppressErrorRendering: true,
           theme: 'dark',
           darkMode: true,
           themeVariables: {
