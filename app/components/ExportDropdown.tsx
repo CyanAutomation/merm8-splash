@@ -310,6 +310,8 @@ export default function ExportDropdown({
       downloadFile(JSON.stringify(sarif, null, 2), 'merm8-analysis.sarif.json', 'application/json')
     } catch {
       downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
+      setCopyStatus({ text: 'Remote SARIF generation failed; exported local fallback.', tone: 'error' })
+      scheduleCopyStatusReset()
     } finally {
       setOpen(false)
     }
