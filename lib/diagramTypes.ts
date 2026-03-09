@@ -25,35 +25,60 @@ export function parseDiagramType(code: string): string | null {
     return null
   }
 
-  // Get first non-whitespace line
+  // Scan for first meaningful declaration line
   const lines = code.split('\n')
-  const firstLine = lines.find((line) => line.trim().length > 0)
+  let inDirectiveBlock = false
 
-  if (!firstLine) {
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    if (!trimmed) {
+      continue
+    }
+
+    if (inDirectiveBlock) {
+      if (trimmed.includes('}%%')) {
+        inDirectiveBlock = false
+      }
+      continue
+    }
+
+    if (trimmed.startsWith('%%{')) {
+      if (!trimmed.includes('}%%')) {
+        inDirectiveBlock = true
+      }
+      continue
+    }
+
+    if (trimmed.startsWith('%%')) {
+      continue
+    }
+
+    const normalized = trimmed.toLowerCase()
+
+    // Check for diagram type markers
+    if (normalized.startsWith('sequencediagram')) {
+      return 'sequence'
+    }
+    if (normalized.startsWith('classdiagram')) {
+      return 'class'
+    }
+    if (normalized.startsWith('erdiagram')) {
+      return 'er'
+    }
+    if (normalized.startsWith('statediagram')) {
+      return 'state'
+    }
+    // Flowchart/Graph detection (graph TD, flowchart LR, etc.)
+    if (normalized.startsWith('graph ') || normalized.startsWith('flowchart ')) {
+      return 'flowchart'
+    }
+
+    // First meaningful declaration line did not match known patterns
     return null
   }
 
-  const trimmed = firstLine.trim().toLowerCase()
-
-  // Check for diagram type markers
-  if (trimmed.startsWith('sequencediagram')) {
-    return 'sequence'
-  }
-  if (trimmed.startsWith('classdiagram')) {
-    return 'class'
-  }
-  if (trimmed.startsWith('erdiagram')) {
-    return 'er'
-  }
-  if (trimmed.startsWith('statediagram')) {
-    return 'state'
-  }
-  // Flowchart/Graph detection (graph TD, flowchart LR, etc.)
-  if (trimmed.startsWith('graph ') || trimmed.startsWith('flowchart ')) {
-    return 'flowchart'
-  }
-
-  // If code starts with diagram-like syntax but doesn't match known patterns, return null
+  // No declaration line found
   return null
 }
 
