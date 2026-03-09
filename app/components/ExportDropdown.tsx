@@ -188,7 +188,7 @@ export default function ExportDropdown({
 
     const lines = results.map(
       (v) =>
-        `[${v.severity.toUpperCase()}] ${v.rule_id}: ${v.message}${v.line ? ` (line ${v.line})` : ''}`
+        `[${v.severity.toUpperCase()}] ${v.rule_id}: ${v.message}${v.line != null ? ` (line ${v.line})` : ''}`
     )
     const text = lines.join('\n') || 'No violations found'
     await handleCopyExport(text, 'text', 'merm8-analysis.txt', 'text/plain')
@@ -286,7 +286,7 @@ export default function ExportDropdown({
           ruleId: v.rule_id,
           level: v.severity === 'error' ? 'error' : v.severity === 'warning' ? 'warning' : 'note',
           message: { text: v.message },
-          locations: v.line ? [{
+          locations: v.line != null ? [{
             physicalLocation: {
               artifactLocation: { uri: 'diagram.mmd' },
               region: { startLine: v.line },
