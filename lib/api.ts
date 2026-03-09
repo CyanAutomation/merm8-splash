@@ -166,9 +166,12 @@ export function createApiClient(endpoint: string): AxiosInstance {
   })
 }
 
-export async function fetchHealthz(endpoint: string): Promise<HealthzResponse> {
+export async function fetchHealthz(
+  endpoint: string,
+  signal?: AbortSignal
+): Promise<HealthzResponse> {
   const client = createApiClient(endpoint)
-  const response = await client.get<HealthzResponse>('/v1/healthz')
+  const response = await client.get<HealthzResponse>('/v1/healthz', { signal })
   return response.data
 }
 
