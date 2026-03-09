@@ -40,6 +40,34 @@ export interface AnalyzeResponse {
   results: Violation[]
 }
 
+function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
+  const data = rawData && typeof rawData === 'object' ? rawData : null
+  const rawResults = data && 'results' in data ? (data as { results?: unknown }).results : undefined
+  const rawDiagramType =
+    data && 'diagram_type' in data ? (data as { diagram_type?: unknown }).diagram_type : undefined
+
+  const normalized: AnalyzeResponse = {
+    diagram_type: typeof rawDiagramType === 'string' ? rawDiagramType : '',
+    results: Array.isArray(rawResults) ? rawResults : [],
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    const malformedReasons: string[] = []
+
+    if (!data) malformedReasons.push('missing `data` payload')
+    if (!Array.isArray(rawResults)) malformedReasons.push('non-array `results`')
+    if (typeof rawDiagramType !== 'string') malformedReasons.push('missing/invalid `diagram_type`')
+
+    if (malformedReasons.length > 0) {
+      console.warn(
+        `[api.analyzeCode] Normalized malformed analyze response: ${malformedReasons.join(', ')}`
+      )
+    }
+  }
+
+  return normalized
+}
+
 export interface HealthzResponse {
   status: string
 }
@@ -195,7 +223,7 @@ export async function analyzeCode(
   const response = await client.post<AnalyzeResponse>('/v1/analyze', request, {
     signal,
   })
-  return response.data
+  return normalizeAnalyzeResponse(response?.data)
 }
 
 export function buildAnalyzeRequest(

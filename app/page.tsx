@@ -554,7 +554,7 @@ export default function Home() {
           parseStatus={parseStatus}
           parseError={parseError}
           ruleCount={enabledRules.length}
-          violationCount={violations.length}
+          violationCount={Array.isArray(violations) ? violations.length : 0}
           apiEndpoint={endpoint}
           diagramType={diagramType}
         />

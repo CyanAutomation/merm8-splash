@@ -89,7 +89,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           )
 
           if (seq === requestSeqRef.current) {
-            setViolations(result.results)
+            setViolations(Array.isArray(result.results) ? result.results : [])
             setDiagramType(result.diagram_type)
             setAnalyzeError(null)
           }
