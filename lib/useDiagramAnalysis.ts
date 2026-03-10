@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import axios from 'axios'
-import { analyzeCode, AnalyzeRequestOptions, Violation, Rule } from './api'
+import { analyzeCode, AnalyzeRequestOptions, Violation, Rule, AnalyzeHint } from './api'
 import { DEFAULT_DIAGRAM } from './constants'
 
 export interface UseDiagramAnalysisReturn {
@@ -38,6 +38,32 @@ function asStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
 }
 
+function normalizeHintItem(item: unknown): string | null {
+  if (typeof item === 'string') return item.trim()
+  if (typeof item === 'object' && item !== null) {
+    const obj = item as Record<string, unknown>
+    return (
+      (typeof obj.message === 'string' && obj.message.trim()) ||
+      (typeof obj.text === 'string' && obj.text.trim()) ||
+      (typeof obj.hint === 'string' && obj.hint.trim()) ||
+      (typeof obj.description === 'string' && obj.description.trim())
+    )
+  }
+  return null
+}
+
+function normalizeHintsFromUnknown(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map(normalizeHintItem)
+    .filter((hint): hint is string => hint !== null && hint.length > 0)
+}
+
+function normalizeHints(hints: AnalyzeHint[] | undefined): string[] {
+  if (!hints) return []
+  return normalizeHintsFromUnknown(hints)
+}
+
 function parseAnalysisError(err: unknown): ParsedAnalysisError {
   if (axios.isAxiosError(err)) {
     const responseData = err.response?.data
@@ -60,9 +86,9 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
         'Analysis failed'
 
       const hints = [
-        ...asStringArray(data.hints),
-        ...asStringArray(data.guidance),
-        ...asStringArray(data.suggestions),
+        ...normalizeHintsFromUnknown(data.hints),
+        ...normalizeHintsFromUnknown(data.guidance),
+        ...normalizeHintsFromUnknown(data.suggestions),
       ]
 
       return {
@@ -149,7 +175,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             setViolations(Array.isArray(result.results) ? result.results : [])
             setDiagramType(result.diagram_type)
             setAnalyzeError(null)
-            setAnalysisHints([])
+            setAnalysisHints(normalizeHints(result.hints))
           }
         } catch (err) {
           if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
