@@ -165,4 +165,12 @@ a {
   .editor-container textarea::-webkit-scrollbar-thumb:hover {
     background-color: var(--color-text-secondary);
   }
+
+  .editor-gutter {
+    scrollbar-width: none;
+  }
+
+  .editor-gutter::-webkit-scrollbar {
+    display: none;
+  }
 }

@@ -108,6 +108,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
               display: 'flex',
               flexDirection: 'column',
               overflowY: 'auto',
+              scrollbarWidth: 'none',
             }}
           >
             {Array.from({ length: lineCount }).map((_, i) => (
