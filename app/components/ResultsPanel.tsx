@@ -315,14 +315,35 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
               {parseError ? (
                 <div
                   style={{
-                    padding: "12px",
-                    color: "var(--color-error)",
-                    fontSize: "12px",
                     border: "1px solid var(--color-error)",
-                    marginBottom: analysisHints.length > 0 ? "8px" : "0",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    marginBottom: "8px",
+                    background: "var(--color-bg-secondary)",
                   }}
                 >
-                  <div>⚠ Syntax error: {parseError}</div>
+                  <div
+                    style={{
+                      color: "var(--color-error)",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      marginBottom: "6px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    Syntax Error
+                  </div>
+                  <div
+                    style={{
+                      color: "var(--color-error)",
+                      fontSize: "12px",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {parseError}
+                  </div>
                 </div>
               ) : filtered.length === 0 ? (
                 <div
