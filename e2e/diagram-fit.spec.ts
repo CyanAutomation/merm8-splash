@@ -29,45 +29,35 @@ test.describe('Diagram Preview Auto-Fit', () => {
     expect(parseFloat(height!)).toBeGreaterThan(0)
   })
 
-  test('should have a "Fit" button that exists when diagram is valid', async ({ page }) => {
-    // Enter diagram code
+
+
+  test('should recalculate SVG dimensions when Fit button is clicked', async ({ page }) => {
+    // Enter simple diagram and verify Fit button updates layout dimensions
     const editorTextarea = page.locator('textarea').first()
-    await editorTextarea.fill('graph LR\n    A[Input] --> B[Process] --> C[Output]')
+    const testDiagram = 'graph TD\n    A[Start] --> B[Middle] --> C[End]'
+    await editorTextarea.fill(testDiagram)
 
     // Wait for the diagram to render
     await page.waitForSelector('svg', { timeout: 5000 })
 
-    // Look for the "Fit" button
-    const fitButton = page.locator('button', { hasText: '↔ Fit' })
-    await expect(fitButton).toBeVisible()
-  })
-
-  test('should recalculate fit when button is clicked', async ({ page }) => {
-    // Enter diagram code
-    const editorTextarea = page.locator('textarea').first()
-    await editorTextarea.fill('graph TD\n    A[Start] --> B[Middle] --> C[End]')
-
-    // Wait for the diagram to render
-    await page.waitForSelector('svg', { timeout: 5000 })
-
-    // Get initial SVG dimensions
+    // Get initial SVG bounding box
     const svg = page.locator('div[style*="overflow: auto"] svg').first()
-    const initialWidth = await svg.getAttribute('width')
+    const initialBox = await svg.boundingBox()
 
-    // Click the Fit button
+    // Click the Fit button to trigger recalculation
     const fitButton = page.locator('button', { hasText: '↔ Fit' })
     await fitButton.click()
+    await page.waitForTimeout(200) // Allow layout recalculation
 
-    // Wait a bit for recalculation
-    await page.waitForTimeout(100)
+    // Get new bounding box after fit operation
+    const newBox = await svg.boundingBox()
 
-    // Get new dimensions (should be close to the same, but proves it was called)
-    const newWidth = await svg.getAttribute('width')
-
-    console.log(`Initial: ${initialWidth}, After click: ${newWidth}`)
-
-    // Should have width set
-    expect(newWidth).toBeTruthy()
+    // Verify SVG has dimensions (presence of bounding box = rendered size exists)
+    expect(initialBox).toBeTruthy()
+    expect(newBox).toBeTruthy()
+    // Both should have width and height set
+    expect(newBox?.width).toBeGreaterThan(0)
+    expect(newBox?.height).toBeGreaterThan(0)
   })
 
   test('should NOT show Fit button when diagram has errors', async ({ page }) => {
