@@ -1,7 +1,5 @@
 'use client'
 
-import { useRef } from 'react'
-
 interface ToggleSliderProps {
   value: boolean
   onChange: (value: boolean) => void
@@ -17,15 +15,12 @@ export default function ToggleSlider({
   title,
   disabled = false,
 }: ToggleSliderProps) {
-  const checkboxRef = useRef<HTMLInputElement>(null)
-
   const handleToggle = () => {
     if (disabled) return
-    const newValue = !value
-    onChange(newValue)
+    onChange(!value)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault()
@@ -34,28 +29,32 @@ export default function ToggleSlider({
   }
 
   return (
-    <label
+    <div
+      role="switch"
+      aria-checked={value}
+      aria-label={label || 'Toggle'}
+      tabIndex={disabled ? -1 : 0}
+      title={title}
+      onClick={handleToggle}
+      onKeyDown={handleKeyDown}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
-        transition: 'opacity 0.2s ease',
+        outline: 'none',
+        userSelect: 'none',
       }}
-      title={title}
+      onFocus={(e) => {
+        e.currentTarget.style.outline = '2px solid var(--color-accent-primary)'
+        e.currentTarget.style.outlineOffset = '2px'
+        e.currentTarget.style.borderRadius = '4px'
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.outline = 'none'
+      }}
     >
-      {/* Hidden checkbox for semantic HTML and keyboard support */}
-      <input
-        ref={checkboxRef}
-        type="checkbox"
-        checked={value}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-        style={{ display: 'none' }}
-        aria-label={label}
-      />
-
       {/* Label text (optional) */}
       {label && (
         <span
@@ -70,56 +69,33 @@ export default function ToggleSlider({
         </span>
       )}
 
-      {/* Toggle slider track and knob */}
+      {/* Toggle track */}
       <div
-        role="switch"
-        aria-checked={value}
-        aria-label={label || 'Toggle'}
-        tabIndex={disabled ? -1 : 0}
-        onKeyDown={handleKeyDown}
-        onClick={handleToggle}
         style={{
           position: 'relative',
+          flexShrink: 0,
           width: '32px',
           height: '16px',
           borderRadius: '8px',
           border: `1px solid ${value ? 'var(--color-accent-primary)' : 'var(--color-border)'}`,
           background: value ? 'var(--color-accent-primary)' : 'var(--color-bg-secondary)',
-          transition: 'all 120ms ease',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          outline: 'none',
-        }}
-        onMouseEnter={(e) => {
-          if (!disabled) {
-            (e.currentTarget as HTMLElement).style.opacity = '0.9'
-          }
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.opacity = '1'
-        }}
-        onFocus={(e) => {
-          (e.currentTarget as HTMLElement).style.outline = `2px solid var(--color-accent-primary)`
-          ;(e.currentTarget as HTMLElement).style.outlineOffset = '2px'
-        }}
-        onBlur={(e) => {
-          (e.currentTarget as HTMLElement).style.outline = 'none'
+          transition: 'background 120ms ease, border-color 120ms ease',
         }}
       >
-        {/* Knob/circle that slides */}
+        {/* Knob */}
         <div
           style={{
             position: 'absolute',
             top: '1px',
             left: value ? '17px' : '1px',
-            width: '14px',
-            height: '14px',
+            width: '12px',
+            height: '12px',
             borderRadius: '50%',
-            background: 'var(--color-bg-primary)',
+            background: value ? '#000' : 'var(--color-text-secondary)',
             transition: 'left 120ms ease',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
           }}
         />
       </div>
-    </label>
+    </div>
   )
 }
