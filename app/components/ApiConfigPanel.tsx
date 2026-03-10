@@ -59,7 +59,40 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
 
     return (
       <div className="panel" style={{ borderColor: 'var(--color-border)' }}>
-        <div className="panel-heading">⚙ API Configuration</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div className="panel-heading">⚙ API Configuration</div>
+          <div
+            style={{
+              fontSize: '11px',
+              color: 'var(--color-text-secondary)',
+              display: 'flex',
+              gap: '16px',
+              alignItems: 'center',
+            }}
+          >
+            <span>
+              Status:{' '}
+              <span
+                style={{
+                  color:
+                    connectionStatus === 'connected'
+                      ? 'var(--color-success)'
+                      : connectionStatus === 'error'
+                      ? 'var(--color-error)'
+                      : connectionStatus === 'checking'
+                      ? 'var(--color-warning)'
+                      : 'var(--color-text-secondary)',
+                }}
+              >
+                {STATUS_LABELS[connectionStatus]}
+              </span>
+            </span>
+            <span>Source: {SOURCE_LABELS[configSource] ?? configSource}</span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>
+              Ctrl+K to focus
+            </span>
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flex: 1, minWidth: '200px' }}>
             <span
@@ -142,38 +175,6 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
             {endpointFeedback}
           </div>
         )}
-
-        <div
-          style={{
-            fontSize: '11px',
-            color: 'var(--color-text-secondary)',
-            marginTop: '6px',
-            display: 'flex',
-            gap: '16px',
-          }}
-        >
-          <span>
-            Status:{' '}
-            <span
-              style={{
-                color:
-                  connectionStatus === 'connected'
-                    ? 'var(--color-success)'
-                    : connectionStatus === 'error'
-                    ? 'var(--color-error)'
-                    : connectionStatus === 'checking'
-                    ? 'var(--color-warning)'
-                    : 'var(--color-text-secondary)',
-              }}
-            >
-              {STATUS_LABELS[connectionStatus]}
-            </span>
-          </span>
-          <span>Source: {SOURCE_LABELS[configSource] ?? configSource}</span>
-          <span style={{ color: 'var(--color-text-secondary)' }}>
-            Ctrl+K to focus
-          </span>
-        </div>
       </div>
     )
   }
