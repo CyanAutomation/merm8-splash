@@ -302,7 +302,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                               style={{ fontSize: "10px", padding: "1px 6px", marginLeft: "6px" }}
                               onClick={() => onJumpToLine(line)}
                             >
-                              jump to line
+                              Show Me Where
                             </button>
                           )}
                         </li>
