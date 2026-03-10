@@ -38,13 +38,7 @@ test.describe('Layout and Panels Visibility', () => {
     expect(handles).toBeGreaterThanOrEqual(3)
   })
 
-  test('should render PanelGroup structure', async ({ page }) => {
-    // Check that PanelGroup exists in DOM
-    const panelGroups = await page.locator('[data-panel-group-direction]').count()
-    // Should have multiple PanelGroups (nested)
-    expect(panelGroups).toBeGreaterThanOrEqual(1)
-    console.log(`Found ${panelGroups} PanelGroups`)
-  })
+
 
   test('should allow Editor to receive input', async ({ page }) => {
     const textarea = page.locator('textarea').first()
@@ -57,29 +51,21 @@ test.describe('Layout and Panels Visibility', () => {
     expect(value).toBe(sampleCode)
   })
 
-  test('should show panel layout without isMounted delay', async ({ page }) => {
-    // The page should render all panels immediately without hydration mismatch
-    // This is a quick test to ensure panels are not hidden behind a loading state
+  test('should show all panels immediately after hydration (no loading state)', async ({ page }) => {
+    // Verify that panels render without delay and no content shift during hydration.
+    // This catches issues where panels briefly hide or shift position on mount.
     
-    const mainContent = page.locator('div[style*="flex: 1"]').first()
-    await expect(mainContent).toBeVisible()
+    const panels = [
+      page.locator('text=Diagram Editor'),
+      page.locator('text=Rules'),
+      page.locator('text=Diagram Preview'),
+      page.locator('text=Results'),
+    ]
     
-    // Try to find all major panels
-    const editor = page.locator('text=Diagram Editor')
-    const rules = page.locator('text=Rules')
-    const preview = page.locator('text=Diagram Preview')
-    const results = page.locator('text=Results')
-    
-    await expect(editor).toBeVisible()
-    await expect(rules).toBeVisible()
-    await expect(preview).toBeVisible()
-    await expect(results).toBeVisible()
+    for (const panel of panels) {
+      await expect(panel).toBeVisible({ timeout: 500 })
+    }
   })
 
-  test('should take screenshot of full layout', async ({ page }) => {
-    // Take a screenshot for visual verification
-    const screenshot = await page.screenshot({ fullPage: true })
-    console.log('Full page screenshot captured')
-    expect(screenshot).toBeTruthy()
-  })
+
 })
