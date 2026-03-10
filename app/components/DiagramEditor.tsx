@@ -10,6 +10,7 @@ interface DiagramEditorProps {
 
 export interface DiagramEditorRef {
   focus: () => void
+  highlightLine: (lineNum: number | null) => void
 }
 
 const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
@@ -21,6 +22,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
 
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
+      highlightLine: (lineNum: number | null) => setHighlightedLine(lineNum),
     }))
 
     const handleExampleClick = () => {
@@ -35,6 +37,15 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     }
 
     const lineCount = value.split('\n').length
+
+    const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+      if (editorContainerRef.current) {
+        const gutter = editorContainerRef.current.querySelector('[data-gutter]') as HTMLElement
+        if (gutter) {
+          gutter.scrollTop = e.currentTarget.scrollTop
+        }
+      }
+    }
 
     return (
       <div className="panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -80,6 +91,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
           }}
         >
           <div
+            data-gutter
             aria-hidden="true"
             style={{
               width: '40px',
@@ -95,7 +107,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
               userSelect: 'none',
               display: 'flex',
               flexDirection: 'column',
-              overflowY: 'hidden',
+              overflowY: 'auto',
             }}
           >
             {Array.from({ length: lineCount }).map((_, i) => (
@@ -125,6 +137,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
               setHighlightedLine(null)
             }}
             spellCheck={false}
+            onScroll={handleScroll}
             style={{
               flex: 1,
               width: '100%',
