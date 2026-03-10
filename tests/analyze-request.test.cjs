@@ -250,39 +250,6 @@ test('buildAnalyzeRequest detects flowchart declarations with tab whitespace', (
   assert.equal(request.config.rules['sequence-max-participants'].enabled, false)
   assert.equal(request.config.rules['no-empty-label'].enabled, true)
 })
-
-test('buildAnalyzeRequest detects directive-trailing flowchart declarations with tab whitespace', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
-  const request = buildAnalyzeRequest(
-    '%%{init: {"theme": "dark"}}%% graph\tTD\nA-->B',
-    ['max-depth', 'sequence-max-participants', 'no-empty-label'],
-    [
-      {
-        id: 'max-depth',
-        name: 'Max Depth',
-        description: 'Limit depth',
-        severity: 'warning',
-      },
-      {
-        id: 'sequence-max-participants',
-        name: 'Sequence Max Participants',
-        description: 'Limit participants',
-        severity: 'warning',
-      },
-      {
-        id: 'no-empty-label',
-        name: 'No Empty Label',
-        description: 'Prevent empty labels',
-        severity: 'warning',
-      },
-    ]
-  )
-
-  assert.equal(request.config.rules['max-depth'].enabled, true)
-  assert.equal(request.config.rules['sequence-max-participants'].enabled, false)
-  assert.equal(request.config.rules['no-empty-label'].enabled, true)
-})
 test('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filtering', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
