@@ -473,3 +473,60 @@ test('analyzeCode filters malformed hints and warns in development', async () =>
     axios.create = originalCreate
   }
 })
+
+test('analyzeCode normalizes non-array hints to empty array', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        diagram_type: 'flowchart',
+        results: [],
+        hints: { message: 'Prefer explicit labels' },
+      },
+    }),
+  })
+
+  try {
+    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+
+    assert.equal(response.diagram_type, 'flowchart')
+    assert.equal(JSON.stringify(response.hints), JSON.stringify([]))
+  } finally {
+    axios.create = originalCreate
+  }
+})
+
+test('analyzeCode drops unsupported nested hint values', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        diagram_type: 'flowchart',
+        results: [],
+        hints: [
+          'Keep swimlanes balanced',
+          ['nested array should be removed'],
+          42,
+          { message: 'Check line ordering' },
+        ],
+      },
+    }),
+  })
+
+  try {
+    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+
+    assert.equal(
+      JSON.stringify(response.hints),
+      JSON.stringify(['Keep swimlanes balanced', { message: 'Check line ordering' }])
+    )
+  } finally {
+    axios.create = originalCreate
+  }
+})
