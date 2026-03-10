@@ -27,7 +27,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
   componentDidUpdate(prevProps: ErrorBoundaryProps) {
     if (!this.state.hasError) return
 
-    if (this.props.resetKeys !== undefined || prevProps.resetKeys !== undefined) {
+    if (this.props.resetKeys !== undefined && prevProps.resetKeys !== undefined) {
       if (!areResetKeysEqual(prevProps.resetKeys, this.props.resetKeys)) {
         this.setState({ hasError: false, error: null })
       }
