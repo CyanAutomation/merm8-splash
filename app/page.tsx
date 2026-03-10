@@ -480,15 +480,6 @@ export default function Home() {
                     ⊞ Rules
                   </button>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button
-                      className="btn"
-                      style={{ fontSize: '12px', padding: '4px 12px' }}
-                      onClick={handleRecheck}
-                      disabled={!canRecheck}
-                      title="Re-run analysis"
-                    >
-                      ↺ Check
-                    </button>
                     <ErrorBoundary>
                       <ExportDropdown
                         results={violations}
@@ -498,6 +489,15 @@ export default function Home() {
                         rulesMetadata={rules}
                       />
                     </ErrorBoundary>
+                    <button
+                      className="btn"
+                      style={{ fontSize: '12px', padding: '4px 12px' }}
+                      onClick={handleRecheck}
+                      disabled={!canRecheck}
+                      title="Re-run analysis"
+                    >
+                      ↺ Check
+                    </button>
                   </div>
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
@@ -552,15 +552,6 @@ export default function Home() {
                     ⊞ Rules
                   </button>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button
-                      className="btn"
-                      style={{ fontSize: '12px', padding: '4px 12px' }}
-                      onClick={handleRecheck}
-                      disabled={!canRecheck}
-                      title="Re-run analysis"
-                    >
-                      ↺ Check
-                    </button>
                     <ErrorBoundary>
                       <ExportDropdown
                         results={violations}
@@ -570,6 +561,15 @@ export default function Home() {
                         rulesMetadata={rules}
                       />
                     </ErrorBoundary>
+                    <button
+                      className="btn"
+                      style={{ fontSize: '12px', padding: '4px 12px' }}
+                      onClick={handleRecheck}
+                      disabled={!canRecheck}
+                      title="Re-run analysis"
+                    >
+                      ↺ Check
+                    </button>
                   </div>
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
