@@ -8,6 +8,7 @@ interface ResultsPanelProps {
   isAnalyzing: boolean;
   analyzeError: string | null;
   analysisHints: string[];
+  parseError?: string | null;
   onJumpToLine?: (line: number) => void;
 }
 
@@ -93,7 +94,9 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
       } catch {
         success = false;
       } finally {
-        document.body.removeChild(textarea);
+        if (textarea.parentNode) {
+          textarea.parentNode.removeChild(textarea);
+        }
       }
 
       return success;
@@ -309,7 +312,19 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                 </div>
               )}
 
-              {filtered.length === 0 ? (
+              {parseError ? (
+                <div
+                  style={{
+                    padding: "12px",
+                    color: "var(--color-error)",
+                    fontSize: "12px",
+                    border: "1px solid var(--color-error)",
+                    marginBottom: analysisHints.length > 0 ? "8px" : "0",
+                  }}
+                >
+                  <div>⚠ Syntax error: {parseError}</div>
+                </div>
+              ) : filtered.length === 0 ? (
                 <div
                   style={{
                     padding: "16px",
