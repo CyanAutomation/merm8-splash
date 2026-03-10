@@ -12,7 +12,7 @@ interface DiagramPreviewProps {
   onParseStateChange?: (state: { hasParseError: boolean; message: string | null }) => void
   parseErrorMessage?: string | null
   useBeautifulRenderer?: boolean
-  onToggleBeautifulRenderer?: () => void
+  onToggleBeautifulRenderer?: (value: boolean) => void
 }
 
 export default function DiagramPreview({ 
