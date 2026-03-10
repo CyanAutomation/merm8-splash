@@ -34,12 +34,12 @@ function normalizeHintItem(item: unknown): string | null {
   if (typeof item === 'string') return item.trim()
   if (typeof item === 'object' && item !== null) {
     const obj = item as Record<string, unknown>
-    return (
+    const result =
       (typeof obj.message === 'string' && obj.message.trim()) ||
       (typeof obj.text === 'string' && obj.text.trim()) ||
       (typeof obj.hint === 'string' && obj.hint.trim()) ||
       (typeof obj.description === 'string' && obj.description.trim())
-    )
+    return result || null
   }
   return null
 }

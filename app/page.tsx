@@ -437,6 +437,7 @@ export default function Home() {
                     onParseStateChange={handleParseStateChange}
                     parseErrorMessage={parseErrorDetail}
                     useBeautifulRenderer={prefs.useBeautifulRenderer}
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     onToggleBeautifulRenderer={(_value) => savePrefs({ useBeautifulRenderer: !prefs.useBeautifulRenderer })}
                   />
                 </ErrorBoundary>
@@ -519,6 +520,7 @@ export default function Home() {
                     onParseStateChange={handleParseStateChange}
                     parseErrorMessage={parseErrorDetail}
                     useBeautifulRenderer={prefs.useBeautifulRenderer}
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     onToggleBeautifulRenderer={(_value) => savePrefs({ useBeautifulRenderer: !prefs.useBeautifulRenderer })}
                   />
                 </ErrorBoundary>
