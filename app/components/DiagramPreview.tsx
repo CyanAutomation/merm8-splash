@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from 'react'
 
 interface DiagramPreviewProps {
   code: string
-  onError?: (error: string | null) => void
+  onParseStateChange?: (state: { hasParseError: boolean; message: string | null }) => void
+  parseErrorMessage?: string | null
 }
 
-export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
+export default function DiagramPreview({ code, onParseStateChange, parseErrorMessage }: DiagramPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
@@ -124,7 +125,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
     if (!code.trim()) {
       if (containerRef.current) containerRef.current.innerHTML = ''
       setRenderError(null)
-      onError?.(null)
+      onParseStateChange?.({ hasParseError: false, message: null })
       setIsRendering(false)
       return
     }
@@ -157,7 +158,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
 
         if (!cancelled) {
           setRenderError(null)
-          onError?.(null)
+          onParseStateChange?.({ hasParseError: false, message: null })
 
           if (containerRef.current) {
             containerRef.current.innerHTML = svg
@@ -179,7 +180,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : 'Render error'
           setRenderError(message)
-          onError?.(message)
+          onParseStateChange?.({ hasParseError: true, message })
           removeMermaidFallbackNodes(`mermaid-${idCounterRef.current}`)
           removeMermaidFallbackNodes()
           if (containerRef.current) containerRef.current.innerHTML = ''
@@ -194,7 +195,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
       cancelled = true
       clearPendingFitRaf()
     }
-  }, [code, onError])
+  }, [code, onParseStateChange])
 
   useEffect(() => {
     return () => {
@@ -207,7 +208,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <div className="panel-heading" style={{ marginBottom: 0 }}>◈ Diagram Preview</div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {!renderError && code.trim() !== '' && (
+          {!parseErrorMessage && !renderError && code.trim() !== '' && (
             <button
               onClick={fitDiagramToContainer}
               title="Reset zoom to fit diagram in view"
@@ -241,7 +242,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
         </div>
       </div>
 
-      {renderError && (
+      {(parseErrorMessage ?? renderError) && (
         <div
           style={{
             padding: '12px',
@@ -253,7 +254,7 @@ export default function DiagramPreview({ code, onError }: DiagramPreviewProps) {
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: '4px' }}>⚠ Syntax Error</div>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{renderError}</pre>
+          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{parseErrorMessage ?? renderError}</pre>
         </div>
       )}
 
