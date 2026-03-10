@@ -141,4 +141,28 @@ a {
   [data-panel-group-direction='vertical'] > [data-panel-resize-handle-enabled]:hover {
     background-color: var(--color-accent-primary);
   }
+
+  /* Editor with line number gutter */
+  .editor-container textarea {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) var(--color-bg-primary);
+  }
+
+  .editor-container textarea::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .editor-container textarea::-webkit-scrollbar-track {
+    background: var(--color-bg-primary);
+  }
+
+  .editor-container textarea::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 4px;
+    border: 2px solid var(--color-bg-primary);
+  }
+
+  .editor-container textarea::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-text-secondary);
+  }
 }

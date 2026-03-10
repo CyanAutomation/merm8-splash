@@ -15,7 +15,9 @@ export interface DiagramEditorRef {
 const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
   ({ value, onChange }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const editorContainerRef = useRef<HTMLDivElement>(null)
     const [currentExampleIndex, setCurrentExampleIndex] = useState(0)
+    const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
 
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
@@ -25,7 +27,14 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       const nextIndex = (currentExampleIndex + 1) % EXAMPLE_DIAGRAMS.length
       setCurrentExampleIndex(nextIndex)
       onChange(EXAMPLE_DIAGRAMS[nextIndex].code)
+      setHighlightedLine(null)
     }
+
+    const handleLineNumberClick = (lineNum: number) => {
+      setHighlightedLine(lineNum === highlightedLine ? null : lineNum)
+    }
+
+    const lineCount = value.split('\n').length
 
     return (
       <div className="panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -59,30 +68,91 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
           Ctrl+E to focus · Paste Mermaid diagram code below
         </div>
 
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          spellCheck={false}
+        <div
+          ref={editorContainerRef}
           style={{
             flex: 1,
-            width: '100%',
-            background: 'var(--color-bg-primary)',
+            display: 'flex',
             border: '1px solid var(--color-border)',
-            color: 'var(--color-text-primary)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: '13px',
-            lineHeight: '1.5',
-            padding: '12px',
             borderRadius: '8px',
-            resize: 'none',
-            outline: 'none',
-            tabSize: 2,
+            overflow: 'hidden',
+            background: 'var(--color-bg-primary)',
           }}
-          onFocus={(e) => (e.target.style.borderColor = 'var(--color-accent-secondary)')}
-          onBlur={(e) => (e.target.style.borderColor = 'var(--color-border)')}
-          placeholder="graph TD&#10;    A --> B"
-        />
+        >
+          <div
+            aria-hidden="true"
+            style={{
+              width: '40px',
+              minWidth: '40px',
+              background: 'var(--color-bg-secondary)',
+              borderRight: '1px solid var(--color-border)',
+              padding: '12px 0',
+              textAlign: 'right',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '13px',
+              lineHeight: '1.5',
+              color: 'var(--color-text-secondary)',
+              userSelect: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              overflowY: 'hidden',
+            }}
+          >
+            {Array.from({ length: lineCount }).map((_, i) => (
+              <div
+                key={i}
+                onClick={() => handleLineNumberClick(i + 1)}
+                style={{
+                  paddingRight: '8px',
+                  paddingLeft: '4px',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  background: highlightedLine === i + 1 ? 'rgba(94, 92, 230, 0.2)' : 'transparent',
+                  color: highlightedLine === i + 1 ? 'var(--color-accent-secondary)' : 'var(--color-text-secondary)',
+                  transition: 'background 0.1s, color 0.1s',
+                }}
+              >
+                {i + 1}
+              </div>
+            ))}
+          </div>
+
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => {
+              onChange(e.target.value)
+              setHighlightedLine(null)
+            }}
+            spellCheck={false}
+            style={{
+              flex: 1,
+              width: '100%',
+              background: 'var(--color-bg-primary)',
+              border: 'none',
+              color: 'var(--color-text-primary)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '13px',
+              lineHeight: '1.5',
+              padding: '12px',
+              resize: 'none',
+              outline: 'none',
+              tabSize: 2,
+            }}
+            onFocus={() => {
+              if (editorContainerRef.current) {
+                editorContainerRef.current.style.borderColor = 'var(--color-accent-secondary)'
+              }
+            }}
+            onBlur={() => {
+              if (editorContainerRef.current) {
+                editorContainerRef.current.style.borderColor = 'var(--color-border)'
+              }
+              setHighlightedLine(null)
+            }}
+            placeholder="graph TD&#10;    A --> B"
+          />
+        </div>
 
         <div
           style={{

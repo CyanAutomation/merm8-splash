@@ -20,6 +20,13 @@ export interface UseDiagramAnalysisReturn {
     rulesMetadata: Rule[],
     options?: AnalyzeRequestOptions
   ) => void
+  forceAnalysis: (
+    endpoint: string,
+    code: string,
+    enabledRules: string[],
+    rulesMetadata: Rule[],
+    options?: AnalyzeRequestOptions
+  ) => void
   cancelAnalysis: () => void
 }
 
