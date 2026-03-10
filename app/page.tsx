@@ -553,7 +553,6 @@ export default function Home() {
         <StatusBar
           connectionStatus={connectionStatus}
           parseStatus={parseStatus}
-          parseError={parseError}
           ruleCount={enabledRules.length}
           violationCount={Array.isArray(violations) ? violations.length : 0}
           apiEndpoint={endpoint}
