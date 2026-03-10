@@ -40,6 +40,7 @@ export default function Home() {
     violations,
     isAnalyzing,
     analyzeError,
+    analysisHints,
     diagramType,
     triggerAnalysis,
     cancelAnalysis,
@@ -479,6 +480,7 @@ export default function Home() {
                       results={violations}
                       isAnalyzing={isAnalyzing}
                       analyzeError={analyzeError}
+                      analysisHints={analysisHints}
                     />
                   </ErrorBoundary>
                 </div>
@@ -555,6 +557,7 @@ export default function Home() {
                       results={violations}
                       isAnalyzing={isAnalyzing}
                       analyzeError={analyzeError}
+                      analysisHints={analysisHints}
                     />
                   </ErrorBoundary>
                 </div>
