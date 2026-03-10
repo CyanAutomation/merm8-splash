@@ -7,6 +7,7 @@ interface ResultsPanelProps {
   results: Violation[];
   isAnalyzing: boolean;
   analyzeError: string | null;
+  analysisHints: string[];
   onJumpToLine?: (line: number) => void;
 }
 
@@ -33,7 +34,7 @@ const violationKey = (violation: Violation, index: number): string => {
 };
 
 const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
-  ({ results, isAnalyzing, analyzeError, onJumpToLine }, ref) => {
+  ({ results, isAnalyzing, analyzeError, analysisHints, onJumpToLine }, ref) => {
     const panelRef = useRef<HTMLDivElement>(null);
     const [filter, setFilter] = useState<SeverityFilter>("all");
     const [sortBy, setSortBy] = useState<"severity" | "line">("severity");
@@ -240,7 +241,14 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                 border: "1px solid var(--color-error)",
               }}
             >
-              ⚠ {analyzeError}
+              <div>⚠ {analyzeError}</div>
+              {analysisHints.length > 0 && (
+                <ul style={{ margin: "8px 0 0 18px", padding: 0 }}>
+                  {analysisHints.map((hint, index) => (
+                    <li key={`${hint}-${index}`}>{hint}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           ) : filtered.length === 0 ? (
             <div
