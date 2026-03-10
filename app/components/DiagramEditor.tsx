@@ -1,7 +1,7 @@
 'use client'
 
-import { useRef, useImperativeHandle, forwardRef } from 'react'
-import { DEFAULT_DIAGRAM } from '@/lib/constants'
+import { useRef, useState, useImperativeHandle, forwardRef } from 'react'
+import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
 
 interface DiagramEditorProps {
   value: string
@@ -12,15 +12,20 @@ export interface DiagramEditorRef {
   focus: () => void
 }
 
-const EXAMPLE_DIAGRAM = DEFAULT_DIAGRAM
-
 const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
   ({ value, onChange }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
+    const [currentExampleIndex, setCurrentExampleIndex] = useState(0)
 
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
     }))
+
+    const handleExampleClick = () => {
+      const nextIndex = (currentExampleIndex + 1) % EXAMPLE_DIAGRAMS.length
+      setCurrentExampleIndex(nextIndex)
+      onChange(EXAMPLE_DIAGRAMS[nextIndex].code)
+    }
 
     return (
       <div className="panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -30,7 +35,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
             <button
               className="btn"
               style={{ fontSize: '12px', padding: '4px 12px' }}
-              onClick={() => onChange(EXAMPLE_DIAGRAM)}
+              onClick={handleExampleClick}
             >
               Example
             </button>
