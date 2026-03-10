@@ -30,14 +30,6 @@ interface ParsedAnalysisError {
   hints: string[]
 }
 
-function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-}
-
 function normalizeHintItem(item: unknown): string | null {
   if (typeof item === 'string') return item.trim()
   if (typeof item === 'object' && item !== null) {
