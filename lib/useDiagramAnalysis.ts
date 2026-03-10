@@ -11,6 +11,7 @@ export interface UseDiagramAnalysisReturn {
   violations: Violation[]
   isAnalyzing: boolean
   analyzeError: string | null
+  analysisHints: string[]
   diagramType: string | null
   triggerAnalysis: (
     endpoint: string,
@@ -24,11 +25,65 @@ export interface UseDiagramAnalysisReturn {
 
 const DEBOUNCE_MS = 500
 
+interface ParsedAnalysisError {
+  summary: string
+  hints: string[]
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+}
+
+function parseAnalysisError(err: unknown): ParsedAnalysisError {
+  if (axios.isAxiosError(err)) {
+    const responseData = err.response?.data
+
+    if (typeof responseData === 'string' && responseData.trim().length > 0) {
+      return {
+        summary: responseData,
+        hints: [],
+      }
+    }
+
+    if (responseData && typeof responseData === 'object') {
+      const data = responseData as Record<string, unknown>
+      const summary =
+        (typeof data.message === 'string' && data.message) ||
+        (typeof data.detail === 'string' && data.detail) ||
+        (typeof data.error === 'string' && data.error) ||
+        (typeof data.title === 'string' && data.title) ||
+        err.message ||
+        'Analysis failed'
+
+      const hints = [
+        ...asStringArray(data.hints),
+        ...asStringArray(data.guidance),
+        ...asStringArray(data.suggestions),
+      ]
+
+      return {
+        summary,
+        hints,
+      }
+    }
+  }
+
+  return {
+    summary: err instanceof Error ? err.message : 'Analysis failed',
+    hints: [],
+  }
+}
+
 export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const [code, setCodeState] = useState<string>(DEFAULT_DIAGRAM)
   const [violations, setViolations] = useState<Violation[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [analysisHints, setAnalysisHints] = useState<string[]>([])
   const [diagramType, setDiagramType] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestSeqRef = useRef(0)
@@ -47,6 +102,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     abortControllerRef.current = null
     setViolations([])
     setAnalyzeError(null)
+    setAnalysisHints([])
     setDiagramType(null)
     setIsAnalyzing(false)
   }, [])
@@ -77,6 +133,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
 
         setIsAnalyzing(true)
         setAnalyzeError(null)
+        setAnalysisHints([])
 
         try {
           const result = await analyzeCode(
@@ -92,6 +149,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             setViolations(Array.isArray(result.results) ? result.results : [])
             setDiagramType(result.diagram_type)
             setAnalyzeError(null)
+            setAnalysisHints([])
           }
         } catch (err) {
           if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
@@ -99,8 +157,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           }
 
           if (seq === requestSeqRef.current) {
-            const message = err instanceof Error ? err.message : 'Analysis failed'
-            setAnalyzeError(message)
+            const parsedError = parseAnalysisError(err)
+            setAnalyzeError(parsedError.summary)
+            setAnalysisHints(parsedError.hints)
             setViolations([])
             setDiagramType(null)
           }
@@ -134,6 +193,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     violations,
     isAnalyzing,
     analyzeError,
+    analysisHints,
     diagramType,
     triggerAnalysis,
     cancelAnalysis,
