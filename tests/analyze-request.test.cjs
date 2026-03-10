@@ -408,3 +408,68 @@ test('validateApiEndpoint rejects endpoint with username/password credentials', 
   assert.equal(usernameOnlyResult.valid, false)
   assert.equal(usernameOnlyResult.message, 'Endpoint must not include credentials.')
 })
+
+
+test('analyzeCode returns normalized string hints when provided by API', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        diagram_type: 'flowchart',
+        results: [],
+        hints: ['Use concise labels', 'Group related nodes'],
+      },
+    }),
+  })
+
+  try {
+    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+
+    assert.equal(response.diagram_type, 'flowchart')
+    assert.equal(JSON.stringify(response.hints), JSON.stringify(['Use concise labels', 'Group related nodes']))
+  } finally {
+    axios.create = originalCreate
+  }
+})
+
+test('analyzeCode filters malformed hints and warns in development', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+  const originalWarn = console.warn
+  const warnings = []
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        diagram_type: 'flowchart',
+        results: [],
+        hints: ['Keep naming consistent', null, 7, { code: 'prefer-short-labels' }],
+      },
+    }),
+  })
+
+  console.warn = (message) => {
+    warnings.push(String(message))
+  }
+
+  try {
+    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+
+    assert.equal(
+      JSON.stringify(response.hints),
+      JSON.stringify(['Keep naming consistent', { code: 'prefer-short-labels' }])
+    )
+    assert.equal(
+      warnings.some((message) => message.includes('invalid entries in `hints`')),
+      true,
+      'expected a warning for malformed hints'
+    )
+  } finally {
+    console.warn = originalWarn
+    axios.create = originalCreate
+  }
+})
