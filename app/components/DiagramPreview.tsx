@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { parseDiagramType } from '@/lib/diagramTypes'
+import ToggleSlider from './ToggleSlider'
 
 // Diagram types supported by beautiful-mermaid
 const BM_SUPPORTED = new Set(['flowchart', 'sequence', 'class', 'state', 'er', 'xychart'])
@@ -285,30 +286,12 @@ export default function DiagramPreview({
             </button>
           )}
           {!parseErrorMessage && !renderError && code.trim() !== '' && onToggleBeautifulRenderer && (
-            <button
-              onClick={onToggleBeautifulRenderer}
+            <ToggleSlider
+              value={useBeautifulRenderer}
+              onChange={onToggleBeautifulRenderer}
+              label="✨ Beautiful"
               title="Toggle beautiful-mermaid renderer"
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                border: '1px solid var(--color-border)',
-                background: useBeautifulRenderer ? 'var(--color-accent-primary)' : 'var(--color-bg-secondary)',
-                color: useBeautifulRenderer ? '#000' : 'var(--color-text-primary)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-primary)'
-                ;(e.currentTarget as HTMLButtonElement).style.color = '#000'
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = useBeautifulRenderer ? 'var(--color-accent-primary)' : 'var(--color-bg-secondary)'
-                ;(e.currentTarget as HTMLButtonElement).style.color = useBeautifulRenderer ? '#000' : 'var(--color-text-primary)'
-              }}
-            >
-              ✨ Beautiful
-            </button>
+            />
           )}
           {isRendering && (
             <span style={{ fontSize: '12px', color: 'var(--color-accent-primary)' }}>
