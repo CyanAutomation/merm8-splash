@@ -425,6 +425,8 @@ export default function Home() {
                     code={code}
                     onParseStateChange={handleParseStateChange}
                     parseErrorMessage={parseErrorDetail}
+                    useBeautifulRenderer={prefs.useBeautifulRenderer}
+                    onToggleBeautifulRenderer={() => savePrefs({ useBeautifulRenderer: !prefs.useBeautifulRenderer })}
                   />
                 </ErrorBoundary>
               </div>
@@ -504,6 +506,8 @@ export default function Home() {
                     code={code}
                     onParseStateChange={handleParseStateChange}
                     parseErrorMessage={parseErrorDetail}
+                    useBeautifulRenderer={prefs.useBeautifulRenderer}
+                    onToggleBeautifulRenderer={() => savePrefs({ useBeautifulRenderer: !prefs.useBeautifulRenderer })}
                   />
                 </ErrorBoundary>
               </div>

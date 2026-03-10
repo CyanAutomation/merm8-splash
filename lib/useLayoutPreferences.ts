@@ -6,12 +6,14 @@ interface LayoutPreferences {
   leftPanelSize: number // percentage
   editorSize: number // percentage of left column
   previewSize: number // percentage of right column
+  useBeautifulRenderer: boolean
 }
 
 const DEFAULT_PREFS: LayoutPreferences = {
   leftPanelSize: 40,
   editorSize: 70,
   previewSize: 55,
+  useBeautifulRenderer: false,
 }
 
 const STORAGE_KEY = 'merm8-layout-prefs'
@@ -36,6 +38,7 @@ function sanitizeLayoutPreferences(
     leftPanelSize: sanitizeValue(values.leftPanelSize, 25, 75, DEFAULT_PREFS.leftPanelSize),
     editorSize: sanitizeValue(values.editorSize, 30, 70, DEFAULT_PREFS.editorSize),
     previewSize: sanitizeValue(values.previewSize, 25, 75, DEFAULT_PREFS.previewSize),
+    useBeautifulRenderer: typeof values.useBeautifulRenderer === 'boolean' ? values.useBeautifulRenderer : false,
   }
 }
 
