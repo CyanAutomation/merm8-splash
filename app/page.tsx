@@ -483,6 +483,7 @@ export default function Home() {
                       isAnalyzing={isAnalyzing}
                       analyzeError={analyzeError}
                       analysisHints={analysisHints}
+                      parseError={parseErrorDetail}
                     />
                   </ErrorBoundary>
                 </div>
@@ -562,6 +563,7 @@ export default function Home() {
                       isAnalyzing={isAnalyzing}
                       analyzeError={analyzeError}
                       analysisHints={analysisHints}
+                      parseError={parseErrorDetail}
                     />
                   </ErrorBoundary>
                 </div>
