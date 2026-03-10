@@ -542,36 +542,15 @@ export default function Home() {
             </div>
             <div style={{ flex: 3, overflow: 'hidden' }}>
               <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="panel-heading" style={{ marginBottom: 0 }}>
-                      ▦ Results
-                      {violations.length > 0 && (
-                        <span
-                          style={{
-                            background: violations.some((r) => r.severity === 'error')
-                              ? 'var(--color-error)'
-                              : 'var(--color-warning)',
-                            color: 'var(--color-bg-primary)',
-                            padding: '0 6px',
-                            fontSize: '12px',
-                            borderRadius: '8px',
-                            marginLeft: '4px',
-                          }}
-                        >
-                          {violations.length}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      className="btn"
-                      style={{ fontSize: '12px', padding: '4px 12px' }}
-                      onClick={() => setShowRulesModal(true)}
-                      title="Configure rules"
-                    >
-                      ⊞ Rules
-                    </button>
-                  </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    className="btn"
+                    style={{ fontSize: '12px', padding: '4px 12px' }}
+                    onClick={() => setShowRulesModal(true)}
+                    title="Configure rules"
+                  >
+                    ⊞ Rules
+                  </button>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                       className="btn"
