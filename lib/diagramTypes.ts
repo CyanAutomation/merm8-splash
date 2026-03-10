@@ -16,6 +16,7 @@
  * - Class: 'classDiagram'
  * - Entity-Relationship: 'erDiagram'
  * - State: 'stateDiagram'
+ * - XY Charts: 'xychart-beta'
  *
  * @param code - The Mermaid diagram code
  * @returns The diagram type string, or null if unable to parse
@@ -48,6 +49,7 @@ export function parseDiagramType(code: string): string | null {
           if (normalized.startsWith('classdiagram')) return 'class'
           if (normalized.startsWith('erdiagram')) return 'er'
           if (isStateDiagramDeclaration(normalized)) return 'state'
+          if (normalized.startsWith('xychart-')) return 'xychart'
           if (isFlowchartDeclaration(normalized)) return 'flowchart'
         }
       }
@@ -71,6 +73,7 @@ export function parseDiagramType(code: string): string | null {
       if (normalized.startsWith('classdiagram')) return 'class'
       if (normalized.startsWith('erdiagram')) return 'er'
       if (isStateDiagramDeclaration(normalized)) return 'state'
+      if (normalized.startsWith('xychart-')) return 'xychart'
       if (isFlowchartDeclaration(normalized)) return 'flowchart'
       continue
     }
@@ -93,6 +96,9 @@ export function parseDiagramType(code: string): string | null {
     }
     if (isStateDiagramDeclaration(normalized)) {
       return 'state'
+    }
+    if (normalized.startsWith('xychart-')) {
+      return 'xychart'
     }
     // Flowchart/Graph detection (graph TD, flowchart LR, etc.)
     if (isFlowchartDeclaration(normalized)) {

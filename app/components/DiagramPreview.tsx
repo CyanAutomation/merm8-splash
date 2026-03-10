@@ -1,14 +1,26 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { parseDiagramType } from '@/lib/diagramTypes'
+
+// Diagram types supported by beautiful-mermaid
+const BM_SUPPORTED = new Set(['flowchart', 'sequence', 'class', 'state', 'er', 'xychart'])
 
 interface DiagramPreviewProps {
   code: string
   onParseStateChange?: (state: { hasParseError: boolean; message: string | null }) => void
   parseErrorMessage?: string | null
+  useBeautifulRenderer?: boolean
+  onToggleBeautifulRenderer?: () => void
 }
 
-export default function DiagramPreview({ code, onParseStateChange, parseErrorMessage }: DiagramPreviewProps) {
+export default function DiagramPreview({ 
+  code, 
+  onParseStateChange, 
+  parseErrorMessage,
+  useBeautifulRenderer = false,
+  onToggleBeautifulRenderer,
+}: DiagramPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
@@ -135,6 +147,44 @@ export default function DiagramPreview({ code, onParseStateChange, parseErrorMes
 
     const renderDiagram = async () => {
       try {
+        // Check if beautiful-mermaid should be used
+        if (useBeautifulRenderer) {
+          const diagramType = parseDiagramType(code)
+          if (diagramType && BM_SUPPORTED.has(diagramType)) {
+            try {
+              const beautifulMermaid = await import('beautiful-mermaid')
+              const svg = beautifulMermaid.renderMermaidSVG(code, {
+                bg: 'var(--color-bg-primary)',
+                fg: 'var(--color-text-primary)',
+                accent: 'var(--color-accent-primary)',
+                transparent: true,
+              })
+              
+              if (!cancelled) {
+                setRenderError(null)
+                onParseStateChange?.({ hasParseError: false, message: null })
+
+                if (containerRef.current) {
+                  containerRef.current.innerHTML = svg
+                  const svgEl = containerRef.current.querySelector('svg')
+                  if (svgEl) {
+                    svgRef.current = svgEl as SVGSVGElement
+                    rafIdRef.current = requestAnimationFrame(() => {
+                      nestedRafIdRef.current = requestAnimationFrame(() => {
+                        if (renderSequenceRef.current !== renderSequence) return
+                        fitDiagramToContainer()
+                      })
+                    })
+                  }
+                }
+              }
+              return
+            } catch (bmErr) {
+              console.debug('beautiful-mermaid render failed, falling back to standard mermaid:', bmErr instanceof Error ? bmErr.message : bmErr)
+            }
+          }
+        }
+
         const mermaid = (await import('mermaid')).default
         mermaid.initialize({
           startOnLoad: false,
@@ -195,7 +245,7 @@ export default function DiagramPreview({ code, onParseStateChange, parseErrorMes
       cancelled = true
       clearPendingFitRaf()
     }
-  }, [code, onParseStateChange])
+  }, [code, onParseStateChange, useBeautifulRenderer])
 
   useEffect(() => {
     return () => {
@@ -232,6 +282,32 @@ export default function DiagramPreview({ code, onParseStateChange, parseErrorMes
               }}
             >
               ↔ Fit
+            </button>
+          )}
+          {!parseErrorMessage && !renderError && code.trim() !== '' && onToggleBeautifulRenderer && (
+            <button
+              onClick={onToggleBeautifulRenderer}
+              title="Toggle beautiful-mermaid renderer"
+              style={{
+                padding: '4px 8px',
+                fontSize: '12px',
+                border: '1px solid var(--color-border)',
+                background: useBeautifulRenderer ? 'var(--color-accent-primary)' : 'var(--color-bg-secondary)',
+                color: useBeautifulRenderer ? '#000' : 'var(--color-text-primary)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-primary)'
+                ;(e.currentTarget as HTMLButtonElement).style.color = '#000'
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = useBeautifulRenderer ? 'var(--color-accent-primary)' : 'var(--color-bg-secondary)'
+                ;(e.currentTarget as HTMLButtonElement).style.color = useBeautifulRenderer ? '#000' : 'var(--color-text-primary)'
+              }}
+            >
+              ✨ Beautiful
             </button>
           )}
           {isRendering && (
