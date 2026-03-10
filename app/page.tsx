@@ -233,6 +233,10 @@ export default function Home() {
     setEnabledRules((prev) => prev.filter((ruleId) => !applicableRuleIds.has(ruleId)))
   }, [diagramType, rules])
 
+  const handleJumpToLine = useCallback((lineNum: number) => {
+    editorRef.current?.highlightLine(lineNum)
+  }, [])
+
   const handleReset = useCallback(() => {
     resetPrefs()
     setShowResetConfirmation(false)
@@ -526,6 +530,7 @@ export default function Home() {
                       analyzeError={analyzeError}
                       analysisHints={analysisHints}
                       parseError={parseErrorDetail}
+                      onJumpToLine={handleJumpToLine}
                     />
                   </ErrorBoundary>
                 </div>
@@ -618,6 +623,7 @@ export default function Home() {
                       analyzeError={analyzeError}
                       analysisHints={analysisHints}
                       parseError={parseErrorDetail}
+                      onJumpToLine={handleJumpToLine}
                     />
                   </ErrorBoundary>
                 </div>
