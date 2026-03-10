@@ -5,6 +5,8 @@ import { Component, ReactNode } from 'react'
 interface ErrorBoundaryProps {
   children: ReactNode
   fallback?: ReactNode
+  resetKey?: string | number
+  resetKeys?: unknown[]
 }
 
 interface ErrorBoundaryState {
@@ -20,6 +22,21 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error }
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    if (!this.state.hasError) return
+
+    if (this.props.resetKeys !== undefined || prevProps.resetKeys !== undefined) {
+      if (!areResetKeysEqual(prevProps.resetKeys, this.props.resetKeys)) {
+        this.setState({ hasError: false, error: null })
+      }
+      return
+    }
+
+    if (this.props.resetKey !== prevProps.resetKey) {
+      this.setState({ hasError: false, error: null })
+    }
   }
 
   render() {
@@ -45,4 +62,12 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
     return this.props.children
   }
+}
+
+function areResetKeysEqual(prevKeys?: unknown[], nextKeys?: unknown[]): boolean {
+  if (prevKeys === nextKeys) return true
+  if (!prevKeys || !nextKeys) return false
+  if (prevKeys.length !== nextKeys.length) return false
+
+  return prevKeys.every((key, index) => Object.is(key, nextKeys[index]))
 }
