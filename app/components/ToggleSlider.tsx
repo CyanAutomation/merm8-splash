@@ -19,15 +19,17 @@ export default function ToggleSlider({
 }: ToggleSliderProps) {
   const checkboxRef = useRef<HTMLInputElement>(null)
 
-  const handleChange = () => {
-    onChange(!value)
+  const handleToggle = () => {
+    if (disabled) return
+    const newValue = !value
+    onChange(newValue)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault()
-      onChange(!value)
+      handleToggle()
     }
   }
 
@@ -48,7 +50,7 @@ export default function ToggleSlider({
         ref={checkboxRef}
         type="checkbox"
         checked={value}
-        onChange={handleChange}
+        onChange={(e) => onChange(e.target.checked)}
         disabled={disabled}
         style={{ display: 'none' }}
         aria-label={label}
@@ -75,7 +77,7 @@ export default function ToggleSlider({
         aria-label={label || 'Toggle'}
         tabIndex={disabled ? -1 : 0}
         onKeyDown={handleKeyDown}
-        onClick={!disabled ? handleChange : undefined}
+        onClick={handleToggle}
         style={{
           position: 'relative',
           width: '32px',
