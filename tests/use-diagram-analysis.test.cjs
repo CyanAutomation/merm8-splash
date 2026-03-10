@@ -6,36 +6,64 @@ const vm = require('node:vm')
 const ts = require('typescript')
 
 function createReactMock() {
-  const state = []
-  let stateIndex = 0
+  const hookValues = []
+  let hookIndex = 0
 
   return {
     useState(initialValue) {
-      const index = stateIndex++
-      if (!(index in state)) {
-        state[index] = initialValue
+      const index = hookIndex++
+      if (!(index in hookValues)) {
+        hookValues[index] = initialValue
       }
 
       const setState = (value) => {
-        state[index] = typeof value === 'function' ? value(state[index]) : value
+        hookValues[index] = typeof value === 'function' ? value(hookValues[index]) : value
       }
 
-      return [state[index], setState]
+      return [hookValues[index], setState]
     },
     useCallback(fn) {
+      hookIndex += 1
       return fn
     },
     useRef(initialValue) {
-      return { current: initialValue }
+      const index = hookIndex++
+      if (!(index in hookValues)) {
+        hookValues[index] = { current: initialValue }
+      }
+
+      return hookValues[index]
     },
     useEffect() {
+      hookIndex += 1
       // No-op for unit-level state transition checks.
     },
-    __resetRenderCursor() {
-      stateIndex = 0
+    __prepareRender() {
+      hookIndex = 0
     },
-    __getState(index) {
-      return state[index]
+  }
+}
+
+function createTimerControls() {
+  const pendingTimers = new Map()
+  let nextTimerId = 1
+
+  return {
+    setTimeout(callback) {
+      const timerId = nextTimerId++
+      pendingTimers.set(timerId, callback)
+      return timerId
+    },
+    clearTimeout(timerId) {
+      pendingTimers.delete(timerId)
+    },
+    async flushTimers() {
+      const callbacks = Array.from(pendingTimers.values())
+      pendingTimers.clear()
+
+      for (const callback of callbacks) {
+        await callback()
+      }
     },
   }
 }
@@ -53,6 +81,7 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl }) {
   })
 
   const reactMock = createReactMock()
+  const timerControls = createTimerControls()
 
   const axiosMock = {
     isAxiosError: isAxiosErrorImpl,
@@ -85,17 +114,16 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl }) {
     __filename: sourcePath,
     process,
     console,
-    setTimeout,
-    clearTimeout,
+    setTimeout: timerControls.setTimeout,
+    clearTimeout: timerControls.clearTimeout,
     AbortController,
   })
 
   script.runInContext(context)
-  reactMock.__resetRenderCursor()
-
   return {
     useDiagramAnalysis: module.exports.useDiagramAnalysis,
     reactMock,
+    timerControls,
   }
 }
 
@@ -112,21 +140,24 @@ test('useDiagramAnalysis maps Axios object payload to analyzeError summary and h
     },
   }
 
-  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async () => {
       throw axiosError
     },
     isAxiosErrorImpl: () => true,
   })
 
+  reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
   hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await timerControls.flushTimers()
 
-  await new Promise((resolve) => setTimeout(resolve, 650))
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
 
-  assert.equal(reactMock.__getState(3), 'Diagram contains unsupported syntax')
+  assert.equal(rerenderedHook.analyzeError, 'Diagram contains unsupported syntax')
   assert.equal(
-    JSON.stringify(reactMock.__getState(4)),
+    JSON.stringify(rerenderedHook.analysisHints),
     JSON.stringify([
       'Use a valid flowchart declaration',
       'Check Mermaid docs for declaration syntax',
@@ -143,18 +174,21 @@ test('useDiagramAnalysis maps Axios string payload to summary and clears hint li
     },
   }
 
-  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async () => {
       throw axiosError
     },
     isAxiosErrorImpl: () => true,
   })
 
+  reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
   hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await timerControls.flushTimers()
 
-  await new Promise((resolve) => setTimeout(resolve, 650))
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
 
-  assert.equal(reactMock.__getState(3), 'Analyzer rejected the payload')
-  assert.equal(JSON.stringify(reactMock.__getState(4)), JSON.stringify([]))
+  assert.equal(rerenderedHook.analyzeError, 'Analyzer rejected the payload')
+  assert.equal(JSON.stringify(rerenderedHook.analysisHints), JSON.stringify([]))
 })
