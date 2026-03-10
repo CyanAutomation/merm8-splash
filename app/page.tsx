@@ -50,7 +50,8 @@ export default function Home() {
   const [rulesLoading, setRulesLoading] = useState(false)
   const [rulesLoadedEndpoint, setRulesLoadedEndpoint] = useState<string | null>(null)
   const [rulesUnavailableEndpoint, setRulesUnavailableEndpoint] = useState<string | null>(null)
-  const [parseError, setParseError] = useState<string | null>(null)
+  const [hasParseError, setHasParseError] = useState(false)
+  const [parseErrorDetail, setParseErrorDetail] = useState<string | null>(null)
   const [showResetConfirmation, setShowResetConfirmation] = useState(false)
   const [showRulesModal, setShowRulesModal] = useState(false)
   const rulesRequestRef = useRef(0)
@@ -221,7 +222,12 @@ export default function Home() {
   }, [resetPrefs])
 
   const parseStatus: 'idle' | 'valid' | 'error' =
-    parseError ? 'error' : code.trim() ? 'valid' : 'idle'
+    hasParseError ? 'error' : code.trim() ? 'valid' : 'idle'
+
+  const handleParseStateChange = useCallback((state: { hasParseError: boolean; message: string | null }) => {
+    setHasParseError(state.hasParseError)
+    setParseErrorDetail(state.message)
+  }, [])
 
   return (
     <div
@@ -412,7 +418,11 @@ export default function Home() {
             <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
               <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
                 <ErrorBoundary>
-                  <DiagramPreview code={code} onError={setParseError} />
+                  <DiagramPreview
+                    code={code}
+                    onParseStateChange={handleParseStateChange}
+                    parseErrorMessage={parseErrorDetail}
+                  />
                 </ErrorBoundary>
               </div>
             </div>
@@ -486,7 +496,11 @@ export default function Home() {
             <div style={{ flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
               <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
                 <ErrorBoundary>
-                  <DiagramPreview code={code} onError={setParseError} />
+                  <DiagramPreview
+                    code={code}
+                    onParseStateChange={handleParseStateChange}
+                    parseErrorMessage={parseErrorDetail}
+                  />
                 </ErrorBoundary>
               </div>
             </div>
@@ -550,6 +564,7 @@ export default function Home() {
 
       {/* Status Bar */}
       <ErrorBoundary>
+        {/* Keep status bar parse state compact: verbose parser text belongs in DiagramPreview's dedicated error panel. */}
         <StatusBar
           connectionStatus={connectionStatus}
           parseStatus={parseStatus}
