@@ -337,9 +337,9 @@ export default function ExportDropdown({
         <div
           style={{
             position: 'absolute',
-            bottom: '100%',
+            top: '100%',
             right: 0,
-            marginBottom: '4px',
+            marginTop: '4px',
             background: 'var(--color-bg-secondary)',
             border: '1px solid var(--color-border)',
             minWidth: '160px',
