@@ -9,39 +9,47 @@ export const EXAMPLE_DIAGRAMS = [
   {
     type: 'flowchart',
     code: `graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Do something]
-    B -->|No| D[Do something else]
-    C --> E[End]
-    D --> E`,
+    A[Pull Request Opened] --> B{Tests Pass?}
+    B -->|No| C[Request Changes]
+    C --> D[Author Updates Code]
+    D --> B
+    B -->|Yes| E[Code Review]
+    E --> F{Approved?}
+    F -->|No| C
+    F -->|Yes| G[Merge to Main]
+    G --> H[Deploy to Staging]
+    H --> I[Deploy to Production]`,
   },
   {
     type: 'sequence',
     code: `sequenceDiagram
-    participant Alice
-    participant Bob
-    Alice->>John: Hello John, how are you?
-    loop Healthcheck
-        John->>John: Fight against hypochondria
-    end
-    Note right of John: Rational thoughts <br/>prevail!
-    John-->>Alice: Great!
-    John->>Bob: How about you?
-    Bob-->>John: Jolly good!`,
+    participant Client
+    participant API
+    participant Database
+    Client->>API: GET /users/123
+    API->>Database: Query user by ID
+    Database-->>API: User record
+    API-->>Client: 200 OK with JSON`,
   },
   {
     type: 'class',
     code: `classDiagram
-    class Animal {
-        +String name
-        +eat()
-        +move()
+    class User {
+        +String id
+        +String email
+        +authenticate()
+        +logout()
     }
-    class Duck {
-        +quack()
+    class Admin {
+        +deleteUser()
+        +viewAuditLog()
     }
-    Animal <|-- Duck
-    Duck : +swim()`,
+    class Customer {
+        +placeOrder()
+        +viewOrderHistory()
+    }
+    User <|-- Admin
+    User <|-- Customer`,
   },
   {
     type: 'er',
@@ -53,11 +61,12 @@ export const EXAMPLE_DIAGRAMS = [
   {
     type: 'state',
     code: `stateDiagram-v2
-    [*] --> Still
-    Still --> [*]
-    Still --> Moving
-    Moving --> Still
-    Moving --> Crash
-    Crash --> [*]`,
+    [*] --> Pending
+    Pending --> Confirmed: Payment Received
+    Confirmed --> Shipped: Item Picked
+    Shipped --> Delivered: Package Delivered
+    Delivered --> [*]
+    Pending --> Cancelled: User Cancels
+    Cancelled --> [*]`,
   },
 ]
