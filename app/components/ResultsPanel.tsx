@@ -33,6 +33,16 @@ const violationKey = (violation: Violation, index: number): string => {
   return [rule_id, severity, message, line ?? "", node_id ?? "", index].join("::");
 };
 
+const hintedLine = (hint: string): number | null => {
+  const match = hint.match(/\bline\s+(\d+)\b/i);
+  if (!match) {
+    return null;
+  }
+
+  const line = Number(match[1]);
+  return Number.isFinite(line) ? line : null;
+};
+
 const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
   ({ results, isAnalyzing, analyzeError, analysisHints, onJumpToLine }, ref) => {
     const panelRef = useRef<HTMLDivElement>(null);
@@ -232,135 +242,186 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
             >
               ⠋ Analyzing...
             </div>
-          ) : analyzeError ? (
-            <div
-              style={{
-                padding: "12px",
-                color: "var(--color-error)",
-                fontSize: "12px",
-                border: "1px solid var(--color-error)",
-              }}
-            >
-              <div>⚠ {analyzeError}</div>
-              {analysisHints.length > 0 && (
-                <ul style={{ margin: "8px 0 0 18px", padding: 0 }}>
-                  {analysisHints.map((hint, index) => (
-                    <li key={`${hint}-${index}`}>{hint}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div
-              style={{
-                padding: "16px",
-                color: "var(--color-success)",
-                fontSize: "13px",
-                textAlign: "center",
-              }}
-            >
-              ✓ No violations found
-            </div>
           ) : (
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                fontSize: "12px",
-              }}
-            >
-              <thead>
-                <tr
+            <>
+              {analyzeError && (
+                <div
                   style={{
-                    borderBottom: "1px solid var(--color-border)",
-                    color: "var(--color-text-secondary)",
-                    fontSize: "11px",
-                    textAlign: "left",
+                    padding: "12px",
+                    color: "var(--color-error)",
+                    fontSize: "12px",
+                    border: "1px solid var(--color-error)",
+                    marginBottom: analysisHints.length > 0 ? "8px" : "0",
                   }}
                 >
-                  <th style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>
-                    Rule
-                  </th>
-                  <th style={{ padding: "4px 8px" }}>Sev</th>
-                  <th style={{ padding: "4px 8px", width: "100%" }}>Message</th>
-                  <th style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>
-                    Line
-                  </th>
-                  <th style={{ padding: "4px 4px" }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((v, i) => {
-                  const key = violationKey(v, i);
+                  <div>⚠ {analyzeError}</div>
+                </div>
+              )}
 
-                  return (
+              {analysisHints.length > 0 && (
+                <div
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    marginBottom: "8px",
+                    background: "var(--color-bg-secondary)",
+                  }}
+                >
+                  <div
+                    style={{
+                      color: "var(--color-text-secondary)",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      marginBottom: "6px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    Hints
+                  </div>
+                  <ol
+                    style={{
+                      margin: 0,
+                      paddingLeft: "18px",
+                      color: "var(--color-text-primary)",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {analysisHints.map((hint, index) => {
+                      const line = hintedLine(hint);
+                      return (
+                        <li key={`${hint}-${index}`} style={{ marginBottom: "4px" }}>
+                          {hint}{" "}
+                          {line != null && onJumpToLine && (
+                            <button
+                              className="btn"
+                              style={{ fontSize: "10px", padding: "1px 6px", marginLeft: "6px" }}
+                              onClick={() => onJumpToLine(line)}
+                            >
+                              jump to line
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              )}
+
+              {filtered.length === 0 ? (
+                <div
+                  style={{
+                    padding: "16px",
+                    color: "var(--color-success)",
+                    fontSize: "13px",
+                    textAlign: "center",
+                  }}
+                >
+                  ✓ No violations found
+                </div>
+              ) : (
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: "12px",
+                  }}
+                >
+                  <thead>
                     <tr
-                      key={key}
                       style={{
-                        borderBottom: "1px solid rgba(68,68,68,0.3)",
-                        cursor: v.line != null ? "pointer" : "default",
+                        borderBottom: "1px solid var(--color-border)",
+                        color: "var(--color-text-secondary)",
+                        fontSize: "11px",
+                        textAlign: "left",
                       }}
-                      onClick={() => v.line != null && onJumpToLine?.(v.line)}
                     >
-                      <td
-                        style={{
-                          padding: "6px 8px",
-                          color: "var(--color-accent-primary)",
-                          whiteSpace: "nowrap",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {v.rule_id}
-                      </td>
-                      <td style={{ padding: "6px 8px" }}>
-                        <span
-                          style={{
-                            color: severityColor(v.severity),
-                            border: `1px solid ${severityColor(v.severity)}`,
-                            padding: "2px 8px",
-                            fontSize: "12px",
-                            borderRadius: "8px",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {v.severity}
-                        </span>
-                      </td>
-                      <td
-                        style={{
-                          padding: "6px 8px",
-                          color: "var(--color-text-primary)",
-                        }}
-                      >
-                        {v.message}
-                      </td>
-                      <td
-                        style={{
-                          padding: "6px 8px",
-                          color: "var(--color-text-secondary)",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {v.line ?? "—"}
-                      </td>
-                      <td style={{ padding: "6px 4px" }}>
-                        <button
-                          className="btn"
-                          style={{ fontSize: "10px", padding: "1px 4px" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyViolation(v, key);
-                          }}
-                          title="Copy"
-                        >
-                          {copiedKey === key ? "✓" : copyErrorKey === key ? "⚠" : "⎘"}
-                        </button>
-                      </td>
+                      <th style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>
+                        Rule
+                      </th>
+                      <th style={{ padding: "4px 8px" }}>Sev</th>
+                      <th style={{ padding: "4px 8px", width: "100%" }}>Message</th>
+                      <th style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>
+                        Line
+                      </th>
+                      <th style={{ padding: "4px 4px" }}></th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map((v, i) => {
+                      const key = violationKey(v, i);
+
+                      return (
+                        <tr
+                          key={key}
+                          style={{
+                            borderBottom: "1px solid rgba(68,68,68,0.3)",
+                            cursor: v.line != null ? "pointer" : "default",
+                          }}
+                          onClick={() => v.line != null && onJumpToLine?.(v.line)}
+                        >
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              color: "var(--color-accent-primary)",
+                              whiteSpace: "nowrap",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {v.rule_id}
+                          </td>
+                          <td style={{ padding: "6px 8px" }}>
+                            <span
+                              style={{
+                                color: severityColor(v.severity),
+                                border: `1px solid ${severityColor(v.severity)}`,
+                                padding: "2px 8px",
+                                fontSize: "12px",
+                                borderRadius: "8px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {v.severity}
+                            </span>
+                          </td>
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              color: "var(--color-text-primary)",
+                            }}
+                          >
+                            {v.message}
+                          </td>
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              color: "var(--color-text-secondary)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {v.line ?? "—"}
+                          </td>
+                          <td style={{ padding: "6px 4px" }}>
+                            <button
+                              className="btn"
+                              style={{ fontSize: "10px", padding: "1px 4px" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyViolation(v, key);
+                              }}
+                              title="Copy"
+                            >
+                              {copiedKey === key ? "✓" : copyErrorKey === key ? "⚠" : "⎘"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </>
           )}
         </div>
       </div>
