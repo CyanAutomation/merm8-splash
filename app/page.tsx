@@ -9,6 +9,7 @@ import ResultsPanel, { ResultsPanelRef } from './components/ResultsPanel'
 import StatusBar from './components/StatusBar'
 import ExportDropdown from './components/ExportDropdown'
 import ErrorBoundary from './components/ErrorBoundary'
+import Modal from './components/Modal'
 import { useApiEndpoint } from '@/lib/useApiEndpoint'
 import { useDiagramAnalysis } from '@/lib/useDiagramAnalysis'
 import { useKeyboardShortcuts } from '@/lib/keyboard'
@@ -51,6 +52,7 @@ export default function Home() {
   const [rulesUnavailableEndpoint, setRulesUnavailableEndpoint] = useState<string | null>(null)
   const [parseError, setParseError] = useState<string | null>(null)
   const [showResetConfirmation, setShowResetConfirmation] = useState(false)
+  const [showRulesModal, setShowRulesModal] = useState(false)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
@@ -306,7 +308,7 @@ export default function Home() {
       {/* Main Content - Desktop & Mobile Layout */}
       <div style={{ flex: 1, overflow: 'hidden', height: '100%' }}>
         {!isMobile ? (
-          // Desktop: 2x2 grid layout
+          // Desktop: 2x2 grid layout with Rules in modal
           <div
             style={{
               display: 'grid',
@@ -366,24 +368,6 @@ export default function Home() {
               }}
             />
 
-            {/* Rules Panel - Bottom Left */}
-            <div style={{ overflow: 'hidden', gridColumn: 1, gridRow: 3 }}>
-              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                <ErrorBoundary>
-                  <RulesPanel
-                    rules={rules}
-                    enabledRules={enabledRules}
-                    onToggleRule={toggleRule}
-                    onEnableAll={enableAllRules}
-                    onDisableAll={disableAllRules}
-                    isLoading={rulesLoading}
-                    isUnavailable={rulesUnavailableEndpoint === endpoint}
-                    diagramType={diagramType}
-                  />
-                </ErrorBoundary>
-              </div>
-            </div>
-
             {/* Vertical Divider */}
             <div
               style={{
@@ -424,8 +408,8 @@ export default function Home() {
               }}
             />
 
-            {/* Preview Panel - Top Right */}
-            <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
+            {/* Preview Panel - Bottom Left */}
+            <div style={{ overflow: 'hidden', gridColumn: 1, gridRow: 3 }}>
               <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
                 <ErrorBoundary>
                   <DiagramPreview code={code} onError={setParseError} />
@@ -433,50 +417,39 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Bottom Horizontal Divider - Right Side */}
-            <div
-              style={{
-                gridColumn: 3,
-                gridRow: 2,
-                background: 'var(--color-border)',
-                cursor: 'row-resize',
-                transition: 'background 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.target as HTMLElement).style.background = 'var(--color-border)'
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                const startY = e.clientY
-                const gridContainer = e.currentTarget.parentElement
-                if (!gridContainer) return
-
-                const handleMouseMove = (moveEvent: MouseEvent) => {
-                  const delta = moveEvent.clientY - startY
-                  const containerHeight = gridContainer.clientHeight
-                  const newPreviewSize = Math.max(25, Math.min(75, prefs.previewSize + (delta / containerHeight) * 100))
-                  savePrefs({ previewSize: Math.round(newPreviewSize) })
-                }
-
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove)
-                  document.removeEventListener('mouseup', handleMouseUp)
-                  dragCleanupFnsRef.current.delete(handleMouseUp)
-                }
-
-                document.addEventListener('mousemove', handleMouseMove)
-                document.addEventListener('mouseup', handleMouseUp)
-                dragCleanupFnsRef.current.add(handleMouseUp)
-              }}
-            />
-
-            {/* Results Panel - Bottom Right */}
-            <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: 3 }}>
+            {/* Results Panel - Full Right Column */}
+            <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: '1 / 4' }}>
               <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="panel-heading" style={{ marginBottom: 0 }}>
+                      ▦ Results
+                      {violations.length > 0 && (
+                        <span
+                          style={{
+                            background: violations.some((r) => r.severity === 'error')
+                              ? 'var(--color-error)'
+                              : 'var(--color-warning)',
+                            color: 'var(--color-bg-primary)',
+                            padding: '0 6px',
+                            fontSize: '12px',
+                            borderRadius: '8px',
+                            marginLeft: '4px',
+                          }}
+                        >
+                          {violations.length}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      className="btn"
+                      style={{ fontSize: '12px', padding: '4px 12px' }}
+                      onClick={() => setShowRulesModal(true)}
+                      title="Configure rules"
+                    >
+                      ⊞ Rules
+                    </button>
+                  </div>
                   <ErrorBoundary>
                     <ExportDropdown
                       results={violations}
@@ -501,28 +474,12 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          // Mobile: Vertical stack
+          // Mobile: Vertical stack (Editor, Preview, Results)
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '4px', padding: '4px' }}>
-            <div style={{ flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
+            <div style={{ flex: 2, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
               <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
                 <ErrorBoundary>
                   <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
-                </ErrorBoundary>
-              </div>
-            </div>
-            <div style={{ flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
-              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                <ErrorBoundary>
-                  <RulesPanel
-                    rules={rules}
-                    enabledRules={enabledRules}
-                    onToggleRule={toggleRule}
-                    onEnableAll={enableAllRules}
-                    onDisableAll={disableAllRules}
-                    isLoading={rulesLoading}
-                    isUnavailable={rulesUnavailableEndpoint === endpoint}
-                    diagramType={diagramType}
-                  />
                 </ErrorBoundary>
               </div>
             </div>
@@ -533,9 +490,38 @@ export default function Home() {
                 </ErrorBoundary>
               </div>
             </div>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
+            <div style={{ flex: 3, overflow: 'hidden' }}>
               <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="panel-heading" style={{ marginBottom: 0 }}>
+                      ▦ Results
+                      {violations.length > 0 && (
+                        <span
+                          style={{
+                            background: violations.some((r) => r.severity === 'error')
+                              ? 'var(--color-error)'
+                              : 'var(--color-warning)',
+                            color: 'var(--color-bg-primary)',
+                            padding: '0 6px',
+                            fontSize: '12px',
+                            borderRadius: '8px',
+                            marginLeft: '4px',
+                          }}
+                        >
+                          {violations.length}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      className="btn"
+                      style={{ fontSize: '12px', padding: '4px 12px' }}
+                      onClick={() => setShowRulesModal(true)}
+                      title="Configure rules"
+                    >
+                      ⊞ Rules
+                    </button>
+                  </div>
                   <ErrorBoundary>
                     <ExportDropdown
                       results={violations}
@@ -675,6 +661,25 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Rules Modal */}
+      <Modal
+        isOpen={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+        title="Rules Configuration"
+        maxHeight="80vh"
+      >
+        <RulesPanel
+          rules={rules}
+          enabledRules={enabledRules}
+          onToggleRule={toggleRule}
+          onEnableAll={enableAllRules}
+          onDisableAll={disableAllRules}
+          isLoading={rulesLoading}
+          isUnavailable={rulesUnavailableEndpoint === endpoint}
+          diagramType={diagramType}
+        />
+      </Modal>
     </div>
   )
 }
