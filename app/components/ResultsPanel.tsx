@@ -40,7 +40,7 @@ const hintedLine = (hint: string): number | null => {
   }
 
   const line = Number(match[1]);
-  return Number.isFinite(line) ? line : null;
+  return Number.isFinite(line) && line > 0 ? line : null;
 };
 
 const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
