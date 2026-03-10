@@ -122,7 +122,10 @@ export default function DiagramPreview({
       )
 
       // Apply dimensions directly to SVG element as inline styles
-      // Using !important to ensure they override any CSS rules
+      // Using !important to ensure they override any CSS rules and attributes
+      // Also remove width/height attributes that might be set by beautiful-mermaid
+      svg.removeAttribute('width')
+      svg.removeAttribute('height')
       svg.style.setProperty('width', `${finalWidth}px`, 'important')
       svg.style.setProperty('height', `${finalHeight}px`, 'important')
       svg.style.setProperty('display', 'block', 'important')
