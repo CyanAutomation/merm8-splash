@@ -192,3 +192,69 @@ test('useDiagramAnalysis maps Axios string payload to summary and clears hint li
   assert.equal(rerenderedHook.analyzeError, 'Analyzer rejected the payload')
   assert.equal(JSON.stringify(rerenderedHook.analysisHints), JSON.stringify([]))
 })
+
+test('useDiagramAnalysis extracts hints from successful response', async () => {
+  const successResponse = {
+    diagram_type: 'flowchart',
+    results: [
+      {
+        rule_id: 'no-empty-label',
+        severity: 'warning',
+        message: 'Node has empty label',
+        line: 2,
+      },
+    ],
+    hints: [
+      'Add a label to the node',
+      'Use descriptive text for better readability',
+      { message: 'Consider adding a label at line 2' },
+    ],
+  }
+
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => successResponse,
+    isAxiosErrorImpl: () => false,
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await timerControls.flushTimers()
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+
+  assert.equal(rerenderedHook.analyzeError, null)
+  assert.equal(JSON.stringify(rerenderedHook.analysisHints), JSON.stringify([
+    'Add a label to the node',
+    'Use descriptive text for better readability',
+    'Consider adding a label at line 2',
+  ]))
+  assert.equal(rerenderedHook.violations.length, 1)
+  assert.equal(rerenderedHook.diagramType, 'flowchart')
+})
+
+test('useDiagramAnalysis handles successful response without hints', async () => {
+  const successResponse = {
+    diagram_type: 'sequenceDiagram',
+    results: [],
+  }
+
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => successResponse,
+    isAxiosErrorImpl: () => false,
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.triggerAnalysis('https://example.test', 'sequenceDiagram\nAlice->>Bob: Hi', [], [])
+  await timerControls.flushTimers()
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+
+  assert.equal(rerenderedHook.analyzeError, null)
+  assert.equal(JSON.stringify(rerenderedHook.analysisHints), JSON.stringify([]))
+  assert.equal(rerenderedHook.violations.length, 0)
+  assert.equal(rerenderedHook.diagramType, 'sequenceDiagram')
+})
