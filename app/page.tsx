@@ -328,10 +328,10 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Top Horizontal Divider - Left Side */}
+            {/* Horizontal Divider - Spans All Columns */}
             <div
               style={{
-                gridColumn: 1,
+                gridColumn: '1 / 4',
                 gridRow: 2,
                 background: 'var(--color-border)',
                 cursor: 'row-resize',
@@ -368,11 +368,11 @@ export default function Home() {
               }}
             />
 
-            {/* Vertical Divider */}
+            {/* Vertical Divider - Top Section Only */}
             <div
               style={{
                 gridColumn: 2,
-                gridRow: '1 / 4',
+                gridRow: '1 / 2',
                 background: 'var(--color-border)',
                 cursor: 'col-resize',
                 transition: 'background 0.2s ease',
@@ -408,8 +408,8 @@ export default function Home() {
               }}
             />
 
-            {/* Preview Panel - Bottom Left */}
-            <div style={{ overflow: 'hidden', gridColumn: 1, gridRow: 3 }}>
+            {/* Preview Panel - Top Right */}
+            <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
               <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
                 <ErrorBoundary>
                   <DiagramPreview code={code} onError={setParseError} />
@@ -417,8 +417,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Results Panel - Full Right Column */}
-            <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: '1 / 4' }}>
+            {/* Results Panel - Full Width Bottom */}
+            <div style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
               <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
