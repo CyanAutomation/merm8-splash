@@ -237,7 +237,7 @@ export default function Home() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        height: '100vh',
         background: 'var(--color-bg-primary)',
       }}
     >
@@ -315,14 +315,14 @@ export default function Home() {
       </div>
 
       {/* Main Content - Desktop & Mobile Layout */}
-      <div style={{ flex: 1, overflow: 'hidden', height: '100%' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {!isMobile ? (
           // Desktop: 2x2 grid layout with Rules in modal
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: `${prefs.leftPanelSize}% 4px 1fr`,
-              gridTemplateRows: `${prefs.editorSize}% 4px 1fr`,
+              gridTemplateRows: `minmax(0, ${prefs.editorSize}%) 4px minmax(0, 1fr)`,
               height: '100%',
               width: '100%',
               gap: 0,
