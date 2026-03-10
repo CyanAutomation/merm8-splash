@@ -1,6 +1,8 @@
 'use client'
 
 import { useRef, useState, useCallback, useEffect } from 'react'
+import Image from 'next/image'
+import remAvatar from '@/design/rem-avatar.png'
 import ApiConfigPanel, { ApiConfigPanelRef } from './components/ApiConfigPanel'
 import DiagramEditor, { DiagramEditorRef } from './components/DiagramEditor'
 import DiagramPreview from './components/DiagramPreview'
@@ -251,20 +253,29 @@ export default function Home() {
           alignItems: 'center',
         }}
       >
-        <div>
-          <span
-            style={{
-              color: 'var(--color-accent-primary)',
-              fontWeight: 600,
-              fontSize: '16px',
-              marginRight: '8px',
-            }}
-          >
-            merm8-splash
-          </span>
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-            Mermaid Linter Interface
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Image
+            src={remAvatar}
+            alt="rem-avatar mascot"
+            width={40}
+            height={40}
+            priority
+          />
+          <div>
+            <span
+              style={{
+                color: 'var(--color-accent-primary)',
+                fontWeight: 600,
+                fontSize: '16px',
+                marginRight: '8px',
+              }}
+            >
+              merm8-splash
+            </span>
+            <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
+              Mermaid Linter Interface
+            </span>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
