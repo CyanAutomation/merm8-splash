@@ -38,6 +38,19 @@ export interface Violation {
 export interface AnalyzeResponse {
   diagram_type: string
   results: Violation[]
+  hints?: AnalyzeHint[]
+}
+
+export type AnalyzeHint = string | Record<string, unknown>
+
+function normalizeAnalyzeHints(rawHints: unknown): AnalyzeHint[] | undefined {
+  if (rawHints === undefined) return undefined
+  if (!Array.isArray(rawHints)) return []
+
+  return rawHints.filter(
+    (hint): hint is AnalyzeHint =>
+      typeof hint === 'string' || (typeof hint === 'object' && hint !== null && !Array.isArray(hint))
+  )
 }
 
 function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
@@ -45,10 +58,13 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
   const rawResults = data && 'results' in data ? (data as { results?: unknown }).results : undefined
   const rawDiagramType =
     data && 'diagram_type' in data ? (data as { diagram_type?: unknown }).diagram_type : undefined
+  const rawHints = data && 'hints' in data ? (data as { hints?: unknown }).hints : undefined
+  const normalizedHints = normalizeAnalyzeHints(rawHints)
 
   const normalized: AnalyzeResponse = {
     diagram_type: typeof rawDiagramType === 'string' ? rawDiagramType : '',
     results: Array.isArray(rawResults) ? rawResults : [],
+    ...(normalizedHints !== undefined ? { hints: normalizedHints } : {}),
   }
 
   if (process.env.NODE_ENV !== 'production') {
@@ -57,6 +73,13 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
     if (!data) malformedReasons.push('missing `data` payload')
     if (!Array.isArray(rawResults)) malformedReasons.push('non-array `results`')
     if (typeof rawDiagramType !== 'string') malformedReasons.push('missing/invalid `diagram_type`')
+    if (rawHints !== undefined) {
+      if (!Array.isArray(rawHints)) {
+        malformedReasons.push('non-array `hints`')
+      } else if (normalizedHints && normalizedHints.length !== rawHints.length) {
+        malformedReasons.push('invalid entries in `hints`')
+      }
+    }
 
     if (malformedReasons.length > 0) {
       console.warn(
