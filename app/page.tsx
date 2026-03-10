@@ -229,6 +229,8 @@ export default function Home() {
     setParseErrorDetail(state.message)
   }, [])
 
+  const diagramPreviewResetKey = code
+
   return (
     <div
       style={{
@@ -417,7 +419,7 @@ export default function Home() {
             {/* Preview Panel - Top Right */}
             <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
               <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                <ErrorBoundary>
+                <ErrorBoundary resetKey={diagramPreviewResetKey}>
                   <DiagramPreview
                     code={code}
                     onParseStateChange={handleParseStateChange}
@@ -495,7 +497,7 @@ export default function Home() {
             </div>
             <div style={{ flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
               <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                <ErrorBoundary>
+                <ErrorBoundary resetKey={diagramPreviewResetKey}>
                   <DiagramPreview
                     code={code}
                     onParseStateChange={handleParseStateChange}
