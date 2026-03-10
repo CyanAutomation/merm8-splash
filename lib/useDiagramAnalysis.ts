@@ -192,7 +192,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         }
       }
     },
-    []
+    [cancelAnalysis]
   )
 
   const triggerAnalysis = useCallback(
