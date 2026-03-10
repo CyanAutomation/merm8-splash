@@ -45,7 +45,7 @@ const hintedLine = (hint: string): number | null => {
 };
 
 const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
-  ({ results, isAnalyzing, analyzeError, analysisHints, onJumpToLine }, ref) => {
+  ({ results, isAnalyzing, analyzeError, analysisHints, parseError, onJumpToLine }, ref) => {
     const panelRef = useRef<HTMLDivElement>(null);
     const [filter, setFilter] = useState<SeverityFilter>("all");
     const [sortBy, setSortBy] = useState<"severity" | "line">("severity");
