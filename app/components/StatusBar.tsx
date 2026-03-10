@@ -6,7 +6,6 @@ import clsx from 'clsx'
 interface StatusBarProps {
   connectionStatus: ConnectionStatus
   parseStatus: 'idle' | 'valid' | 'error'
-  parseError?: string | null
   ruleCount: number
   violationCount: number
   apiEndpoint: string
@@ -16,7 +15,6 @@ interface StatusBarProps {
 export default function StatusBar({
   connectionStatus,
   parseStatus,
-  parseError,
   ruleCount,
   violationCount,
   apiEndpoint,
@@ -71,7 +69,7 @@ export default function StatusBar({
         >
           {parseStatus === 'idle' && '○ Idle'}
           {parseStatus === 'valid' && '✓ Valid'}
-          {parseStatus === 'error' && `⚠ ${parseError ?? 'Parse error'}`}
+          {parseStatus === 'error' && '⚠ Parse error'}
         </span>
 
         {diagramType && (
