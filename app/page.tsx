@@ -45,6 +45,7 @@ export default function Home() {
     analysisHints,
     diagramType,
     triggerAnalysis,
+    forceAnalysis,
     cancelAnalysis,
   } = useDiagramAnalysis()
 
@@ -183,6 +184,19 @@ export default function Home() {
     await testConnection()
   }, [testConnection])
 
+  const handleRecheck = useCallback(() => {
+    const isConnected = connectionStatus === 'connected'
+    const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
+    const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+    const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
+
+    if (!code.trim() || !endpoint || !canAnalyze) {
+      return
+    }
+
+    forceAnalysis(endpoint, code, enabledRules, rules, { useServerDefaults: rulesUnavailableForEndpoint })
+  }, [code, endpoint, connectionStatus, rulesLoading, rulesLoadedEndpoint, rulesUnavailableEndpoint, enabledRules, rules, forceAnalysis])
+
   useKeyboardShortcuts({
     onFocusApiInput: () => apiConfigRef.current?.focusInput(),
     onFocusEditor: () => editorRef.current?.focus(),
@@ -233,6 +247,11 @@ export default function Home() {
   }, [])
 
   const diagramPreviewResetKey = code
+
+  const isConnected = connectionStatus === 'connected'
+  const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
+  const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+  const canRecheck = !!code.trim() && !!endpoint && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint) && !isAnalyzing
 
   return (
     <div
@@ -477,15 +496,26 @@ export default function Home() {
                       ⊞ Rules
                     </button>
                   </div>
-                  <ErrorBoundary>
-                    <ExportDropdown
-                      results={violations}
-                      code={code}
-                      endpoint={endpoint}
-                      enabledRules={enabledRules}
-                      rulesMetadata={rules}
-                    />
-                  </ErrorBoundary>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      className="btn"
+                      style={{ fontSize: '12px', padding: '4px 12px' }}
+                      onClick={handleRecheck}
+                      disabled={!canRecheck}
+                      title="Re-run analysis"
+                    >
+                      ↺ Check
+                    </button>
+                    <ErrorBoundary>
+                      <ExportDropdown
+                        results={violations}
+                        code={code}
+                        endpoint={endpoint}
+                        enabledRules={enabledRules}
+                        rulesMetadata={rules}
+                      />
+                    </ErrorBoundary>
+                  </div>
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   <ErrorBoundary>
@@ -558,15 +588,26 @@ export default function Home() {
                       ⊞ Rules
                     </button>
                   </div>
-                  <ErrorBoundary>
-                    <ExportDropdown
-                      results={violations}
-                      code={code}
-                      endpoint={endpoint}
-                      enabledRules={enabledRules}
-                      rulesMetadata={rules}
-                    />
-                  </ErrorBoundary>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      className="btn"
+                      style={{ fontSize: '12px', padding: '4px 12px' }}
+                      onClick={handleRecheck}
+                      disabled={!canRecheck}
+                      title="Re-run analysis"
+                    >
+                      ↺ Check
+                    </button>
+                    <ErrorBoundary>
+                      <ExportDropdown
+                        results={violations}
+                        code={code}
+                        endpoint={endpoint}
+                        enabledRules={enabledRules}
+                        rulesMetadata={rules}
+                      />
+                    </ErrorBoundary>
+                  </div>
                 </div>
                 <div style={{ flex: 1, overflow: 'auto' }}>
                   <ErrorBoundary>

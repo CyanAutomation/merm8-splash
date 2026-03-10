@@ -132,6 +132,69 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     setIsAnalyzing(false)
   }, [])
 
+  const runAnalysis = useCallback(
+    async (
+      endpoint: string,
+      newCode: string,
+      enabledRules: string[],
+      rulesMetadata: Rule[],
+      options: AnalyzeRequestOptions = {}
+    ) => {
+      if (!endpoint || !newCode.trim()) {
+        cancelAnalysis()
+        return
+      }
+
+      abortControllerRef.current?.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+
+      const seq = ++requestSeqRef.current
+
+      setIsAnalyzing(true)
+      setAnalyzeError(null)
+      setAnalysisHints([])
+
+      try {
+        const result = await analyzeCode(
+          endpoint,
+          newCode,
+          enabledRules,
+          rulesMetadata,
+          options,
+          controller.signal
+        )
+
+        if (seq === requestSeqRef.current) {
+          setViolations(Array.isArray(result.results) ? result.results : [])
+          setDiagramType(result.diagram_type)
+          setAnalyzeError(null)
+          setAnalysisHints(normalizeHints(result.hints))
+        }
+      } catch (err) {
+        if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
+          return
+        }
+
+        if (seq === requestSeqRef.current) {
+          const parsedError = parseAnalysisError(err)
+          setAnalyzeError(parsedError.summary)
+          setAnalysisHints(parsedError.hints)
+          setViolations([])
+          setDiagramType(null)
+        }
+      } finally {
+        if (seq === requestSeqRef.current) {
+          setIsAnalyzing(false)
+          if (abortControllerRef.current === controller) {
+            abortControllerRef.current = null
+          }
+        }
+      }
+    },
+    []
+  )
+
   const triggerAnalysis = useCallback(
     (
       endpoint: string,
@@ -144,61 +207,29 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         clearTimeout(debounceRef.current)
       }
 
-      debounceRef.current = setTimeout(async () => {
-        if (!endpoint || !newCode.trim()) {
-          cancelAnalysis()
-          return
-        }
-
-        abortControllerRef.current?.abort()
-        const controller = new AbortController()
-        abortControllerRef.current = controller
-
-        const seq = ++requestSeqRef.current
-
-        setIsAnalyzing(true)
-        setAnalyzeError(null)
-        setAnalysisHints([])
-
-        try {
-          const result = await analyzeCode(
-            endpoint,
-            newCode,
-            enabledRules,
-            rulesMetadata,
-            options,
-            controller.signal
-          )
-
-          if (seq === requestSeqRef.current) {
-            setViolations(Array.isArray(result.results) ? result.results : [])
-            setDiagramType(result.diagram_type)
-            setAnalyzeError(null)
-            setAnalysisHints(normalizeHints(result.hints))
-          }
-        } catch (err) {
-          if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
-            return
-          }
-
-          if (seq === requestSeqRef.current) {
-            const parsedError = parseAnalysisError(err)
-            setAnalyzeError(parsedError.summary)
-            setAnalysisHints(parsedError.hints)
-            setViolations([])
-            setDiagramType(null)
-          }
-        } finally {
-          if (seq === requestSeqRef.current) {
-            setIsAnalyzing(false)
-            if (abortControllerRef.current === controller) {
-              abortControllerRef.current = null
-            }
-          }
-        }
+      debounceRef.current = setTimeout(() => {
+        runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options)
       }, DEBOUNCE_MS)
     },
-    [cancelAnalysis]
+    [runAnalysis]
+  )
+
+  const forceAnalysis = useCallback(
+    (
+      endpoint: string,
+      newCode: string,
+      enabledRules: string[],
+      rulesMetadata: Rule[],
+      options: AnalyzeRequestOptions = {}
+    ) => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+        debounceRef.current = null
+      }
+
+      runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options)
+    },
+    [runAnalysis]
   )
 
   useEffect(() => {
@@ -221,6 +252,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     analysisHints,
     diagramType,
     triggerAnalysis,
+    forceAnalysis,
     cancelAnalysis,
   }
 }
