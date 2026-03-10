@@ -34,7 +34,7 @@ const violationKey = (violation: Violation, index: number): string => {
 };
 
 const hintedLine = (hint: string): number | null => {
-  const match = hint.match(/\bline\s+(\d+)\b/i);
+  const match = hint.match(/\bat line (\d+)\b/i) || hint.match(/\bline (\d+)\b/i);
   if (!match) {
     return null;
   }
