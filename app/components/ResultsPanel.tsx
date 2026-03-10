@@ -291,7 +291,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                     {analysisHints.map((hint, index) => {
                       const line = hintedLine(hint);
                       return (
-                        <li key={`${hint}-${index}`} style={{ marginBottom: "4px" }}>
+                        <li key={`hint-${index}`} style={{ marginBottom: "4px" }}>
                           {hint}{" "}
                           {line != null && onJumpToLine && (
                             <button
