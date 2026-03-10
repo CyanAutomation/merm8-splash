@@ -16,6 +16,7 @@ test.describe('Diagram preview recovery after transient invalid input', () => {
 
     await editorTextarea.fill('graph TD\n  A[Start] --> B[End]')
 
+    await page.waitForTimeout(100)
     await expect(page.getByText('⚠ Component Error')).not.toBeVisible()
     await expect(page.locator('svg').first()).toBeVisible()
   })
