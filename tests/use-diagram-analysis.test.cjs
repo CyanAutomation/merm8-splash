@@ -49,9 +49,9 @@ function createTimerControls() {
   let nextTimerId = 1
 
   return {
-    setTimeout(callback) {
+    setTimeout(callback, delay, ...args) {
       const timerId = nextTimerId++
-      pendingTimers.set(timerId, callback)
+      pendingTimers.set(timerId, () => callback(...args))
       return timerId
     },
     clearTimeout(timerId) {
