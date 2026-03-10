@@ -164,12 +164,12 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
           </div>
         </div>
 
-        {endpointFeedback && (
+        {isEndpointInvalid && endpointFeedback && (
           <div
             style={{
               marginTop: '6px',
               fontSize: '11px',
-              color: connectionStatus === 'error' || isEndpointInvalid ? 'var(--color-error)' : 'var(--color-text-secondary)',
+              color: 'var(--color-error)',
             }}
           >
             {endpointFeedback}
