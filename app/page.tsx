@@ -585,6 +585,7 @@ export default function Home() {
                     parseErrorMessage={parseErrorDetail}
                     useBeautifulRenderer={prefs.useBeautifulRenderer}
                     onToggleBeautifulRenderer={(value) => savePrefs({ useBeautifulRenderer: value })}
+                    onJumpToLine={handleJumpToLine}
                   />
                 </ErrorBoundary>
               </div>
