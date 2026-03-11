@@ -120,8 +120,9 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
                   paddingLeft: '4px',
                   cursor: 'pointer',
                   flexShrink: 0,
-                  background: highlightedLine === i + 1 ? 'rgba(94, 92, 230, 0.2)' : 'transparent',
-                  color: highlightedLine === i + 1 ? 'var(--color-accent-secondary)' : 'var(--color-text-secondary)',
+                  background: highlightedLine === i + 1 ? 'rgba(10, 132, 255, 0.3)' : 'transparent',
+                  color: highlightedLine === i + 1 ? 'var(--color-accent-primary)' : 'var(--color-text-secondary)',
+                  fontWeight: highlightedLine === i + 1 ? '600' : 'normal',
                   transition: 'background 0.1s, color 0.1s',
                 }}
               >
