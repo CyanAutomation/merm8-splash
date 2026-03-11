@@ -303,6 +303,37 @@ test('cancelAnalysis aborts in-flight analysis and resets state', async () => {
 })
 
 
+
+test('identical concurrent forceAnalysis calls coalesce into one API request', async () => {
+  const deferred = createDeferred()
+  let callCount = 0
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      callCount += 1
+      return deferred.promise
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+
+  assert.equal(callCount, 1)
+
+  deferred.resolve({
+    diagram_type: 'flowchart',
+    results: [{ rule_id: 'coalesced', severity: 'warning', message: 'shared', line: 1 }],
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+  assert.equal(rerenderedHook.violations[0].rule_id, 'coalesced')
+})
+
 test('identical forceAnalysis request reuses fresh cache entry', async () => {
   const calls = []
 
