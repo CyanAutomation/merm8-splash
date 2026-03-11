@@ -215,6 +215,9 @@ function isPrivateOrLoopbackIpv4(host: string): boolean {
 }
 
 function parseIpv6ToBigInt(host: string): bigint | null {
+  const IPV6_SEGMENT_BITS = BigInt(16)
+  const BIGINT_ZERO = BigInt(0)
+
   if (!host.includes(':')) return null
 
   const [left, right] = host.split('::')
@@ -234,19 +237,23 @@ function parseIpv6ToBigInt(host: string): bigint | null {
   if (expandedParts.length !== 8) return null
   if (!expandedParts.every((part) => /^[0-9a-f]{1,4}$/i.test(part))) return null
 
-  return expandedParts.reduce((value, part) => (value << 16n) + BigInt(parseInt(part, 16)), 0n)
+  return expandedParts.reduce(
+    (value, part) => (value << IPV6_SEGMENT_BITS) + BigInt(parseInt(part, 16)),
+    BIGINT_ZERO,
+  )
 }
 
 function isPrivateOrLoopbackIpv6(host: string): boolean {
   const parsed = parseIpv6ToBigInt(host)
   if (parsed === null) return false
 
-  const fe80Prefix = 0xfe80_0000_0000_0000_0000_0000_0000_0000n
-  const fe80Mask = 0xffc0_0000_0000_0000_0000_0000_0000_0000n
-  const fc00Prefix = 0xfc00_0000_0000_0000_0000_0000_0000_0000n
-  const fc00Mask = 0xfe00_0000_0000_0000_0000_0000_0000_0000n
+  const BIGINT_ONE = BigInt(1)
+  const fe80Prefix = BigInt('0xfe800000000000000000000000000000')
+  const fe80Mask = BigInt('0xffc00000000000000000000000000000')
+  const fc00Prefix = BigInt('0xfc000000000000000000000000000000')
+  const fc00Mask = BigInt('0xfe000000000000000000000000000000')
 
-  return parsed === 1n || (parsed & fe80Mask) === fe80Prefix || (parsed & fc00Mask) === fc00Prefix
+  return parsed === BIGINT_ONE || (parsed & fe80Mask) === fe80Prefix || (parsed & fc00Mask) === fc00Prefix
 }
 
 export function safeGetLocalStorage(key: string): string | null {
