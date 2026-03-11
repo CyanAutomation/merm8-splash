@@ -761,6 +761,7 @@ export default function Home() {
         isOpen={showApiConfigModal}
         onClose={() => setShowApiConfigModal(false)}
         title="API Configuration"
+        maxWidth="min(60vw, 1200px)"
       >
         {showApiConfigModal && (
           <ErrorBoundary>
