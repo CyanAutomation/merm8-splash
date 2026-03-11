@@ -18,7 +18,8 @@ export interface UseDiagramAnalysisReturn {
     code: string,
     enabledRules: string[],
     rulesMetadata: Rule[],
-    options?: AnalyzeRequestOptions
+    options?: AnalyzeRequestOptions,
+    scheduling?: AnalysisSchedulingOptions
   ) => void
   forceAnalysis: (
     endpoint: string,
@@ -30,11 +31,60 @@ export interface UseDiagramAnalysisReturn {
   cancelAnalysis: () => void
 }
 
-const DEBOUNCE_MS = 500
+type AnalysisTriggerSource = 'input' | 'config'
+
+interface AnalysisSchedulingOptions {
+  source?: AnalysisTriggerSource
+}
+
+const SMALL_EDIT_MAX_LENGTH = 160
+const LARGE_DIAGRAM_MIN_LENGTH = 1400
+const LARGE_DIAGRAM_MIN_LINES = 70
+const RAPID_INPUT_WINDOW_MS = 260
+
+const TINY_EDIT_DEBOUNCE_MS = 250
+const NORMAL_DEBOUNCE_MS = 550
+const LARGE_DIAGRAM_DEBOUNCE_MS = 900
+
+const NORMAL_IDLE_MIN_MS = 450
+const LARGE_IDLE_MIN_MS = 1000
+const RAPID_INPUT_EXTRA_MS = 150
+const RAPID_INPUT_EXTRA_MAX_MS = 450
 
 interface ParsedAnalysisError {
   summary: string
   hints: string[]
+}
+
+function countLines(value: string): number {
+  if (!value) return 0
+  return value.split('\n').length
+}
+
+function getAdaptiveDebounceMs(newCode: string): { debounceMs: number; minIdleMs: number } {
+  const trimmedLength = newCode.trim().length
+  const lineCount = countLines(newCode)
+  const isLargeDiagram =
+    trimmedLength >= LARGE_DIAGRAM_MIN_LENGTH || lineCount >= LARGE_DIAGRAM_MIN_LINES
+
+  if (isLargeDiagram) {
+    return {
+      debounceMs: LARGE_DIAGRAM_DEBOUNCE_MS,
+      minIdleMs: LARGE_IDLE_MIN_MS,
+    }
+  }
+
+  if (trimmedLength <= SMALL_EDIT_MAX_LENGTH) {
+    return {
+      debounceMs: TINY_EDIT_DEBOUNCE_MS,
+      minIdleMs: 0,
+    }
+  }
+
+  return {
+    debounceMs: NORMAL_DEBOUNCE_MS,
+    minIdleMs: NORMAL_IDLE_MIN_MS,
+  }
 }
 
 function normalizeHintItem(item: unknown): string | null {
@@ -113,6 +163,8 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestSeqRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const lastInputAtRef = useRef(0)
+  const rapidInputStreakRef = useRef(0)
 
   const cancelAnalysis = useCallback(() => {
     if (debounceRef.current) {
@@ -201,15 +253,38 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       newCode: string,
       enabledRules: string[],
       rulesMetadata: Rule[],
-      options: AnalyzeRequestOptions = {}
+      options: AnalyzeRequestOptions = {},
+      scheduling: AnalysisSchedulingOptions = {}
     ) => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current)
       }
 
+      const source = scheduling.source ?? 'input'
+      const { debounceMs, minIdleMs } = getAdaptiveDebounceMs(newCode)
+
+      let delayMs = Math.max(debounceMs, minIdleMs)
+
+      if (source === 'input') {
+        const now = Date.now()
+        const elapsedSinceLastInput = now - lastInputAtRef.current
+        const isRapid = elapsedSinceLastInput > 0 && elapsedSinceLastInput <= RAPID_INPUT_WINDOW_MS
+
+        rapidInputStreakRef.current = isRapid ? rapidInputStreakRef.current + 1 : 0
+        lastInputAtRef.current = now
+
+        const rapidExtraMs = Math.min(
+          rapidInputStreakRef.current * RAPID_INPUT_EXTRA_MS,
+          RAPID_INPUT_EXTRA_MAX_MS
+        )
+        delayMs = Math.max(delayMs + rapidExtraMs, minIdleMs)
+      } else {
+        rapidInputStreakRef.current = 0
+      }
+
       debounceRef.current = setTimeout(() => {
         runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options)
-      }, DEBOUNCE_MS)
+      }, delayMs)
     },
     [runAnalysis]
   )
