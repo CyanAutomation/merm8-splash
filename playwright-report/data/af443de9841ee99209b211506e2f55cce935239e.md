@@ -1,0 +1,94 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "rem-avatar mascot" [ref=e5]
+        - generic [ref=e6]: merm8-splashMermaid Linter Interface
+      - generic [ref=e7]:
+        - generic [ref=e8]: Ctrl+K (API) · Ctrl+E · Ctrl+R
+        - button "⚙ API" [ref=e9] [cursor=pointer]
+        - button "↺ Reset" [ref=e10] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: ✎ Diagram Editor
+          - generic [ref=e18]:
+            - button "Example" [ref=e19] [cursor=pointer]
+            - button "Clear" [ref=e20] [cursor=pointer]
+        - generic [ref=e21]: Ctrl+E to focus · Paste Mermaid diagram code below
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - generic [ref=e24] [cursor=pointer]: "1"
+            - generic [ref=e25] [cursor=pointer]: "2"
+            - generic [ref=e26] [cursor=pointer]: "3"
+            - generic [ref=e27] [cursor=pointer]: "4"
+            - generic [ref=e28] [cursor=pointer]: "5"
+            - generic [ref=e29] [cursor=pointer]: "6"
+          - textbox "graph TD A --> B" [ref=e30]: "graph TD A[Start] --> B{Decision} B -->|Yes| C[Do something] B -->|No| D[Do something else] C --> E[End] D --> E"
+        - generic [ref=e31]: 6 lines · 132 chars
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: ◈ Diagram Preview
+          - generic [ref=e39]:
+            - button "↔ Fit" [ref=e40] [cursor=pointer]
+            - switch "✨ Beautiful" [ref=e41] [cursor=pointer]:
+              - generic [ref=e42]: ✨ Beautiful
+        - document [ref=e46]:
+          - generic [ref=e54]:
+            - generic [ref=e61]:
+              - generic [ref=e65]: "Yes"
+              - generic [ref=e69]: "No"
+            - generic [ref=e70]:
+              - generic [ref=e75]: Start
+              - generic [ref=e80]: Decision
+              - generic [ref=e85]: Do something
+              - generic [ref=e90]: Do something else
+              - generic [ref=e95]: End
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - generic [ref=e99]: ▦ Results
+          - generic [ref=e100]:
+            - button "↓ Export ▼" [ref=e102] [cursor=pointer]:
+              - text: ↓ Export
+              - generic [ref=e103]: ▼
+            - button "⊞ Rules" [ref=e104] [cursor=pointer]
+            - button "↺ Check" [disabled] [ref=e105] [cursor=pointer]
+        - generic [ref=e107]:
+          - generic [ref=e108]:
+            - generic [ref=e109]: "Filter: All • Sort: Severity"
+            - button "⚲ Filter" [ref=e110] [cursor=pointer]
+          - generic [ref=e112]: ✓ No violations found
+    - generic [ref=e113]:
+      - generic [ref=e114]:
+        - generic [ref=e115]: API Not Tested
+        - generic [ref=e117]: ✓ Valid
+        - generic [ref=e118]: 0 rules enabled
+      - generic [ref=e119]: https://api.example.test
+    - generic [ref=e121]:
+      - generic [ref=e122]:
+        - heading "API Configuration" [level=2] [ref=e123]
+        - button "Close modal" [ref=e124] [cursor=pointer]: ×
+      - generic [ref=e126]:
+        - generic [ref=e127]:
+          - generic [ref=e128]: ⚙ API Configuration
+          - generic [ref=e129]:
+            - generic [ref=e130]: "Status: Not tested"
+            - generic [ref=e131]: "Source: URL parameter"
+            - generic [ref=e132]: Ctrl+K to focus
+        - generic [ref=e133]:
+          - textbox "https://api.merm8.app" [active] [ref=e136]: https://api.example.test
+          - generic [ref=e137]:
+            - combobox [ref=e138] [cursor=pointer]:
+              - option "Presets" [disabled] [selected]
+              - option "Official API"
+              - option "Localhost 8080"
+              - option "Localhost 3000"
+            - button "Test" [ref=e139] [cursor=pointer]
+            - button "Save" [ref=e140] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e146] [cursor=pointer]:
+    - img [ref=e147]
+  - alert [ref=e152]
+```
