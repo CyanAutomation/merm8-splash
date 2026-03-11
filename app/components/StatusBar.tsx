@@ -117,7 +117,7 @@ export default function StatusBar({
             className="btn"
             style={{ fontSize: '11px', padding: '2px 8px' }}
             onClick={onTestConnection}
-            disabled={connectionStatus === 'checking'}
+            disabled={connectionStatus === 'checking' || !apiEndpoint}
           >
             Test
           </button>

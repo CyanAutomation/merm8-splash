@@ -83,7 +83,6 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     }));
 
     const filtered = results;
-    const hasResults = results.length > 0;
 
     const fallbackCopyWithTextarea = (text: string): boolean => {
       const textarea = document.createElement("textarea");
