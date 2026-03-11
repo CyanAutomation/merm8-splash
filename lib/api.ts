@@ -135,6 +135,22 @@ export interface EndpointValidationResult {
   message?: string
 }
 
+function normalizeRulesResponse(rawData: unknown): Rule[] {
+  const data = rawData && typeof rawData === 'object' && !Array.isArray(rawData) ? rawData : null
+  const rawRules = data && 'rules' in data ? (data as { rules?: unknown }).rules : undefined
+
+  if (Array.isArray(rawRules)) {
+    return rawRules as Rule[]
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    const reason = !data ? 'missing object `data` payload' : 'non-array `rules`'
+    console.warn(`[api.fetchRules] Normalized malformed rules response: ${reason}`)
+  }
+
+  return []
+}
+
 function normalizeHost(hostname: string): string {
   const lowerCased = hostname.toLowerCase().replace(/\.+$/g, '')
   const unbracketed = lowerCased.replace(/^\[/, '').replace(/\]$/, '')
@@ -356,7 +372,7 @@ export async function fetchHealthz(
 export async function fetchRules(endpoint: string, signal?: AbortSignal): Promise<Rule[]> {
   const client = createApiClient(endpoint)
   const response = await client.get<{ rules: Rule[] }>('/v1/rules', { signal })
-  return response.data.rules
+  return normalizeRulesResponse(response?.data)
 }
 
 export async function analyzeCode(
