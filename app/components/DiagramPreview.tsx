@@ -234,7 +234,10 @@ export default function DiagramPreview({
     setIsRendering(true)
 
     // Save original insertAdjacentHTML to restore later and block error SVG injection
-    const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML
+    const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML as (
+      position: InsertPosition,
+      html: string
+    ) => void
     let isRenderingDiagram = false
 
     const renderDiagram = async () => {
@@ -295,7 +298,7 @@ export default function DiagramPreview({
         const mermaid = (await import('mermaid')).default
         
         // Intercept DOM insertions to block mermaid error SVGs from being rendered
-        Element.prototype.insertAdjacentHTML = function(position: string, html: string) {
+        Element.prototype.insertAdjacentHTML = function(position: InsertPosition, html: string) {
           // Block mermaid error SVGs from being inserted
           if (isRenderingDiagram && html.includes('aria-roledescription="error"')) {
             console.debug('Blocked mermaid error SVG from inserting to DOM')
