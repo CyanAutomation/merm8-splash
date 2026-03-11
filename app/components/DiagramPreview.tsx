@@ -223,9 +223,9 @@ export default function DiagramPreview({
         })
 
         const id = `mermaid-${++idCounterRef.current}`
+        removeMermaidFallbackNodes()
         ownedRenderIdsRef.current.add(id)
         lastRenderIdRef.current = id
-        removeMermaidFallbackNodes()
         // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
         const { svg } = await mermaid.render(id, code)
 
