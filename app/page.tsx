@@ -332,14 +332,14 @@ export default function Home() {
 
   return (
     <SnackbarProvider>
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        background: 'var(--color-bg-primary)',
-      }}
-    >
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          background: 'var(--color-bg-primary)',
+        }}
+      >
       {/* Header */}
       <div
         style={{
