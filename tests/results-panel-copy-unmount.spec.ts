@@ -76,7 +76,7 @@ test('copying then immediate unmount does not trigger unmounted state warnings',
     ;(window as Window & { __copyPending?: { resolve: null | (() => void) } }).__copyPending?.resolve?.()
   })
 
-  await page.waitForTimeout(50)
+  await page.waitForTimeout(2500)
 
   expect(consoleErrors).not.toContainEqual(expect.stringContaining("Can't perform a React state update on an unmounted component"))
 })
