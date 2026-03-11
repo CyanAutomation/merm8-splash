@@ -1,0 +1,559 @@
+
+> merm8-splash@0.1.0 test
+> playwright test
+
+[1A[2K[2m[WebServer] [22m
+[2m[WebServer] [22m> merm8-splash@0.1.0 dev
+[2m[WebServer] [22m> next dev
+[2m[WebServer] [22m
+
+[1A[2K[2m[WebServer] [22m   [1m[38;2;173;127;168m▲ Next.js 15.5.12[39m[22m
+
+[1A[2K[2m[WebServer] [22m   - Local:        http://localhost:3000
+[2m[WebServer] [22m   - Network:      http://10.0.1.182:3000
+[2m[WebServer] [22m
+[2m[WebServer] [22m [32m[1m✓[22m[39m Starting...
+
+[1A[2K[2m[WebServer] [22m [32m[1m✓[22m[39m Ready in 2.7s
+
+[1A[2K[2m[WebServer] [22m [37m[1m○[22m[39m Compiling / ...
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m ./app/page.tsx
+[2m[WebServer] [22mError:   [31mx[0m Expression expected
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m    ^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m  [31mx[0m Unterminated regexp literal
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m     ^^^^^^^^^^^^^^^^^^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m
+[2m[WebServer] [22mCaused by:
+[2m[WebServer] [22m    Syntax Error
+[2m[WebServer] [22m
+[2m[WebServer] [22mImport trace for requested module:
+[2m[WebServer] [22m./app/page.tsx
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m ./app/page.tsx
+[2m[WebServer] [22mError:   [31mx[0m Expression expected
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m    ^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m  [31mx[0m Unterminated regexp literal
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m     ^^^^^^^^^^^^^^^^^^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m
+[2m[WebServer] [22mCaused by:
+[2m[WebServer] [22m    Syntax Error
+[2m[WebServer] [22m
+[2m[WebServer] [22mImport trace for requested module:
+[2m[WebServer] [22m./app/page.tsx
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m ./app/page.tsx
+[2m[WebServer] [22mError:   [31mx[0m Expression expected
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m    ^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m  [31mx[0m Unterminated regexp literal
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m     ^^^^^^^^^^^^^^^^^^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m
+[2m[WebServer] [22mCaused by:
+[2m[WebServer] [22m    Syntax Error
+[2m[WebServer] [22m
+[2m[WebServer] [22mImport trace for requested module:
+[2m[WebServer] [22m./app/page.tsx
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 17016ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 16ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 13ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 15ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 22ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m ./app/page.tsx
+[2m[WebServer] [22mError:   [31mx[0m Unterminated regexp literal
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:684:1]
+[2m[WebServer] [22m [2m681[0m |             </div>
+[2m[WebServer] [22m [2m682[0m |           </div>
+[2m[WebServer] [22m [2m683[0m |         </div>
+[2m[WebServer] [22m [2m684[0m |       </div>
+[2m[WebServer] [22m     : [35;1m       ^^^^^[0m
+[2m[WebServer] [22m [2m685[0m | 
+[2m[WebServer] [22m [2m686[0m |       {/* Rules Modal */}
+[2m[WebServer] [22m [2m687[0m |       <Modal
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m
+[2m[WebServer] [22mCaused by:
+[2m[WebServer] [22m    Syntax Error
+[2m[WebServer] [22m
+[2m[WebServer] [22mImport trace for requested module:
+[2m[WebServer] [22m./app/page.tsx
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 55ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 30ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 58ms
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m ./app/page.tsx
+[2m[WebServer] [22mError:   [31mx[0m Unterminated regexp literal
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:684:1]
+[2m[WebServer] [22m [2m681[0m |             </div>
+[2m[WebServer] [22m [2m682[0m |           </div>
+[2m[WebServer] [22m [2m683[0m |         </div>
+[2m[WebServer] [22m [2m684[0m |       </div>
+[2m[WebServer] [22m     : [35;1m       ^^^^^[0m
+[2m[WebServer] [22m [2m685[0m | 
+[2m[WebServer] [22m [2m686[0m |       {/* Rules Modal */}
+[2m[WebServer] [22m [2m687[0m |       <Modal
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m
+[2m[WebServer] [22mCaused by:
+[2m[WebServer] [22m    Syntax Error
+[2m[WebServer] [22m
+[2m[WebServer] [22mImport trace for requested module:
+[2m[WebServer] [22m./app/page.tsx
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 13ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 38ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 21ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 14ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 27ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 17ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 26ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 19ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 16ms
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m ./app/page.tsx
+[2m[WebServer] [22mError:   [31mx[0m Expression expected
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m    ^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m  [31mx[0m Unterminated regexp literal
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m     ^^^^^^^^^^^^^^^^^^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m
+[2m[WebServer] [22mCaused by:
+[2m[WebServer] [22m    Syntax Error
+[2m[WebServer] [22m
+[2m[WebServer] [22mImport trace for requested module:
+[2m[WebServer] [22m./app/page.tsx
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 285ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 17ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 44ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 13ms
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m ./app/page.tsx
+[2m[WebServer] [22mError:   [31mx[0m Expression expected
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m    ^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m  [31mx[0m Unterminated regexp literal
+[2m[WebServer] [22m     ,-[[36;1;4m/workspaces/merm8-splash/app/page.tsx[0m:726:1]
+[2m[WebServer] [22m [2m723[0m |         />
+[2m[WebServer] [22m [2m724[0m |       </Modal>
+[2m[WebServer] [22m [2m725[0m |     </div>
+[2m[WebServer] [22m [2m726[0m |     </SnackbarProvider>
+[2m[WebServer] [22m     : [35;1m     ^^^^^^^^^^^^^^^^^^[0m
+[2m[WebServer] [22m [2m727[0m |   )
+[2m[WebServer] [22m [2m728[0m | }
+[2m[WebServer] [22m     `----
+[2m[WebServer] [22m
+[2m[WebServer] [22mCaused by:
+[2m[WebServer] [22m    Syntax Error
+[2m[WebServer] [22m
+[2m[WebServer] [22mImport trace for requested module:
+[2m[WebServer] [22m./app/page.tsx
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 441ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 13ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 35ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 15ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 55ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 22ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 6ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 13ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 154ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 33ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 32ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 7ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 21ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 13ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 17ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 12ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 14ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 8ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 9ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 11ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 10ms
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 18ms
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m [Error: ENOENT: no such file or directory, open '/workspaces/merm8-splash/.next/routes-manifest.json'] {
+[2m[WebServer] [22m  errno: [33m-2[39m,
+[2m[WebServer] [22m  code: [32m'ENOENT'[39m,
+[2m[WebServer] [22m  syscall: [32m'open'[39m,
+[2m[WebServer] [22m  path: [32m'/workspaces/merm8-splash/.next/routes-manifest.json'[39m
+[2m[WebServer] [22m}
+
+[1A[2K[2m[WebServer] [22m[Error: ENOENT: no such file or directory, open '/workspaces/merm8-splash/.next/routes-manifest.json'] {
+[2m[WebServer] [22m  errno: [33m-2[39m,
+[2m[WebServer] [22m  code: [32m'ENOENT'[39m,
+[2m[WebServer] [22m  syscall: [32m'open'[39m,
+[2m[WebServer] [22m  path: [32m'/workspaces/merm8-splash/.next/routes-manifest.json'[39m
+[2m[WebServer] [22m}
+
+[1A[2K[2m[WebServer] [22m[Error: ENOENT: no such file or directory, open '/workspaces/merm8-splash/.next/routes-manifest.json'] {
+[2m[WebServer] [22m  errno: [33m-2[39m,
+[2m[WebServer] [22m  code: [32m'ENOENT'[39m,
+[2m[WebServer] [22m  syscall: [32m'open'[39m,
+[2m[WebServer] [22m  path: [32m'/workspaces/merm8-splash/.next/routes-manifest.json'[39m
+[2m[WebServer] [22m}
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 536ms
+[2m[WebServer] [22m GET / [31m500[39m in 103ms
+
+[1A[2K[2m[WebServer] [22m [31m[1m⨯[22m[39m [Error: ENOENT: no such file or directory, open '/workspaces/merm8-splash/.next/routes-manifest.json'] {
+[2m[WebServer] [22m  errno: [33m-2[39m,
+[2m[WebServer] [22m  code: [32m'ENOENT'[39m,
+[2m[WebServer] [22m  syscall: [32m'open'[39m,
+[2m[WebServer] [22m  path: [32m'/workspaces/merm8-splash/.next/routes-manifest.json'[39m
+[2m[WebServer] [22m}
+
+[1A[2K[2m[WebServer] [22m[Error: ENOENT: no such file or directory, open '/workspaces/merm8-splash/.next/routes-manifest.json'] {
+[2m[WebServer] [22m  errno: [33m-2[39m,
+[2m[WebServer] [22m  code: [32m'ENOENT'[39m,
+[2m[WebServer] [22m  syscall: [32m'open'[39m,
+[2m[WebServer] [22m  path: [32m'/workspaces/merm8-splash/.next/routes-manifest.json'[39m
+[2m[WebServer] [22m}
+
+[1A[2K[2m[WebServer] [22m[Error: ENOENT: no such file or directory, open '/workspaces/merm8-splash/.next/routes-manifest.json'] {
+[2m[WebServer] [22m  errno: [33m-2[39m,
+[2m[WebServer] [22m  code: [32m'ENOENT'[39m,
+[2m[WebServer] [22m  syscall: [32m'open'[39m,
+[2m[WebServer] [22m  path: [32m'/workspaces/merm8-splash/.next/routes-manifest.json'[39m
+[2m[WebServer] [22m}
+
+[1A[2K[2m[WebServer] [22m GET / [31m500[39m in 140ms
+[2m[WebServer] [22m GET / [31m500[39m in 44ms
+
+Error: Timed out waiting 180000ms from config.webServer.
+
+[1A[2K
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report[39m
+[36m[39m
