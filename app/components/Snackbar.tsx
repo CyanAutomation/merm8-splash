@@ -31,7 +31,8 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     const timerId = window.setTimeout(() => {
       const wasTracked = timeoutIdsRef.current.delete(timerId)
       if (!wasTracked) {
-        window.clearTimeout(timerId)
+        // Timer was already cleared by cleanup, skip message removal
+        return
       }
       setMessages((prev) => prev.filter((m) => m.id !== id))
     }, 3000)
