@@ -4,6 +4,7 @@ test('one diagram preview cleanup does not remove other preview output', async (
   await page.goto('/diagram-preview-isolation')
 
   await expect(page.locator('#right-preview svg')).toHaveCount(1)
+  await expect(page.locator('#left-preview svg')).toHaveCount(1)
 
   await page.click('#left-invalid-btn')
 
