@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Violation, analyzeCodeSarif, Rule, validateApiEndpoint } from '@/lib/api'
+import { useSnackbar } from '@/app/components/Snackbar'
 
 interface ExportDropdownProps {
   results: Violation[]
@@ -28,16 +29,15 @@ export default function ExportDropdown({
   enabledRules,
   rulesMetadata,
 }: ExportDropdownProps) {
+  const snackbar = useSnackbar()
   const [open, setOpen] = useState(false)
   const [copying, setCopying] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
-  const [copyStatus, setCopyStatus] = useState<{ text: string; tone: 'success' | 'error' } | null>(null)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const isMountedRef = useRef(true)
   const isExportingRef = useRef(false)
   const timeoutCancelsRef = useRef<Set<() => void>>(new Set())
-  const copyStatusCancelRef = useRef<(() => void) | null>(null)
   const copyingCancelRef = useRef<(() => void) | null>(null)
 
   const scheduleTimeout = (callback: () => void, delay: number) => {
@@ -58,18 +58,6 @@ export default function ExportDropdown({
     }, delay)
 
     return cancelTimeout
-  }
-
-  const scheduleCopyStatusReset = () => {
-    copyStatusCancelRef.current?.()
-    copyStatusCancelRef.current = null
-
-    const cancelTimeout = scheduleTimeout(() => {
-      copyStatusCancelRef.current = null
-      setCopyStatus(null)
-    }, 3000)
-
-    copyStatusCancelRef.current = cancelTimeout
   }
 
   const scheduleCopyingReset = () => {
@@ -104,9 +92,6 @@ export default function ExportDropdown({
 
     return () => {
       isMountedRef.current = false
-      isMountedRef.current = false
-      copyStatusCancelRef.current?.()
-      copyStatusCancelRef.current = null
       copyingCancelRef.current?.()
       copyingCancelRef.current = null
       timeoutCancels.forEach((cancelTimeout) => cancelTimeout())
@@ -230,8 +215,7 @@ export default function ExportDropdown({
       try {
         await navigator.clipboard.writeText(text)
         setCopying(format)
-        setCopyStatus({ text: `Copied ${format} to clipboard.`, tone: 'success' })
-        scheduleCopyStatusReset()
+        snackbar.show(`Copied ${format} to clipboard.`, 'success')
         scheduleCopyingReset()
         setOpen(false)
         return
@@ -239,19 +223,14 @@ export default function ExportDropdown({
         const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
         if (textareaFallbackSucceeded) {
           setCopying(format)
-          setCopyStatus({ text: `Clipboard access failed, but copied ${format} using fallback.`, tone: 'success' })
-          scheduleCopyStatusReset()
+          snackbar.show(`Clipboard access failed, but copied ${format} using fallback.`, 'success')
           scheduleCopyingReset()
           setOpen(false)
           return
         }
 
         downloadFile(text, fallbackFilename, fallbackMime)
-        setCopyStatus({
-          text: `Clipboard access failed. Downloaded ${fallbackFilename} instead.`,
-          tone: 'error',
-        })
-        scheduleCopyStatusReset()
+        snackbar.show(`Clipboard access failed. Downloaded ${fallbackFilename} instead.`, 'error')
         setOpen(false)
         return
       }
@@ -260,19 +239,14 @@ export default function ExportDropdown({
     const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
     if (textareaFallbackSucceeded) {
       setCopying(format)
-      setCopyStatus({ text: `Clipboard API unavailable; copied ${format} using fallback.`, tone: 'success' })
-      scheduleCopyStatusReset()
+      snackbar.show(`Clipboard API unavailable; copied ${format} using fallback.`, 'success')
       scheduleCopyingReset()
       setOpen(false)
       return
     }
 
     downloadFile(text, fallbackFilename, fallbackMime)
-    setCopyStatus({
-      text: `Clipboard unavailable. Downloaded ${fallbackFilename} instead.`,
-      tone: 'error',
-    })
-    scheduleCopyStatusReset()
+    snackbar.show(`Clipboard unavailable. Downloaded ${fallbackFilename} instead.`, 'error')
     setOpen(false)
   }
 
@@ -301,8 +275,7 @@ export default function ExportDropdown({
     try {
       if (!endpointValidation.valid) {
         downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
-        setCopyStatus({ text: 'Endpoint invalid; exported local fallback SARIF.', tone: 'success' })
-        scheduleCopyStatusReset()
+        snackbar.show('Endpoint invalid; exported local fallback SARIF.', 'success')
         return
       }
 
@@ -310,8 +283,7 @@ export default function ExportDropdown({
       downloadFile(JSON.stringify(sarif, null, 2), 'merm8-analysis.sarif.json', 'application/json')
     } catch {
       downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
-      setCopyStatus({ text: 'Remote SARIF generation failed; exported local fallback.', tone: 'error' })
-      scheduleCopyStatusReset()
+      snackbar.show('Remote SARIF generation failed; exported local fallback.', 'error')
     } finally {
       setOpen(false)
     }
@@ -381,18 +353,6 @@ export default function ExportDropdown({
         </div>
       )}
 
-      {copyStatus && (
-        <div
-          style={{
-            marginTop: '6px',
-            fontSize: '11px',
-            color: copyStatus.tone === 'error' ? 'var(--color-error)' : 'var(--color-text-secondary)',
-            maxWidth: '260px',
-          }}
-        >
-          {copyStatus.text}
-        </div>
-      )}
     </div>
   )
 }
