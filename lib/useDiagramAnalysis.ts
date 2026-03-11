@@ -329,10 +329,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           setDiagramType(null)
         }
       } finally {
-        const inFlightRequest = inFlightRequestsRef.current.get(cacheKey)
-        if (inFlightRequest) {
-          inFlightRequestsRef.current.delete(cacheKey)
-        }
+        inFlightRequestsRef.current.delete(cacheKey)
 
         if (seq === requestSeqRef.current) {
           setIsAnalyzing(false)
