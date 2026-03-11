@@ -497,3 +497,42 @@ test('analyzeCode drops unsupported nested hint values', async () => {
     axios.create = originalCreate
   }
 })
+
+test('validateApiEndpoint blocks normalized local/private bypass forms in production', () => {
+  const { validateApiEndpoint } = loadApiModule()
+  const originalNodeEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+
+  try {
+    const blockedUrls = [
+      'http://localhost.',
+      'http://127.1',
+      'http://127.0.1.1',
+      'http://[::1]',
+      'http://[fe80::1]',
+    ]
+
+    for (const blockedUrl of blockedUrls) {
+      const result = validateApiEndpoint(blockedUrl)
+      assert.equal(result.valid, false, `expected ${blockedUrl} to be rejected`)
+      assert.equal(result.message, 'Local/private network endpoints are not allowed in production.')
+    }
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv
+  }
+})
+
+test('validateApiEndpoint allows public hosts in production', () => {
+  const { validateApiEndpoint } = loadApiModule()
+  const originalNodeEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+
+  try {
+    const result = validateApiEndpoint('https://api.example.com')
+
+    assert.equal(result.valid, true)
+    assert.equal(result.message, undefined)
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv
+  }
+})
