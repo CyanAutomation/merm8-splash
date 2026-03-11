@@ -87,6 +87,7 @@ export default function Home() {
   const latestEndpointRef = useRef(endpoint)
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
   const dragCleanupFnsRef = useRef<Set<() => void>>(new Set())
+  const previousAnalysisCodeRef = useRef(code)
 
   // Load rules when connected
   const loadRules = useCallback(async () => {
@@ -174,11 +175,13 @@ export default function Home() {
   // Trigger analysis when code, endpoint, or rules change
   useEffect(() => {
     if (!code.trim()) {
+      previousAnalysisCodeRef.current = code
       cancelAnalysis()
       return
     }
 
     if (!endpoint) {
+      previousAnalysisCodeRef.current = code
       cancelAnalysis()
       return
     }
@@ -191,11 +194,22 @@ export default function Home() {
 
     if (!canAnalyze) {
       // Cancel immediately so delayed debounce callbacks cannot abort a newer valid analysis.
+      previousAnalysisCodeRef.current = code
       cancelAnalysis()
       return
     }
 
-    triggerAnalysis(endpoint, code, enabledRules, rules, { useServerDefaults: useServerDefaultRules })
+    const triggerSource = previousAnalysisCodeRef.current === code ? 'config' : 'input'
+    previousAnalysisCodeRef.current = code
+
+    triggerAnalysis(
+      endpoint,
+      code,
+      enabledRules,
+      rules,
+      { useServerDefaults: useServerDefaultRules },
+      { source: triggerSource }
+    )
   }, [
     code,
     endpoint,
