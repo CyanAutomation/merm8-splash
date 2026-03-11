@@ -81,13 +81,17 @@ export default function Home() {
     try {
       const fetched = await fetchRules(requestEndpoint, controller.signal)
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
-        setRules(fetched)
+        const normalizedFetched = Array.isArray(fetched) ? fetched : []
+
+        setRules(normalizedFetched)
         setEnabledRules((prev) => {
-          const fetchedRuleIds = new Set(fetched.map((r) => r.id))
+          const fetchedRuleIds = new Set(normalizedFetched.map((r) => r.id))
           const preservedSelection = prev.filter((id) => fetchedRuleIds.has(id))
 
           // Preserve existing choices across reconnect/reload so user preferences are not lost.
-          return preservedSelection.length > 0 ? preservedSelection : fetched.map((r) => r.id)
+          return preservedSelection.length > 0
+            ? preservedSelection
+            : normalizedFetched.map((r) => r.id)
         })
         setRulesLoadedEndpoint(requestEndpoint)
         setRulesUnavailableEndpoint(null)
