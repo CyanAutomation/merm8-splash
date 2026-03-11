@@ -30,17 +30,23 @@ export default function DiagramPreview({
   const rafIdRef = useRef<number | null>(null)
   const nestedRafIdRef = useRef<number | null>(null)
   const renderSequenceRef = useRef(0)
+  const lastRenderIdRef = useRef<string | null>(null)
 
   const removeMermaidFallbackNodes = (renderId?: string) => {
     if (typeof document === 'undefined') return
 
-    const selectors = [
-      '[id^="dmermaid-"]',
-      renderId ? `#d${renderId}` : null,
-    ].filter(Boolean) as string[]
+    if (containerRef.current) {
+      containerRef.current
+        .querySelectorAll('[id^="dmermaid-"]')
+        .forEach((node) => node.remove())
+    }
 
-    for (const selector of selectors) {
-      document.querySelectorAll(selector).forEach((node) => node.remove())
+    const targetRenderIds = [renderId, lastRenderIdRef.current].filter(
+      (id): id is string => Boolean(id)
+    )
+
+    for (const targetRenderId of targetRenderIds) {
+      document.getElementById(`d${targetRenderId}`)?.remove()
     }
   }
 
@@ -206,6 +212,7 @@ export default function DiagramPreview({
         })
 
         const id = `mermaid-${++idCounterRef.current}`
+        lastRenderIdRef.current = id
         removeMermaidFallbackNodes(id)
         // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
         const { svg } = await mermaid.render(id, code)
@@ -235,8 +242,7 @@ export default function DiagramPreview({
           const message = err instanceof Error ? err.message : 'Render error'
           setRenderError(message)
           onParseStateChange?.({ hasParseError: true, message })
-          removeMermaidFallbackNodes(`mermaid-${idCounterRef.current}`)
-          removeMermaidFallbackNodes()
+          removeMermaidFallbackNodes(lastRenderIdRef.current ?? undefined)
           if (containerRef.current) containerRef.current.innerHTML = ''
         }
       } finally {
