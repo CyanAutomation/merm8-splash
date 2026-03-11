@@ -11,6 +11,7 @@ interface ResultsPanelProps {
   analysisHints: string[];
   parseError?: string | null;
   onJumpToLine?: (line: number) => void;
+  showInternalHeader?: boolean;
 }
 
 export interface ResultsPanelRef {
@@ -46,7 +47,18 @@ const hintedLine = (hint: string): number | null => {
 };
 
 const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
-  ({ results, isAnalyzing, analyzeError, analysisHints, parseError, onJumpToLine }, ref) => {
+  (
+    {
+      results,
+      isAnalyzing,
+      analyzeError,
+      analysisHints,
+      parseError,
+      onJumpToLine,
+      showInternalHeader = true,
+    },
+    ref,
+  ) => {
     const panelRef = useRef<HTMLDivElement>(null);
     const [filter, setFilter] = useState<SeverityFilter>("all");
     const [sortBy, setSortBy] = useState<"severity" | "line">("severity");
@@ -167,45 +179,58 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
           outline: "none",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "8px",
-            flexWrap: "wrap",
-            gap: "4px",
-          }}
-        >
-          <div className="panel-heading" style={{ marginBottom: 0 }}>
-            ▦ Results{" "}
-            {results.length > 0 && (
-              <span
-                style={{
-                  background: results.some((r) => r.severity === "error")
-                    ? "var(--color-error)"
-                    : "var(--color-warning)",
-                  color: "var(--color-bg-primary)",
-                  padding: "0 6px",
-                  fontSize: "12px",
-                  borderRadius: "8px",
-                  marginLeft: "4px",
-                }}
-              >
-                {results.length}
-              </span>
-            )}
-          </div>
-
-          <button
-            className="btn"
-            style={{ fontSize: "12px", padding: "4px 12px" }}
-            onClick={() => setShowFilterModal(true)}
-            title="Filter and sort results"
+        {showInternalHeader ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "8px",
+              flexWrap: "wrap",
+              gap: "4px",
+            }}
           >
-            ⚲ Filter
-          </button>
-        </div>
+            <div className="panel-heading" style={{ marginBottom: 0 }}>
+              ▦ Results{" "}
+              {results.length > 0 && (
+                <span
+                  style={{
+                    background: results.some((r) => r.severity === "error")
+                      ? "var(--color-error)"
+                      : "var(--color-warning)",
+                    color: "var(--color-bg-primary)",
+                    padding: "0 6px",
+                    fontSize: "12px",
+                    borderRadius: "8px",
+                    marginLeft: "4px",
+                  }}
+                >
+                  {results.length}
+                </span>
+              )}
+            </div>
+
+            <button
+              className="btn"
+              style={{ fontSize: "12px", padding: "4px 12px" }}
+              onClick={() => setShowFilterModal(true)}
+              title="Filter and sort results"
+            >
+              ⚲ Filter
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+            <button
+              className="btn"
+              style={{ fontSize: "12px", padding: "4px 12px" }}
+              onClick={() => setShowFilterModal(true)}
+              title="Filter and sort results"
+            >
+              ⚲ Filter
+            </button>
+          </div>
+        )}
 
         <div style={{ flex: 1, overflow: "auto" }}>
           {isAnalyzing ? (
