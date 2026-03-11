@@ -1,0 +1,73 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "rem-avatar mascot" [ref=e5]
+        - generic [ref=e6]: merm8-splashMermaid Linter Interface
+      - generic [ref=e7]:
+        - generic [ref=e8]: Ctrl+K (API) · Ctrl+E · Ctrl+R
+        - button "API" [ref=e9] [cursor=pointer]
+        - button "↺ Reset" [ref=e10] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]: ✎ Diagram Editor
+          - generic [ref=e18]:
+            - button "Example" [ref=e19] [cursor=pointer]
+            - button "Clear" [ref=e20] [cursor=pointer]
+        - generic [ref=e21]: Ctrl+E to focus · Paste Mermaid diagram code below
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - generic [ref=e24] [cursor=pointer]: "1"
+            - generic [ref=e25] [cursor=pointer]: "2"
+            - generic [ref=e26] [cursor=pointer]: "3"
+            - generic [ref=e27] [cursor=pointer]: "4"
+            - generic [ref=e28] [cursor=pointer]: "5"
+            - generic [ref=e29] [cursor=pointer]: "6"
+          - textbox "graph TD A --> B" [ref=e30]: "graph TD A[Start] --> B{Decision} B -->|Yes| C[Do something] B -->|No| D[Do something else] C --> E[End] D --> E"
+        - generic [ref=e31]: 6 lines · 132 chars
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: ◈ Diagram Preview
+          - generic [ref=e39]:
+            - button "↔ Fit" [ref=e40] [cursor=pointer]
+            - switch "✨ Beautiful" [ref=e41] [cursor=pointer]:
+              - generic [ref=e42]: ✨ Beautiful
+        - document [ref=e46]:
+          - generic [ref=e48]:
+            - generic [ref=e55]:
+              - generic [ref=e59]: "Yes"
+              - generic [ref=e63]: "No"
+            - generic [ref=e64]:
+              - generic [ref=e69]: Start
+              - generic [ref=e74]: Decision
+              - generic [ref=e79]: Do something
+              - generic [ref=e84]: Do something else
+              - generic [ref=e89]: End
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]: ▦ Results
+          - generic [ref=e94]:
+            - button "↓ Export ▼" [ref=e96] [cursor=pointer]:
+              - text: ↓ Export
+              - generic [ref=e97]: ▼
+            - button "⊞ Rules" [ref=e98] [cursor=pointer]
+            - button "↺ Check" [disabled] [ref=e99] [cursor=pointer]
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]: "Filter: All • Sort: Severity"
+            - button "⚲ Filter" [ref=e104] [cursor=pointer]
+          - generic [ref=e106]: ✓ No violations found
+    - generic [ref=e107]:
+      - generic [ref=e108]:
+        - generic [ref=e109]: API Not Tested
+        - generic [ref=e111]: ✓ Valid
+        - generic [ref=e112]: 0 rules enabled
+      - generic [ref=e113]: https://api.example.test
+  - button "Open Next.js Dev Tools" [ref=e119] [cursor=pointer]:
+    - img [ref=e120]
+  - alert [ref=e123]
+```
