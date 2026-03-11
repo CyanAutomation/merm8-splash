@@ -5,6 +5,8 @@ import { useEffect, useCallback, useRef, ReactNode } from 'react'
 let openModalCount = 0
 
 function lockBodyScroll() {
+  if (typeof document === 'undefined') return
+
   if (openModalCount === 0) {
     document.body.style.overflow = 'hidden'
   }
