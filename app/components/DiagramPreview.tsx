@@ -53,13 +53,12 @@ export default function DiagramPreview({
     for (const ownedRenderId of ownedRenderIdsRef.current) {
       targetRenderIds.add(ownedRenderId)
     }
-
     for (const targetRenderId of targetRenderIds) {
-      const fallbackNode = document.getElementById(`d${targetRenderId}`)
-    if (fallbackNode) {
-      fallbackNode.remove()
-    }
-    ownedRenderIdsRef.current.delete(targetRenderId)
+      const fallbackNode = containerRef.current?.querySelector(`#d${targetRenderId}`)
+      if (fallbackNode) {
+        fallbackNode.remove()
+        ownedRenderIdsRef.current.delete(targetRenderId)
+      }
     }
   }
 
