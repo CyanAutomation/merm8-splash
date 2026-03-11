@@ -51,8 +51,11 @@ const LARGE_IDLE_MIN_MS = 1000
 const RAPID_INPUT_EXTRA_MS = 150
 const RAPID_INPUT_EXTRA_MAX_MS = 450
 const ANALYSIS_CACHE_TTL_MS = 60_000
+const ANALYSIS_CACHE_MAX_ENTRIES = 100
+const ANALYSIS_CACHE_CLEANUP_INTERVAL_MS = 30_000
 
 interface AnalysisCacheEntry {
+  code: string
   result: AnalyzeResponse
   ts: number
 }
@@ -159,25 +162,36 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
   }
 }
 
-function hashCode(input: string): string {
-  let hash = 5381
-  for (let i = 0; i < input.length; i += 1) {
-    hash = (hash * 33) ^ input.charCodeAt(i)
-  }
-
-  return (hash >>> 0).toString(16)
-}
-
 function buildAnalysisCacheKey(
   endpoint: string,
-  code: string,
   enabledRules: string[],
   options: AnalyzeRequestOptions
 ): string {
   const normalizedEndpoint = endpoint.trim().toLowerCase()
   const normalizedRules = [...enabledRules].sort().join(',')
   const useServerDefaults = options.useServerDefaults === true ? '1' : '0'
-  return `${normalizedEndpoint}::${hashCode(code)}::${normalizedRules}::${useServerDefaults}`
+  return `${normalizedEndpoint}::${normalizedRules}::${useServerDefaults}`
+}
+
+function pruneAnalysisCache(cache: Map<string, AnalysisCacheEntry>, now: number): void {
+  for (const [key, entry] of cache.entries()) {
+    if (now - entry.ts > ANALYSIS_CACHE_TTL_MS) {
+      cache.delete(key)
+    }
+  }
+
+  if (cache.size <= ANALYSIS_CACHE_MAX_ENTRIES) {
+    return
+  }
+
+  const sortedByTs = Array.from(cache.entries()).sort((a, b) => a[1].ts - b[1].ts)
+  const itemsToDelete = cache.size - ANALYSIS_CACHE_MAX_ENTRIES
+  for (let i = 0; i < itemsToDelete; i += 1) {
+    const candidate = sortedByTs[i]
+    if (candidate) {
+      cache.delete(candidate[0])
+    }
+  }
 }
 
 export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
@@ -230,11 +244,15 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       abortControllerRef.current = controller
 
       const seq = ++requestSeqRef.current
-      const cacheKey = buildAnalysisCacheKey(endpoint, newCode, enabledRules, options)
+      const cacheKey = buildAnalysisCacheKey(endpoint, enabledRules, options)
       const cachedEntry = analysisCacheRef.current.get(cacheKey)
       const now = Date.now()
 
-      if (cachedEntry && now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS) {
+      if (
+        cachedEntry &&
+        cachedEntry.code === newCode &&
+        now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS
+      ) {
         setViolations(Array.isArray(cachedEntry.result.results) ? cachedEntry.result.results : [])
         setDiagramType(cachedEntry.result.diagram_type)
         setAnalyzeError(null)
@@ -264,9 +282,11 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
 
         if (seq === requestSeqRef.current) {
           analysisCacheRef.current.set(cacheKey, {
+            code: newCode,
             result,
             ts: Date.now(),
           })
+          pruneAnalysisCache(analysisCacheRef.current, Date.now())
           setViolations(Array.isArray(result.results) ? result.results : [])
           setDiagramType(result.diagram_type)
           setAnalyzeError(null)
@@ -357,9 +377,14 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   )
 
   useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      pruneAnalysisCache(analysisCacheRef.current, Date.now())
+    }, ANALYSIS_CACHE_CLEANUP_INTERVAL_MS)
+
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       abortControllerRef.current?.abort()
+      clearInterval(cleanupInterval)
     }
   }, [])
 
