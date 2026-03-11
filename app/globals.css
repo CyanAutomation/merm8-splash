@@ -173,4 +173,13 @@ a {
   .editor-gutter::-webkit-scrollbar {
     display: none;
   }
+
+  @keyframes snackbar-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .snackbar-enter {
+    animation: snackbar-in 150ms ease;
+  }
 }

@@ -9,6 +9,7 @@ import DiagramPreview from './components/DiagramPreview'
 import RulesPanel from './components/RulesPanel'
 import ResultsPanel, { ResultsPanelRef } from './components/ResultsPanel'
 import StatusBar from './components/StatusBar'
+import { SnackbarProvider } from './components/Snackbar'
 import ExportDropdown from './components/ExportDropdown'
 import ErrorBoundary from './components/ErrorBoundary'
 import Modal from './components/Modal'
@@ -258,6 +259,7 @@ export default function Home() {
   const canRecheck = !!code.trim() && !!endpoint && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint) && !isAnalyzing
 
   return (
+    <SnackbarProvider>
     <div
       style={{
         display: 'flex',
@@ -724,5 +726,6 @@ export default function Home() {
         />
       </Modal>
     </div>
+    </SnackbarProvider>
   )
 }
