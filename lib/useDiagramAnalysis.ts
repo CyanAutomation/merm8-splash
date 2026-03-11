@@ -208,6 +208,23 @@ function buildAnalysisCacheKey(
   return `${normalizedEndpoint}::${normalizedRules}::${useServerDefaults}`
 }
 
+function hashCodeContent(newCode: string): string {
+  let hash = 0
+  for (let i = 0; i < newCode.length; i += 1) {
+    hash = (hash * 31 + newCode.charCodeAt(i)) >>> 0
+  }
+  return hash.toString(16)
+}
+
+function buildInFlightAnalysisKey(
+  endpoint: string,
+  enabledRules: string[],
+  options: AnalyzeRequestOptions,
+  newCode: string
+): string {
+  return `${buildAnalysisCacheKey(endpoint, enabledRules, options)}::${hashCodeContent(newCode)}`
+}
+
 function pruneAnalysisCache(cache: Map<string, AnalysisCacheEntry>, now: number): void {
   for (const [key, entry] of cache.entries()) {
     if (now - entry.ts > ANALYSIS_CACHE_TTL_MS) {
@@ -276,6 +293,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       }
       const seq = ++requestSeqRef.current
       const cacheKey = buildAnalysisCacheKey(endpoint, enabledRules, options)
+      const inFlightKey = buildInFlightAnalysisKey(endpoint, enabledRules, options, newCode)
       const cachedEntry = analysisCacheRef.current.get(cacheKey)
       const now = Date.now()
 
@@ -299,7 +317,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
 
       const controller = new AbortController()
 
-      const existingInFlight = inFlightRequestsRef.current.get(cacheKey)
+      const existingInFlight = inFlightRequestsRef.current.get(inFlightKey)
 
       if (existingInFlight && existingInFlight.code === newCode) {
         existingInFlight.waiters += 1
@@ -337,7 +355,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         } finally {
           existingInFlight.waiters -= 1
           if (existingInFlight.waiters <= 0) {
-            inFlightRequestsRef.current.delete(cacheKey)
+            inFlightRequestsRef.current.delete(inFlightKey)
           }
 
           if (seq === requestSeqRef.current) {
@@ -369,7 +387,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           options,
           controller.signal
         )
-        inFlightRequestsRef.current.set(cacheKey, {
+        inFlightRequestsRef.current.set(inFlightKey, {
           code: newCode,
           promise: requestPromise,
           waiters: 1,
@@ -402,11 +420,11 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           setDiagramType(null)
         }
       } finally {
-        const currentInFlight = inFlightRequestsRef.current.get(cacheKey)
+        const currentInFlight = inFlightRequestsRef.current.get(inFlightKey)
         if (requestPromise && currentInFlight && currentInFlight.promise === requestPromise) {
           currentInFlight.waiters -= 1
           if (currentInFlight.waiters <= 0) {
-            inFlightRequestsRef.current.delete(cacheKey)
+            inFlightRequestsRef.current.delete(inFlightKey)
           }
         }
 
