@@ -25,6 +25,8 @@ export default function DiagramPreview({
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
+  const [fullRenderError, setFullRenderError] = useState<string | null>(null)
+  const [isErrorExpanded, setIsErrorExpanded] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
   const idCounterRef = useRef(0)
   const rafIdRef = useRef<number | null>(null)
@@ -71,6 +73,13 @@ export default function DiagramPreview({
       cancelAnimationFrame(nestedRafIdRef.current)
       nestedRafIdRef.current = null
     }
+  }
+
+  // Extract first line of error message for collapsed view
+  const extractErrorFirstLine = (message: string | null): string | null => {
+    if (!message) return null
+    const firstLine = message.split('\n')[0]
+    return firstLine || message
   }
 
   // Fit diagram to container dimensions
@@ -158,6 +167,8 @@ export default function DiagramPreview({
     if (!code.trim()) {
       if (containerRef.current) containerRef.current.innerHTML = ''
       setRenderError(null)
+      setFullRenderError(null)
+      setIsErrorExpanded(false)
       onParseStateChange?.({ hasParseError: false, message: null })
       setIsRendering(false)
       return
@@ -183,6 +194,8 @@ export default function DiagramPreview({
               
               if (!cancelled) {
                 setRenderError(null)
+                setFullRenderError(null)
+                setIsErrorExpanded(false)
                 onParseStateChange?.({ hasParseError: false, message: null })
 
                 if (containerRef.current) {
@@ -232,6 +245,8 @@ export default function DiagramPreview({
 
         if (!cancelled) {
           setRenderError(null)
+          setFullRenderError(null)
+          setIsErrorExpanded(false)
           onParseStateChange?.({ hasParseError: false, message: null })
 
           if (containerRef.current) {
@@ -253,8 +268,11 @@ export default function DiagramPreview({
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : 'Render error'
-          setRenderError(message)
-          onParseStateChange?.({ hasParseError: true, message })
+          const collapsedMessage = extractErrorFirstLine(message)
+          setRenderError(collapsedMessage)
+          setFullRenderError(message)
+          setIsErrorExpanded(false)
+          onParseStateChange?.({ hasParseError: true, message: collapsedMessage })
           removeMermaidFallbackNodes(lastRenderIdRef.current ?? undefined)
           if (containerRef.current) containerRef.current.innerHTML = ''
         }
@@ -334,8 +352,38 @@ export default function DiagramPreview({
             marginBottom: '8px',
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: '4px' }}>⚠ Syntax Error</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+            <div style={{ fontWeight: 600 }}>⚠ Syntax Error</div>
+            {fullRenderError && fullRenderError !== (parseErrorMessage ?? renderError) && (
+              <button
+                onClick={() => setIsErrorExpanded(!isErrorExpanded)}
+                style={{
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  border: '1px solid rgba(255,85,85,0.4)',
+                  background: 'transparent',
+                  color: 'var(--color-error)',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,85,85,0.1)'
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                }}
+              >
+                {isErrorExpanded ? 'Hide details' : 'Show details'}
+              </button>
+            )}
+          </div>
           <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{parseErrorMessage ?? renderError}</pre>
+          {isErrorExpanded && fullRenderError && fullRenderError !== (parseErrorMessage ?? renderError) && (
+            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '10px', marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px' }}>
+              {fullRenderError}
+            </pre>
+          )}
         </div>
       )}
 
