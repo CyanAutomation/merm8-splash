@@ -355,6 +355,42 @@ test('analyzeCode normalizes missing data payload to UI-safe defaults', async ()
   }
 })
 
+test('fetchRules normalizes malformed payloads to an empty array', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+  const originalWarn = console.warn
+  const warnings = []
+  const payloads = [{ data: null }, { data: { rules: 'not-an-array' } }]
+  let index = 0
+
+  axios.create = () => ({
+    get: async () => payloads[index++],
+  })
+
+  console.warn = (message) => {
+    warnings.push(String(message))
+  }
+
+  try {
+    const first = await api.fetchRules('https://api.example.com')
+    const second = await api.fetchRules('https://api.example.com')
+
+    assert.ok(Array.isArray(first))
+    assert.ok(Array.isArray(second))
+    assert.equal(first.length, 0)
+    assert.equal(second.length, 0)
+    assert.equal(
+      warnings.some((message) => message.includes('[api.fetchRules] Normalized malformed rules response')),
+      true,
+      'expected a warning for malformed rules payloads'
+    )
+  } finally {
+    console.warn = originalWarn
+    axios.create = originalCreate
+  }
+})
+
 test('validateApiEndpoint accepts endpoint without credentials', () => {
   const { validateApiEndpoint } = loadApiModule()
 
