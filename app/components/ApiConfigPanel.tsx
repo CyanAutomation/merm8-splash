@@ -123,45 +123,45 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
             />
           </div>
 
-          <select
-            value={selectedPreset}
-            onChange={(e) => {
-              const { value } = e.target
-              if (value) {
-                onEndpointChange(value)
-              }
-              setSelectedPreset('')
-            }}
-            style={{
-              background: 'var(--color-bg-primary)',
-              border: isEndpointInvalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
-              color: 'var(--color-text-secondary)',
-              fontFamily: 'var(--font-sans)',
-              fontSize: '12px',
-              padding: '6px 8px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="" disabled>Presets</option>
-            {PRESETS.map((p) => (
-              <option key={p.value} value={p.value}>{p.label}</option>
-            ))}
-          </select>
-        </div>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            <select
+              value={selectedPreset}
+              onChange={(e) => {
+                const { value } = e.target
+                if (value) {
+                  onEndpointChange(value)
+                }
+                setSelectedPreset('')
+              }}
+              style={{
+                background: 'var(--color-bg-primary)',
+                border: isEndpointInvalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
+                color: 'var(--color-text-secondary)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: '12px',
+                padding: '6px 8px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="" disabled>Presets</option>
+              {PRESETS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginTop: '12px' }}>
-          <button
-            className="btn"
-            onClick={onTestConnection}
-            title="Ctrl+K to focus"
-            disabled={connectionStatus === 'checking' || !endpointValidation.valid}
-          >
-            Test
-          </button>
-          <button className="btn" onClick={onSave} disabled={!endpointValidation.valid}>
-            Save
-          </button>
+            <button
+              className="btn"
+              onClick={onTestConnection}
+              title="Ctrl+K to focus"
+              disabled={connectionStatus === 'checking' || !endpointValidation.valid}
+            >
+              Test
+            </button>
+            <button className="btn" onClick={onSave} disabled={!endpointValidation.valid}>
+              Save
+            </button>
+          </div>
         </div>
 
         {isEndpointInvalid && endpointFeedback && (
