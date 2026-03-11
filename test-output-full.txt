@@ -1,0 +1,184 @@
+
+> merm8-splash@0.1.0 test
+> playwright test
+
+[api.analyzeCode] Normalized malformed analyze response: non-array `results`
+[api.analyzeCode] Normalized malformed analyze response: non-array `results`
+[api.analyzeCode] Normalized malformed analyze response: non-array `results`
+[api.analyzeCode] Normalized malformed analyze response: missing `data` payload, non-array `results`, missing/invalid `diagram_type`
+[api.analyzeCode] Normalized malformed analyze response: non-array `hints`
+[api.analyzeCode] Normalized malformed analyze response: invalid entries in `hints`
+✔ buildAnalyzeRequest omits rules and keeps schema-version in server-default fallback mode (567.669381ms)
+✔ buildAnalyzeRequest includes explicit rule config when metadata is available (64.612208ms)
+✔ buildAnalyzeRequest keeps universal rules enabled for known diagram types (83.845687ms)
+✔ buildAnalyzeRequest detects diagram type after leading Mermaid comments and init block (74.518383ms)
+✔ buildAnalyzeRequest detects diagram type after multi-line Mermaid init block (101.860452ms)
+✔ buildAnalyzeRequest detects flowchart declarations with tab whitespace (48.997195ms)
+✔ buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filtering (69.943689ms)
+✔ analyzeCode normalizes missing results to empty array (41.706365ms)
+✔ analyzeCode normalizes null and non-array results without throwing (73.478592ms)
+✔ analyzeCode normalizes missing data payload to UI-safe defaults (72.458656ms)
+✔ fetchRules normalizes malformed payloads to an empty array (76.756136ms)
+✔ fetchRules filters malformed rule entries and warns with drop summary (78.572532ms)
+✔ validateApiEndpoint accepts endpoint without credentials (47.763403ms)
+✔ validateApiEndpoint rejects endpoint with username/password credentials (98.497527ms)
+✔ analyzeCode returns normalized string hints when provided by API (84.389624ms)
+✔ analyzeCode filters malformed hints and warns in development (182.742106ms)
+✔ analyzeCode normalizes non-array hints to empty array (104.498505ms)
+✔ analyzeCode drops unsupported nested hint values (118.628703ms)
+✔ analyzeCode filters malformed violations and keeps only safe entries (300.141605ms)
+✔ analyzeCode ignores non-numeric line values on violations (161.215801ms)
+✔ validateApiEndpoint blocks normalized local/private bypass forms in production (94.282312ms)
+✔ validateApiEndpoint allows public hosts in production (67.162834ms)
+✔ SnackbarProvider tracks timeout IDs in a ref-backed Set (0.654387ms)
+✔ SnackbarProvider removes timeout IDs when timers fire (0.197195ms)
+✔ SnackbarProvider cleanup clears pending timers on unmount (0.207284ms)
+✔ triggerAnalysis uses short debounce for tiny edits (84.215352ms)
+✔ triggerAnalysis enforces longer idle window for large diagrams (42.854168ms)
+✔ rapid consecutive input increases debounce delay (28.293478ms)
+✔ forceAnalysis runs immediately and bypasses pending debounce (57.179954ms)
+✔ stale responses are ignored and latest analysis wins (36.33983ms)
+✔ cancelAnalysis aborts in-flight analysis and resets state (64.284177ms)
+
+Running 21 tests using 1 worker
+
+✔ identical concurrent forceAnalysis calls coalesce into one API request (85.194471ms)
+✔ coalesced request cancellation exits analyzing state without waiting for shared promise (85.748883ms)
+✔ identical forceAnalysis request reuses fresh cache entry (31.999526ms)
+✔ cache key changes when code/rules/endpoint change (58.216106ms)
+✔ expired cache entry triggers fresh network analysis (229.494732ms)
+[1A[2K[1/21] [chromium] › tests/beautiful-renderer-toggle.spec.ts:23:5 › desktop preview beautiful toggle keeps final state aligned with last rapid toggle
+[1A[2K[2/21] [chromium] › tests/beautiful-renderer-toggle.spec.ts:30:5 › mobile preview beautiful toggle keeps final state aligned with last rapid toggle
+[1A[2K[3/21] [chromium] › tests/diagram-preview-isolation.spec.ts:3:5 › one diagram preview cleanup does not remove other preview output
+[1A[2K[4/21] [chromium] › tests/diagram-preview-isolation.spec.ts:16:5 › rapid left preview updates keep right preview rendered
+[1A[2K[5/21] [chromium] › tests/modal-scroll-lock.spec.ts:29:5 › body scroll stays locked until the last open modal closes
+[1A[2K[6/21] [chromium] › tests/results-panel-copy-unmount.spec.ts:36:5 › copying then immediate unmount does not trigger unmounted state warnings
+[1A[2K[7/21] [chromium] › tests/results-panel-hints.spec.ts:3:5 › ResultsPanel renders analysis hints from analyze error payload
+[1A[2K[8/21] [firefox] › tests/beautiful-renderer-toggle.spec.ts:23:5 › desktop preview beautiful toggle keeps final state aligned with last rapid toggle
+[1A[2K[9/21] [firefox] › tests/beautiful-renderer-toggle.spec.ts:30:5 › mobile preview beautiful toggle keeps final state aligned with last rapid toggle
+[1A[2K[10/21] [firefox] › tests/diagram-preview-isolation.spec.ts:3:5 › one diagram preview cleanup does not remove other preview output
+[1A[2K[11/21] [firefox] › tests/diagram-preview-isolation.spec.ts:16:5 › rapid left preview updates keep right preview rendered
+[1A[2K[12/21] [firefox] › tests/modal-scroll-lock.spec.ts:29:5 › body scroll stays locked until the last open modal closes
+[1A[2K[13/21] [firefox] › tests/results-panel-copy-unmount.spec.ts:36:5 › copying then immediate unmount does not trigger unmounted state warnings
+[1A[2K[14/21] [firefox] › tests/results-panel-hints.spec.ts:3:5 › ResultsPanel renders analysis hints from analyze error payload
+[1A[2K[15/21] [webkit] › tests/beautiful-renderer-toggle.spec.ts:23:5 › desktop preview beautiful toggle keeps final state aligned with last rapid toggle
+[1A[2K[16/21] [webkit] › tests/beautiful-renderer-toggle.spec.ts:30:5 › mobile preview beautiful toggle keeps final state aligned with last rapid toggle
+[1A[2K[17/21] [webkit] › tests/diagram-preview-isolation.spec.ts:3:5 › one diagram preview cleanup does not remove other preview output
+[1A[2K  1) [webkit] › tests/diagram-preview-isolation.spec.ts:3:5 › one diagram preview cleanup does not remove other preview output 
+
+    Error: page.goto: Could not connect to localhost: Connection refused
+    Call log:
+    [2m  - navigating to "http://localhost:3000/diagram-preview-isolation", waiting until "load"[22m
+
+
+      2 |
+      3 | test('one diagram preview cleanup does not remove other preview output', async ({ page }) => {
+    > 4 |   await page.goto('/diagram-preview-isolation')
+        |              ^
+      5 |
+      6 |   await expect(page.locator('#right-preview svg')).toHaveCount(1)
+      7 |   await expect(page.locator('#left-preview svg')).toHaveCount(1)
+        at /workspaces/merm8-splash/tests/diagram-preview-isolation.spec.ts:4:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/diagram-preview-isolation--2b3a1-remove-other-preview-output-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K[18/21] [webkit] › tests/diagram-preview-isolation.spec.ts:16:5 › rapid left preview updates keep right preview rendered
+[1A[2K  2) [webkit] › tests/diagram-preview-isolation.spec.ts:16:5 › rapid left preview updates keep right preview rendered 
+
+    Error: page.goto: Could not connect to localhost: Connection refused
+    Call log:
+    [2m  - navigating to "http://localhost:3000/diagram-preview-isolation", waiting until "load"[22m
+
+
+      15 |
+      16 | test('rapid left preview updates keep right preview rendered', async ({ page }) => {
+    > 17 |   await page.goto('/diagram-preview-isolation')
+         |              ^
+      18 |
+      19 |   await expect(page.locator('#right-preview svg')).toHaveCount(1)
+      20 |   await expect(page.locator('#left-preview svg')).toHaveCount(1)
+        at /workspaces/merm8-splash/tests/diagram-preview-isolation.spec.ts:17:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/diagram-preview-isolation--6637d-keep-right-preview-rendered-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K[19/21] [webkit] › tests/modal-scroll-lock.spec.ts:29:5 › body scroll stays locked until the last open modal closes
+[1A[2K  3) [webkit] › tests/modal-scroll-lock.spec.ts:29:5 › body scroll stays locked until the last open modal closes 
+
+    Error: page.goto: Could not connect to localhost: Connection refused
+    Call log:
+    [2m  - navigating to "http://localhost:3000/?api=https://api.example.test", waiting until "load"[22m
+
+
+      30 |   await stubApi(page)
+      31 |
+    > 32 |   await page.goto('http://localhost:3000/?api=https://api.example.test')
+         |              ^
+      33 |
+      34 |   await page.getByRole('button', { name: 'API' }).click()
+      35 |   await expect(page.getByRole('heading', { name: 'API Configuration' })).toBeVisible()
+        at /workspaces/merm8-splash/tests/modal-scroll-lock.spec.ts:32:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/modal-scroll-lock-body-scr-258a2--the-last-open-modal-closes-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K[20/21] [webkit] › tests/results-panel-copy-unmount.spec.ts:36:5 › copying then immediate unmount does not trigger unmounted state warnings
+[1A[2K  4) [webkit] › tests/results-panel-copy-unmount.spec.ts:36:5 › copying then immediate unmount does not trigger unmounted state warnings 
+
+    Error: page.goto: Could not connect to localhost: Connection refused
+    Call log:
+    [2m  - navigating to "http://localhost:3000/?api=https://api.example.test", waiting until "load"[22m
+
+
+      66 |   })
+      67 |
+    > 68 |   await page.goto('http://localhost:3000/?api=https://api.example.test')
+         |              ^
+      69 |   await page.getByRole('button', { name: 'Test' }).click()
+      70 |   await expect(page.getByRole('row', { name: /ERR_12/ })).toBeVisible()
+      71 |
+        at /workspaces/merm8-splash/tests/results-panel-copy-unmount.spec.ts:68:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/results-panel-copy-unmount-e228f-er-unmounted-state-warnings-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K[21/21] [webkit] › tests/results-panel-hints.spec.ts:3:5 › ResultsPanel renders analysis hints from analyze error payload
+[1A[2K  5) [webkit] › tests/results-panel-hints.spec.ts:3:5 › ResultsPanel renders analysis hints from analyze error payload 
+
+    Error: page.goto: Could not connect to localhost: Connection refused
+    Call log:
+    [2m  - navigating to "http://localhost:3000/?api=https://api.example.test", waiting until "load"[22m
+
+
+      29 |   })
+      30 |
+    > 31 |   await page.goto('http://localhost:3000/?api=https://api.example.test')
+         |              ^
+      32 |   await page.getByRole('button', { name: 'Test' }).click()
+      33 |
+      34 |   await expect(page.getByText('Connection successful.')).toBeVisible()
+        at /workspaces/merm8-splash/tests/results-panel-hints.spec.ts:31:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/results-panel-hints-Result-3549f--from-analyze-error-payload-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K  5 failed
+    [webkit] › tests/diagram-preview-isolation.spec.ts:3:5 › one diagram preview cleanup does not remove other preview output 
+    [webkit] › tests/diagram-preview-isolation.spec.ts:16:5 › rapid left preview updates keep right preview rendered 
+    [webkit] › tests/modal-scroll-lock.spec.ts:29:5 › body scroll stays locked until the last open modal closes 
+    [webkit] › tests/results-panel-copy-unmount.spec.ts:36:5 › copying then immediate unmount does not trigger unmounted state warnings 
+    [webkit] › tests/results-panel-hints.spec.ts:3:5 › ResultsPanel renders analysis hints from analyze error payload 
+  16 passed (2.3m)
+
+[36m  Serving HTML report at http://localhost:9323. Press Ctrl+C to quit.[39m
