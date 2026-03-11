@@ -59,6 +59,7 @@ export default function Home() {
   const [parseErrorDetail, setParseErrorDetail] = useState<string | null>(null)
   const [showResetConfirmation, setShowResetConfirmation] = useState(false)
   const [showRulesModal, setShowRulesModal] = useState(false)
+  const [showApiConfigModal, setShowApiConfigModal] = useState(false)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
@@ -311,6 +312,31 @@ export default function Home() {
             Ctrl+K · Ctrl+E · Ctrl+R
           </div>
           <button
+            onClick={() => setShowApiConfigModal(true)}
+            style={{
+              padding: '4px 12px',
+              fontSize: '12px',
+              background: 'transparent',
+              color: 'var(--color-text-secondary)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              ;(e.target as HTMLElement).style.color = 'var(--color-accent-primary)'
+              ;(e.target as HTMLElement).style.borderColor = 'var(--color-accent-primary)'
+              ;(e.target as HTMLElement).style.background = 'rgba(10, 132, 255, 0.1)'
+            }}
+            onMouseLeave={(e) => {
+              ;(e.target as HTMLElement).style.color = 'var(--color-text-secondary)'
+              ;(e.target as HTMLElement).style.borderColor = 'var(--color-border)'
+              ;(e.target as HTMLElement).style.background = 'transparent'
+            }}
+          >
+            API
+          </button>
+          <button
             onClick={() => setShowResetConfirmation(true)}
             style={{
               padding: '4px 12px',
@@ -336,22 +362,6 @@ export default function Home() {
             ↺ Reset
           </button>
         </div>
-      </div>
-
-      {/* API Config */}
-      <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--color-border)' }}>
-        <ErrorBoundary>
-          <ApiConfigPanel
-            ref={apiConfigRef}
-            endpoint={endpoint}
-            onEndpointChange={setEndpoint}
-            connectionStatus={connectionStatus}
-            onTestConnection={handleTestConnection}
-            onSave={saveEndpoint}
-            configSource={configSource}
-            statusMessage={statusMessage}
-          />
-        </ErrorBoundary>
       </div>
 
       {/* Main Content - Desktop & Mobile Layout */}
@@ -710,6 +720,25 @@ export default function Home() {
       )}
 
       {/* Rules Modal */}
+      <Modal
+        isOpen={showApiConfigModal}
+        onClose={() => setShowApiConfigModal(false)}
+        title="API Configuration"
+      >
+        <ErrorBoundary>
+          <ApiConfigPanel
+            ref={apiConfigRef}
+            endpoint={endpoint}
+            onEndpointChange={setEndpoint}
+            connectionStatus={connectionStatus}
+            onTestConnection={handleTestConnection}
+            onSave={saveEndpoint}
+            configSource={configSource}
+            statusMessage={statusMessage}
+          />
+        </ErrorBoundary>
+      </Modal>
+
       <Modal
         isOpen={showRulesModal}
         onClose={() => setShowRulesModal(false)}
