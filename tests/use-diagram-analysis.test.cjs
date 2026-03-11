@@ -301,3 +301,89 @@ test('cancelAnalysis aborts in-flight analysis and resets state', async () => {
   assert.equal(JSON.stringify(rerenderedHook.violations), JSON.stringify([]))
   assert.equal(rerenderedHook.analyzeError, null)
 })
+
+
+test('identical forceAnalysis request reuses fresh cache entry', async () => {
+  const calls = []
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (endpoint, code, enabledRules, _rulesMetadata, options) => {
+      calls.push({ endpoint, code, enabledRules: [...enabledRules], options: { ...options } })
+      return {
+        diagram_type: 'flowchart',
+        results: [{ rule_id: 'cached', severity: 'warning', message: 'cached result', line: 1 }],
+      }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r2', 'r1'], [], {
+    useServerDefaults: true,
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1', 'r2'], [], {
+    useServerDefaults: true,
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(calls.length, 1)
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+  assert.equal(rerenderedHook.violations[0].rule_id, 'cached')
+})
+
+test('cache key changes when code/rules/endpoint change', async () => {
+  const calls = []
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (endpoint, code, enabledRules) => {
+      calls.push({ endpoint, code, enabledRules: [...enabledRules] })
+      return { diagram_type: 'flowchart', results: [] }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', ['r2'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis('https://example-2.test', 'graph TD\nA-->C', ['r2'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(calls.length, 4)
+})
+
+test('expired cache entry triggers fresh network analysis', async () => {
+  let callCount = 0
+
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      callCount += 1
+      return { diagram_type: 'flowchart', results: [] }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  await timerControls.advanceBy(60_001)
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(callCount, 2)
+})
