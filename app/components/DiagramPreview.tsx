@@ -233,6 +233,10 @@ export default function DiagramPreview({
     let cancelled = false
     setIsRendering(true)
 
+    // Save original insertAdjacentHTML to restore later and block error SVG injection
+    const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML
+    let isRenderingDiagram = false
+
     const renderDiagram = async () => {
       try {
         // Check if beautiful-mermaid should be used
@@ -289,6 +293,17 @@ export default function DiagramPreview({
         }
 
         const mermaid = (await import('mermaid')).default
+        
+        // Intercept DOM insertions to block mermaid error SVGs from being rendered
+        Element.prototype.insertAdjacentHTML = function(position: string, html: string) {
+          // Block mermaid error SVGs from being inserted
+          if (isRenderingDiagram && html.includes('aria-roledescription="error"')) {
+            console.debug('Blocked mermaid error SVG from inserting to DOM')
+            return
+          }
+          return originalInsertAdjacentHTML.call(this, position, html)
+        }
+        
         mermaid.initialize({
           startOnLoad: false,
           theme: 'dark',
@@ -302,14 +317,25 @@ export default function DiagramPreview({
             mainBkg: '#2c2c2e',
           },
           securityLevel: 'strict',
+          logLevel: 'error',
         })
 
         const id = `mermaid-${++idCounterRef.current}`
         removeMermaidFallbackNodes()
         ownedRenderIdsRef.current.add(id)
         lastRenderIdRef.current = id
-        // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
-        const { svg } = await mermaid.render(id, code)
+        
+        let svg: string = ''
+        try {
+          isRenderingDiagram = true
+          // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
+          const result = await mermaid.render(id, code)
+          svg = result.svg
+        } finally {
+          isRenderingDiagram = false
+          // Restore original insertAdjacentHTML
+          Element.prototype.insertAdjacentHTML = originalInsertAdjacentHTML
+        }
 
         // Check if the returned SVG contains mermaid error content
         const mermaidError = detectMermaidErrorInSvg(svg)
