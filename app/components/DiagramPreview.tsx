@@ -39,10 +39,23 @@ export default function DiagramPreview({
     if (typeof document === 'undefined') return
 
     if (containerRef.current) {
+      // Remove fallback error nodes injected by mermaid
       containerRef.current
         .querySelectorAll('[id^="dmermaid-"]')
         .forEach((node) => node.remove())
+
+      // Also remove any error SVGs that mermaid might have created
+      containerRef.current
+        .querySelectorAll('svg[aria-roledescription="error"]')
+        .forEach((node) => node.remove())
     }
+
+    // Remove error nodes from the document body as well
+    document.querySelectorAll('svg[aria-roledescription="error"]').forEach((node) => {
+      if (!containerRef.current?.contains(node)) {
+        node.remove()
+      }
+    })
 
     const targetRenderIds = new Set<string>()
     if (renderId && ownedRenderIdsRef.current.has(renderId)) {
@@ -84,45 +97,45 @@ export default function DiagramPreview({
 
   // Detect if an SVG contains mermaid error content (returns error message if found, null otherwise)
   const detectMermaidErrorInSvg = (svg: string): string | null => {
-    // Mermaid error SVGs contain specific indicators:
-    // 1. aria-roledescription="error" attribute
-    // 2. Text patterns like "Syntax error", "Error", "mermaid version"
-    // 3. Both graphics-document and error role indicators
-    
     if (!svg) return null
 
-    // Check for error attributes and indicators
-    const hasErrorRole = svg.includes('aria-roledescription="error"') || 
-                        (svg.includes('role="img"') && svg.includes('aria-label'))
-    
-    const hasSyntaxError = svg.includes('Syntax error') || 
-                          svg.includes('SyntaxError') ||
-                          svg.includes('Parse error')
-    
-    const hasMermaidVersion = svg.includes('mermaid version')
-    
-    // If it looks like an error SVG, try to extract the error message
-    if ((hasErrorRole && (hasSyntaxError || hasMermaidVersion)) || hasSyntaxError || hasMermaidVersion) {
-      try {
-        // Try to extract clean text from the SVG
-        const tempDiv = document.createElement('div')
-        tempDiv.innerHTML = svg
-        const textNodes = tempDiv.innerText || tempDiv.textContent || ''
-        
-        if (textNodes) {
-          // Extract error message from text
-          const lines = textNodes.split('\n').map(l => l.trim()).filter(Boolean)
-          // Get first 1-2 meaningful lines
-          const errorMessage = lines.slice(0, 2).join(' ')
-          return errorMessage || 'Diagram syntax error'
-        }
-      } catch (e) {
-        // If extraction fails, return generic error
-        console.debug('Failed to extract error message from SVG:', e)
-        return 'Diagram syntax error'
-      }
+    // Mermaid error SVGs contain specific visual error markers
+    // Check for the patterns that indicate a mermaid-generated error SVG
+    const hasErrorIndicator = 
+      svg.includes('aria-roledescription="error"') ||
+      svg.includes('Syntax error') ||
+      svg.includes('Parse error') ||
+      (svg.includes('mermaid version') && svg.includes('text'))
+
+    if (!hasErrorIndicator) {
+      return null
     }
-    return null
+
+    // This looks like an error SVG - extract a meaningful error message
+    try {
+      // Look for text content in the SVG that describes the error
+      if (svg.includes('Syntax error')) {
+        // Try to extract the full error text
+        const syntaxMatch = svg.match(/Syntax error[^<>]*/)
+        if (syntaxMatch) {
+          return `Syntax error in diagram (line error detected)`
+        }
+        return 'Syntax error in diagram'
+      }
+
+      if (svg.includes('Parse error')) {
+        return 'Parse error in diagram'
+      }
+
+      if (svg.includes('mermaid version')) {
+        // This is definitely a mermaid error SVG
+        return 'Mermaid diagram rendering error'
+      }
+    } catch (e) {
+      console.debug('Error processing SVG:', e)
+    }
+
+    return 'Diagram error'
   }
 
   // Fit diagram to container dimensions
@@ -249,6 +262,13 @@ export default function DiagramPreview({
 
                 if (containerRef.current) {
                   containerRef.current.innerHTML = svg
+                  
+                  // Safety check: remove any error SVGs that might have been rendered
+                  containerRef.current.querySelectorAll('svg[aria-roledescription="error"]').forEach(node => {
+                    console.debug('Removing error SVG from beautiful-mermaid render')
+                    node.remove()
+                  })
+                  
                   const svgEl = containerRef.current.querySelector('svg')
                   if (svgEl) {
                     svgRef.current = svgEl as SVGSVGElement
@@ -294,7 +314,13 @@ export default function DiagramPreview({
         // Check if the returned SVG contains mermaid error content
         const mermaidError = detectMermaidErrorInSvg(svg)
         if (mermaidError) {
+          console.debug('Detected mermaid error SVG rendering, throwing:', mermaidError)
           throw new Error(mermaidError)
+        }
+
+        // Additional safety: if SVG string starts with error indicators, reject it
+        if (svg.trim().length === 0 || svg.includes('aria-roledescription="error"')) {
+          throw new Error('Mermaid returned error SVG')
         }
 
         if (!cancelled) {
@@ -305,6 +331,13 @@ export default function DiagramPreview({
 
           if (containerRef.current) {
             containerRef.current.innerHTML = svg
+            
+            // Safety check: remove any error SVGs that might have been rendered
+            containerRef.current.querySelectorAll('svg[aria-roledescription="error"]').forEach(node => {
+              console.debug('Removing error SVG from container')
+              node.remove()
+            })
+            
             const svgEl = containerRef.current.querySelector('svg')
             if (svgEl) {
               svgRef.current = svgEl as SVGSVGElement
@@ -328,7 +361,17 @@ export default function DiagramPreview({
           setIsErrorExpanded(false)
           onParseStateChange?.({ hasParseError: true, message: collapsedMessage })
           removeMermaidFallbackNodes(lastRenderIdRef.current ?? undefined)
-          if (containerRef.current) containerRef.current.innerHTML = ''
+          
+          // Clean container and remove any stray error SVGs from the page
+          if (containerRef.current) {
+            containerRef.current.innerHTML = ''
+          }
+          
+          // Remove any error SVGs that might have been rendered elsewhere on the page
+          document.querySelectorAll('svg[aria-roledescription="error"]').forEach(node => {
+            console.debug('Removing stray error SVG from page')
+            node.remove()
+          })
         }
       } finally {
         if (!cancelled) setIsRendering(false)
