@@ -294,6 +294,28 @@ export default function Home() {
   const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
   const canRecheck = !!code.trim() && !!endpoint && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint) && !isAnalyzing
 
+  const resultsHasErrors = violations.some((violation) => violation.severity === 'error')
+
+  const renderResultsHeading = () => (
+    <div className="panel-heading" style={{ marginBottom: 0 }}>
+      ▦ Results{' '}
+      {violations.length > 0 && (
+        <span
+          style={{
+            background: resultsHasErrors ? 'var(--color-error)' : 'var(--color-warning)',
+            color: 'var(--color-bg-primary)',
+            padding: '0 6px',
+            fontSize: '12px',
+            borderRadius: '8px',
+            marginLeft: '4px',
+          }}
+        >
+          {violations.length}
+        </span>
+      )}
+    </div>
+  )
+
   return (
     <SnackbarProvider>
     <div
@@ -482,7 +504,8 @@ export default function Home() {
             {/* Results Panel - Full Width Bottom */}
             <div style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
               <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
+                  {renderResultsHeading()}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <ErrorBoundary>
                       <ExportDropdown
@@ -522,6 +545,7 @@ export default function Home() {
                       analysisHints={analysisHints}
                       parseError={parseErrorDetail}
                       onJumpToLine={handleJumpToLine}
+                      showInternalHeader={false}
                     />
                   </ErrorBoundary>
                 </div>
@@ -553,7 +577,8 @@ export default function Home() {
             </div>
             <div style={{ flex: 3, overflow: 'hidden' }}>
               <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
+                  {renderResultsHeading()}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <ErrorBoundary>
                       <ExportDropdown
@@ -593,6 +618,7 @@ export default function Home() {
                       analysisHints={analysisHints}
                       parseError={parseErrorDetail}
                       onJumpToLine={handleJumpToLine}
+                      showInternalHeader={false}
                     />
                   </ErrorBoundary>
                 </div>
