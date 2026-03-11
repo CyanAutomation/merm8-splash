@@ -507,7 +507,7 @@ export default function DiagramPreview({
                       (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
                     }}
                   >
-                    Show Me Where
+                    Show me where
                   </button>
                 ) : null;
               })()}
