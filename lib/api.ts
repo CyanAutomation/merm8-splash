@@ -43,6 +43,35 @@ export interface AnalyzeResponse {
 
 export type AnalyzeHint = string | Record<string, unknown>
 
+function normalizeViolation(rawViolation: unknown): Violation | null {
+  if (!rawViolation || typeof rawViolation !== 'object' || Array.isArray(rawViolation)) {
+    return null
+  }
+
+  const violation = rawViolation as Record<string, unknown>
+  const { rule_id, severity, message, node_id, line } = violation
+
+  if (typeof rule_id !== 'string') return null
+  if (severity !== 'error' && severity !== 'warning' && severity !== 'info') return null
+  if (typeof message !== 'string') return null
+
+  const normalized: Violation = {
+    rule_id,
+    severity,
+    message,
+  }
+
+  if (typeof node_id === 'string') {
+    normalized.node_id = node_id
+  }
+
+  if (typeof line === 'number' && Number.isFinite(line)) {
+    normalized.line = line
+  }
+
+  return normalized
+}
+
 function normalizeAnalyzeHints(rawHints: unknown): AnalyzeHint[] | undefined {
   if (rawHints === undefined) return undefined
   if (!Array.isArray(rawHints)) return []
@@ -60,10 +89,13 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
     data && 'diagram_type' in data ? (data as { diagram_type?: unknown }).diagram_type : undefined
   const rawHints = data && 'hints' in data ? (data as { hints?: unknown }).hints : undefined
   const normalizedHints = normalizeAnalyzeHints(rawHints)
+  const normalizedResults = Array.isArray(rawResults)
+    ? rawResults.map(normalizeViolation).filter((result): result is Violation => result !== null)
+    : []
 
   const normalized: AnalyzeResponse = {
     diagram_type: typeof rawDiagramType === 'string' ? rawDiagramType : '',
-    results: Array.isArray(rawResults) ? rawResults : [],
+    results: normalizedResults,
     ...(normalizedHints !== undefined ? { hints: normalizedHints } : {}),
   }
 
@@ -72,6 +104,9 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
 
     if (!data) malformedReasons.push('missing `data` payload')
     if (!Array.isArray(rawResults)) malformedReasons.push('non-array `results`')
+    if (Array.isArray(rawResults) && normalizedResults.length !== rawResults.length) {
+      malformedReasons.push('invalid entries in `results`')
+    }
     if (typeof rawDiagramType !== 'string') malformedReasons.push('missing/invalid `diagram_type`')
     if (rawHints !== undefined) {
       if (!Array.isArray(rawHints)) {
