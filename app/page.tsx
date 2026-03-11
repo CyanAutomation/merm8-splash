@@ -482,15 +482,7 @@ export default function Home() {
             {/* Results Panel - Full Width Bottom */}
             <div style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
               <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    className="btn"
-                    style={{ fontSize: '12px', padding: '4px 12px' }}
-                    onClick={() => setShowRulesModal(true)}
-                    title="Configure rules"
-                  >
-                    ⊞ Rules
-                  </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <ErrorBoundary>
                       <ExportDropdown
@@ -501,6 +493,14 @@ export default function Home() {
                         rulesMetadata={rules}
                       />
                     </ErrorBoundary>
+                    <button
+                      className="btn"
+                      style={{ fontSize: '12px', padding: '4px 12px' }}
+                      onClick={() => setShowRulesModal(true)}
+                      title="Configure rules"
+                    >
+                      ⊞ Rules
+                    </button>
                     <button
                       className="btn"
                       style={{ fontSize: '12px', padding: '4px 12px' }}
@@ -553,15 +553,7 @@ export default function Home() {
             </div>
             <div style={{ flex: 3, overflow: 'hidden' }}>
               <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    className="btn"
-                    style={{ fontSize: '12px', padding: '4px 12px' }}
-                    onClick={() => setShowRulesModal(true)}
-                    title="Configure rules"
-                  >
-                    ⊞ Rules
-                  </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <ErrorBoundary>
                       <ExportDropdown
@@ -572,6 +564,14 @@ export default function Home() {
                         rulesMetadata={rules}
                       />
                     </ErrorBoundary>
+                    <button
+                      className="btn"
+                      style={{ fontSize: '12px', padding: '4px 12px' }}
+                      onClick={() => setShowRulesModal(true)}
+                      title="Configure rules"
+                    >
+                      ⊞ Rules
+                    </button>
                     <button
                       className="btn"
                       style={{ fontSize: '12px', padding: '4px 12px' }}
