@@ -55,21 +55,42 @@ function createReactMock() {
 
 function createTimerControls() {
   const pendingTimers = new Map()
+  const pendingIntervals = new Map()
   let nextTimerId = 1
   let nowMs = 0
   const scheduledDelays = []
 
   async function runDueTimers() {
     while (true) {
-      const dueTimers = Array.from(pendingTimers.entries())
-        .filter(([, timer]) => timer.dueAt <= nowMs)
-        .sort((a, b) => a[1].dueAt - b[1].dueAt)
+      const dueTimeouts = Array.from(pendingTimers.entries()).map(([id, timer]) => ({
+        id,
+        type: 'timeout',
+        dueAt: timer.dueAt,
+      }))
+      const dueIntervals = Array.from(pendingIntervals.entries()).map(([id, timer]) => ({
+        id,
+        type: 'interval',
+        dueAt: timer.dueAt,
+      }))
+      const dueTimers = [...dueTimeouts, ...dueIntervals]
+        .filter((timer) => timer.dueAt <= nowMs)
+        .sort((a, b) => a.dueAt - b.dueAt)
 
       if (dueTimers.length === 0) break
 
-      for (const [id, timer] of dueTimers) {
-        pendingTimers.delete(id)
-        await timer.callback()
+      for (const timer of dueTimers) {
+        if (timer.type === 'timeout') {
+          const timeout = pendingTimers.get(timer.id)
+          if (!timeout) continue
+          pendingTimers.delete(timer.id)
+          await timeout.callback()
+          continue
+        }
+
+        const interval = pendingIntervals.get(timer.id)
+        if (!interval) continue
+        interval.dueAt += interval.intervalMs
+        await interval.callback()
       }
     }
   }
@@ -87,6 +108,19 @@ function createTimerControls() {
     },
     clearTimeout(timerId) {
       pendingTimers.delete(timerId)
+    },
+    setInterval(callback, delay, ...args) {
+      const timerId = nextTimerId++
+      const normalizedDelay = Number(delay) || 0
+      pendingIntervals.set(timerId, {
+        dueAt: nowMs + normalizedDelay,
+        intervalMs: normalizedDelay,
+        callback: () => callback(...args),
+      })
+      return timerId
+    },
+    clearInterval(timerId) {
+      pendingIntervals.delete(timerId)
     },
     now() {
       return nowMs
@@ -162,6 +196,8 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl, isCan
     console,
     setTimeout: timerControls.setTimeout,
     clearTimeout: timerControls.clearTimeout,
+    setInterval: timerControls.setInterval,
+    clearInterval: timerControls.clearInterval,
     AbortController,
     Date: FakeDate,
   })
