@@ -220,6 +220,7 @@ export default function DiagramPreview({
             mainBkg: '#2c2c2e',
           },
           securityLevel: 'strict',
+          suppressErrorRendering: true,
         })
 
         const id = `mermaid-${++idCounterRef.current}`
