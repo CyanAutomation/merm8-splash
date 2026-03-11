@@ -42,11 +42,10 @@ export default function DiagramPreview({
         .forEach((node) => node.remove())
     }
 
-    if (renderId) {
-      ownedRenderIdsRef.current.add(renderId)
-    }
-
     const targetRenderIds = new Set<string>()
+    if (renderId && ownedRenderIdsRef.current.has(renderId)) {
+      targetRenderIds.add(renderId)
+    }
     if (lastRenderIdRef.current && ownedRenderIdsRef.current.has(lastRenderIdRef.current)) {
       targetRenderIds.add(lastRenderIdRef.current)
     }
@@ -57,8 +56,8 @@ export default function DiagramPreview({
       const fallbackNode = containerRef.current?.querySelector(`#d${targetRenderId}`)
       if (fallbackNode) {
         fallbackNode.remove()
-        ownedRenderIdsRef.current.delete(targetRenderId)
       }
+      ownedRenderIdsRef.current.delete(targetRenderId)
     }
   }
 
@@ -226,7 +225,7 @@ export default function DiagramPreview({
         const id = `mermaid-${++idCounterRef.current}`
         ownedRenderIdsRef.current.add(id)
         lastRenderIdRef.current = id
-        removeMermaidFallbackNodes(id)
+        removeMermaidFallbackNodes()
         // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
         const { svg } = await mermaid.render(id, code)
 
