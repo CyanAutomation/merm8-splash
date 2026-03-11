@@ -92,6 +92,10 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
         return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
       });
 
+    const filterLabel =
+      filter === "all" ? "All" : filter === "error" ? "Error" : filter === "warning" ? "Warning" : "Info";
+    const sortLabel = sortBy === "line" ? "Line" : "Severity";
+
     const fallbackCopyWithTextarea = (text: string): boolean => {
       const textarea = document.createElement("textarea");
       textarea.value = text;
@@ -210,17 +214,25 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
               )}
             </div>
 
-            <button
-              className="btn"
-              style={{ fontSize: "12px", padding: "4px 12px" }}
-              onClick={() => setShowFilterModal(true)}
-              title="Filter and sort results"
-            >
-              ⚲ Filter
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
+                Filter: {filterLabel} • Sort: {sortLabel}
+              </span>
+              <button
+                className="btn"
+                style={{ fontSize: "12px", padding: "4px 12px" }}
+                onClick={() => setShowFilterModal(true)}
+                title="Filter and sort results"
+              >
+                ⚲ Filter
+              </button>
+            </div>
           </div>
         ) : (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
+              Filter: {filterLabel} • Sort: {sortLabel}
+            </span>
             <button
               className="btn"
               style={{ fontSize: "12px", padding: "4px 12px" }}
@@ -310,7 +322,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                 </div>
               )}
 
-              {parseError ? (
+              {parseError && (
                 <div
                   style={{
                     border: "1px solid var(--color-error)",
@@ -343,7 +355,9 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                     {parseError}
                   </div>
                 </div>
-              ) : filtered.length === 0 ? (
+              )}
+
+              {filtered.length === 0 ? (
                 <div
                   style={{
                     padding: "16px",
