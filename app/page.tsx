@@ -21,6 +21,29 @@ import { fetchRules, Rule } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
 
 export default function Home() {
+  const headerControlButtonStyle = {
+    padding: '4px 12px',
+    fontSize: '12px',
+    background: 'transparent',
+    color: 'var(--color-text-secondary)',
+    border: '1px solid var(--color-border)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  }
+
+  const handleHeaderControlMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.color = 'var(--color-accent-primary)'
+    e.currentTarget.style.borderColor = 'var(--color-accent-primary)'
+    e.currentTarget.style.background = 'rgba(10, 132, 255, 0.1)'
+  }
+
+  const handleHeaderControlMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.color = 'var(--color-text-secondary)'
+    e.currentTarget.style.borderColor = 'var(--color-border)'
+    e.currentTarget.style.background = 'transparent'
+  }
+
   const apiConfigRef = useRef<ApiConfigPanelRef>(null)
   const editorRef = useRef<DiagramEditorRef>(null)
   const resultsRef = useRef<ResultsPanelRef>(null)
@@ -317,55 +340,21 @@ export default function Home() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-            Ctrl+K · Ctrl+E · Ctrl+R
+            Ctrl+K (API) · Ctrl+E · Ctrl+R
           </div>
           <button
             onClick={openApiConfigAndFocus}
-            style={{
-              padding: '4px 12px',
-              fontSize: '12px',
-              background: 'transparent',
-              color: 'var(--color-text-secondary)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              ;(e.target as HTMLElement).style.color = 'var(--color-accent-primary)'
-              ;(e.target as HTMLElement).style.borderColor = 'var(--color-accent-primary)'
-              ;(e.target as HTMLElement).style.background = 'rgba(10, 132, 255, 0.1)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.target as HTMLElement).style.color = 'var(--color-text-secondary)'
-              ;(e.target as HTMLElement).style.borderColor = 'var(--color-border)'
-              ;(e.target as HTMLElement).style.background = 'transparent'
-            }}
+            style={headerControlButtonStyle}
+            onMouseEnter={handleHeaderControlMouseEnter}
+            onMouseLeave={handleHeaderControlMouseLeave}
           >
             API
           </button>
           <button
             onClick={() => setShowResetConfirmation(true)}
-            style={{
-              padding: '4px 12px',
-              fontSize: '12px',
-              background: 'transparent',
-              color: 'var(--color-text-secondary)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              ;(e.target as HTMLElement).style.color = 'var(--color-accent-primary)'
-              ;(e.target as HTMLElement).style.borderColor = 'var(--color-accent-primary)'
-              ;(e.target as HTMLElement).style.background = 'rgba(10, 132, 255, 0.1)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.target as HTMLElement).style.color = 'var(--color-text-secondary)'
-              ;(e.target as HTMLElement).style.borderColor = 'var(--color-border)'
-              ;(e.target as HTMLElement).style.background = 'transparent'
-            }}
+            style={headerControlButtonStyle}
+            onMouseEnter={handleHeaderControlMouseEnter}
+            onMouseLeave={handleHeaderControlMouseLeave}
           >
             ↺ Reset
           </button>
