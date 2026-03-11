@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { parseDiagramType } from '@/lib/diagramTypes'
+import { extractLineNumber } from '@/lib/errorUtils'
 import ToggleSlider from './ToggleSlider'
 
 // Diagram types supported by beautiful-mermaid
@@ -13,6 +14,7 @@ interface DiagramPreviewProps {
   parseErrorMessage?: string | null
   useBeautifulRenderer?: boolean
   onToggleBeautifulRenderer?: (value: boolean) => void
+  onJumpToLine?: (line: number) => void
 }
 
 export default function DiagramPreview({ 
@@ -21,6 +23,7 @@ export default function DiagramPreview({
   parseErrorMessage,
   useBeautifulRenderer = false,
   onToggleBeautifulRenderer,
+  onJumpToLine,
 }: DiagramPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
@@ -481,29 +484,57 @@ export default function DiagramPreview({
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
             <div style={{ fontWeight: 600 }}>⚠ Syntax Error</div>
-            {fullRenderError && fullRenderError !== (parseErrorMessage ?? renderError) && (
-              <button
-                onClick={() => setIsErrorExpanded(!isErrorExpanded)}
-                style={{
-                  padding: '2px 8px',
-                  fontSize: '11px',
-                  border: '1px solid rgba(255,85,85,0.4)',
-                  background: 'transparent',
-                  color: 'var(--color-error)',
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,85,85,0.1)'
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                }}
-              >
-                {isErrorExpanded ? 'Hide details' : 'Show details'}
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {(() => {
+                const line = extractLineNumber(parseErrorMessage ?? renderError ?? '');
+                return line != null && onJumpToLine ? (
+                  <button
+                    onClick={() => onJumpToLine(line)}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: '11px',
+                      border: '1px solid rgba(255,85,85,0.4)',
+                      background: 'transparent',
+                      color: 'var(--color-error)',
+                      borderRadius: '3px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,85,85,0.1)'
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                    }}
+                  >
+                    Show Me Where
+                  </button>
+                ) : null;
+              })()}
+              {fullRenderError && fullRenderError !== (parseErrorMessage ?? renderError) && (
+                <button
+                  onClick={() => setIsErrorExpanded(!isErrorExpanded)}
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '11px',
+                    border: '1px solid rgba(255,85,85,0.4)',
+                    background: 'transparent',
+                    color: 'var(--color-error)',
+                    borderRadius: '3px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,85,85,0.1)'
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                  }}
+                >
+                  {isErrorExpanded ? 'Hide details' : 'Show details'}
+                </button>
+              )}
+            </div>
           </div>
           <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{parseErrorMessage ?? renderError}</pre>
           {isErrorExpanded && fullRenderError && fullRenderError !== (parseErrorMessage ?? renderError) && (
