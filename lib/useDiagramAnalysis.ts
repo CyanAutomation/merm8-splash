@@ -91,11 +91,9 @@ function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): 
 
     promise.then(
       (result) => {
-        signal.removeEventListener('abort', onAbort)
         resolve(result)
       },
       (error) => {
-        signal.removeEventListener('abort', onAbort)
         reject(error)
       }
     )
