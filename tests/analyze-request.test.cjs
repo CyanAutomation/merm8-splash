@@ -506,7 +506,9 @@ test('validateApiEndpoint blocks normalized local/private bypass forms in produc
   try {
     const blockedUrls = [
       'http://localhost.',
+      'http://2130706433',
       'http://127.1',
+      'http://127.0.1',
       'http://127.0.1.1',
       'http://[::1]',
       'http://[fe80::1]',
