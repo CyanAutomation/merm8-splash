@@ -1,6 +1,28 @@
 'use client'
 
-import { useEffect, useCallback, ReactNode } from 'react'
+import { useEffect, useCallback, useRef, ReactNode } from 'react'
+
+let openModalCount = 0
+
+function lockBodyScroll() {
+  if (typeof document === 'undefined') return
+
+  if (openModalCount === 0) {
+    document.body.style.overflow = 'hidden'
+  }
+
+  openModalCount += 1
+}
+
+function unlockBodyScroll() {
+  if (typeof document === 'undefined') return
+
+  openModalCount = Math.max(0, openModalCount - 1)
+
+  if (openModalCount === 0) {
+    document.body.style.overflow = ''
+  }
+}
 
 interface ModalProps {
   isOpen: boolean
@@ -19,6 +41,8 @@ export default function Modal({
   maxWidth = 640,
   maxHeight = '80vh',
 }: ModalProps) {
+  const hasScrollLockRef = useRef(false)
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -31,13 +55,23 @@ export default function Modal({
   useEffect(() => {
     if (isOpen) {
       document.addEventListener('keydown', handleKeyDown)
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = 'hidden'
+
+      if (!hasScrollLockRef.current) {
+        lockBodyScroll()
+        hasScrollLockRef.current = true
+      }
+    } else if (hasScrollLockRef.current) {
+      unlockBodyScroll()
+      hasScrollLockRef.current = false
     }
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
+
+      if (hasScrollLockRef.current) {
+        unlockBodyScroll()
+        hasScrollLockRef.current = false
+      }
     }
   }, [isOpen, handleKeyDown])
 
