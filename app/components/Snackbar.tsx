@@ -39,12 +39,14 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
         style={{
           position: 'fixed',
           bottom: '24px',
-          right: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
           zIndex: 1000,
           pointerEvents: 'none',
+          alignItems: 'center',
         }}
       >
         {messages.map((msg) => (
