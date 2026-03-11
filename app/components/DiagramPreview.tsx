@@ -56,10 +56,10 @@ export default function DiagramPreview({
 
     for (const targetRenderId of targetRenderIds) {
       const fallbackNode = document.getElementById(`d${targetRenderId}`)
-      if (fallbackNode) {
-        fallbackNode.remove()
-        ownedRenderIdsRef.current.delete(targetRenderId)
-      }
+    if (fallbackNode) {
+      fallbackNode.remove()
+    }
+    ownedRenderIdsRef.current.delete(targetRenderId)
     }
   }
 
