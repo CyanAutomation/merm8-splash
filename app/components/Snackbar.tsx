@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 interface SnackbarMessage {
   id: number
@@ -23,13 +23,27 @@ export function useSnackbar(): SnackbarContextValue {
 export function SnackbarProvider({ children }: { children: React.ReactNode }) {
   const [messages, setMessages] = useState<SnackbarMessage[]>([])
   const idRef = useRef(0)
+  const timeoutIdsRef = useRef<Set<number>>(new Set())
 
   const show = useCallback((text: string, tone: 'success' | 'error' = 'success') => {
     const id = ++idRef.current
     setMessages((prev) => [...prev, { id, text, tone }])
-    setTimeout(() => {
+    const timerId = window.setTimeout(() => {
+      timeoutIdsRef.current.delete(timerId)
       setMessages((prev) => prev.filter((m) => m.id !== id))
     }, 3000)
+    timeoutIdsRef.current.add(timerId)
+  }, [])
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current
+
+    return () => {
+      timeoutIds.forEach((timerId) => {
+        window.clearTimeout(timerId)
+      })
+      timeoutIds.clear()
+    }
   }, [])
 
   return (
