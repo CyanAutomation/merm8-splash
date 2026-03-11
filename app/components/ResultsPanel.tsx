@@ -538,9 +538,10 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
           maxWidth={420}
         >
           <div style={{ display: "grid", gap: "12px" }}>
-            <label style={{ display: "grid", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+            <label htmlFor="results-filter-severity" style={{ display: "grid", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
               Severity
               <select
+                id="results-filter-severity"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value as SeverityFilter)}
                 style={{
@@ -560,9 +561,10 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
               </select>
             </label>
 
-            <label style={{ display: "grid", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+            <label htmlFor="results-filter-sort" style={{ display: "grid", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
               Sort
               <select
+                id="results-filter-sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "severity" | "line")}
                 style={{

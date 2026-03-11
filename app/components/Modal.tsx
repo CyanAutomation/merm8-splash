@@ -88,8 +88,8 @@ export default function Modal({
         justifyContent: 'center',
         zIndex: 1000,
         padding: '24px',
+        pointerEvents: 'none',
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -102,8 +102,8 @@ export default function Modal({
           maxHeight,
           display: 'flex',
           flexDirection: 'column',
+          pointerEvents: 'auto',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {title && (
           <div
