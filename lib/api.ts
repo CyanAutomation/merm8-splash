@@ -100,6 +100,82 @@ export interface EndpointValidationResult {
   message?: string
 }
 
+function normalizeHost(hostname: string): string {
+  const lowerCased = hostname.toLowerCase().replace(/\.+$/g, '')
+  const unbracketed = lowerCased.replace(/^\[/, '').replace(/\]$/, '')
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(unbracketed)
+    } catch {
+      return unbracketed
+    }
+  })()
+
+  return decoded.split('%')[0]
+}
+
+function parseIpv4(host: string): number[] | null {
+  const parts = host.split('.')
+  if (parts.length !== 4) return null
+  if (!parts.every((part) => /^\d+$/.test(part))) return null
+
+  const octets = parts.map((part) => Number(part))
+  if (octets.some((octet) => octet < 0 || octet > 255)) return null
+
+  return octets
+}
+
+function isPrivateOrLoopbackIpv4(host: string): boolean {
+  const octets = parseIpv4(host)
+  if (!octets) return false
+
+  const [first, second] = octets
+
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168)
+  )
+}
+
+function parseIpv6ToBigInt(host: string): bigint | null {
+  if (!host.includes(':')) return null
+
+  const [left, right] = host.split('::')
+  if (host.split('::').length > 2) return null
+
+  const leftParts = left ? left.split(':').filter(Boolean) : []
+  const rightParts = right ? right.split(':').filter(Boolean) : []
+  const totalParts = leftParts.length + rightParts.length
+
+  if (!host.includes('::') && totalParts !== 8) return null
+  if (host.includes('::') && totalParts >= 8) return null
+
+  const expandedParts = host.includes('::')
+    ? [...leftParts, ...Array(8 - totalParts).fill('0'), ...rightParts]
+    : [...leftParts, ...rightParts]
+
+  if (expandedParts.length !== 8) return null
+  if (!expandedParts.every((part) => /^[0-9a-f]{1,4}$/i.test(part))) return null
+
+  return expandedParts.reduce((value, part) => (value << 16n) + BigInt(parseInt(part, 16)), 0n)
+}
+
+function isPrivateOrLoopbackIpv6(host: string): boolean {
+  const parsed = parseIpv6ToBigInt(host)
+  if (parsed === null) return false
+
+  const fe80Prefix = 0xfe80_0000_0000_0000_0000_0000_0000_0000n
+  const fe80Mask = 0xffc0_0000_0000_0000_0000_0000_0000_0000n
+  const fc00Prefix = 0xfc00_0000_0000_0000_0000_0000_0000_0000n
+  const fc00Mask = 0xfe00_0000_0000_0000_0000_0000_0000_0000n
+
+  return parsed === 1n || (parsed & fe80Mask) === fe80Prefix || (parsed & fc00Mask) === fc00Prefix
+}
+
 export function safeGetLocalStorage(key: string): string | null {
   try {
     return localStorage.getItem(key)
@@ -174,27 +250,16 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
     }
     // Reject localhost and internal IPs in production
     if (process.env.NODE_ENV === 'production') {
-      const hostname = parsed.hostname.toLowerCase()
-      const normalizedHostname = hostname.replace(/^[\[]|[\]]$/g, '').split('%')[0]
-      const isBlockedIpv4Host = (value: string): boolean =>
-        value === '127.0.0.1' ||
-        value === '0.0.0.0' ||
-        value.startsWith('192.168.') ||
-        value.startsWith('10.') ||
-        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(value) ||
-        value.startsWith('169.254.')
-      const mappedIpv4Match = normalizedHostname.match(/^::ffff:((?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/)
-      const mappedIpv4 = mappedIpv4Match?.[1]
-      const isBlockedIpv6Host =
-        /^(0{0,4}:){0,7}(0{0,4})?:0{0,3}1$/.test(normalizedHostname) ||
-        /^f[cd][0-9a-f]{2}:/i.test(normalizedHostname) ||
-        /^fe[89ab][0-9a-f]:/i.test(normalizedHostname)
+      const normalizedHostname = normalizeHost(parsed.hostname)
+      const mappedIpv4 = normalizedHostname.startsWith('::ffff:')
+        ? normalizedHostname.slice('::ffff:'.length)
+        : null
 
       if (
-        hostname === 'localhost' ||
-        isBlockedIpv4Host(normalizedHostname) ||
-        (mappedIpv4 !== undefined && isBlockedIpv4Host(mappedIpv4)) ||
-        isBlockedIpv6Host
+        normalizedHostname === 'localhost' ||
+        isPrivateOrLoopbackIpv4(normalizedHostname) ||
+        (mappedIpv4 !== null && isPrivateOrLoopbackIpv4(mappedIpv4)) ||
+        isPrivateOrLoopbackIpv6(normalizedHostname)
       ) {
         return {
           valid: false,
