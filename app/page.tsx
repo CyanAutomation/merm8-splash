@@ -384,7 +384,7 @@ export default function Home() {
             onMouseEnter={handleHeaderControlMouseEnter}
             onMouseLeave={handleHeaderControlMouseLeave}
           >
-            API
+            ⚙ API
           </button>
           <button
             onClick={() => setShowResetConfirmation(true)}

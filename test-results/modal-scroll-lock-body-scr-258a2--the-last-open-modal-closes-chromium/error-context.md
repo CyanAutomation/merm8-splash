@@ -9,7 +9,7 @@
         - generic [ref=e6]: merm8-splashMermaid Linter Interface
       - generic [ref=e7]:
         - generic [ref=e8]: Ctrl+K (API) · Ctrl+E · Ctrl+R
-        - button "API" [ref=e9] [cursor=pointer]
+        - button "⚙ API" [ref=e9] [cursor=pointer]
         - button "↺ Reset" [ref=e10] [cursor=pointer]
     - generic [ref=e12]:
       - generic [ref=e15]:
@@ -80,14 +80,14 @@
             - generic [ref=e126]: Ctrl+K to focus
         - generic [ref=e127]:
           - textbox "https://api.merm8.app" [active] [ref=e130]: https://api.example.test
-          - combobox [ref=e131] [cursor=pointer]:
-            - option "Presets" [disabled] [selected]
-            - option "Official API"
-            - option "Localhost 8080"
-            - option "Localhost 3000"
-        - generic [ref=e132]:
-          - button "Test" [ref=e133] [cursor=pointer]
-          - button "Save" [ref=e134] [cursor=pointer]
+          - generic [ref=e131]:
+            - combobox [ref=e132] [cursor=pointer]:
+              - option "Presets" [disabled] [selected]
+              - option "Official API"
+              - option "Localhost 8080"
+              - option "Localhost 3000"
+            - button "Test" [ref=e133] [cursor=pointer]
+            - button "Save" [ref=e134] [cursor=pointer]
   - button "Open Next.js Dev Tools" [ref=e140] [cursor=pointer]:
     - img [ref=e141]
   - alert [ref=e144]

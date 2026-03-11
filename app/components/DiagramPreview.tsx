@@ -82,6 +82,49 @@ export default function DiagramPreview({
     return firstLine || message
   }
 
+  // Detect if an SVG contains mermaid error content (returns error message if found, null otherwise)
+  const detectMermaidErrorInSvg = (svg: string): string | null => {
+    // Mermaid error SVGs contain specific indicators:
+    // 1. aria-roledescription="error" attribute
+    // 2. Text patterns like "Syntax error", "Error", "mermaid version"
+    // 3. Both graphics-document and error role indicators
+    
+    if (!svg) return null
+
+    // Check for error attributes and indicators
+    const hasErrorRole = svg.includes('aria-roledescription="error"') || 
+                        (svg.includes('role="img"') && svg.includes('aria-label'))
+    
+    const hasSyntaxError = svg.includes('Syntax error') || 
+                          svg.includes('SyntaxError') ||
+                          svg.includes('Parse error')
+    
+    const hasMermaidVersion = svg.includes('mermaid version')
+    
+    // If it looks like an error SVG, try to extract the error message
+    if ((hasErrorRole && (hasSyntaxError || hasMermaidVersion)) || hasSyntaxError || hasMermaidVersion) {
+      try {
+        // Try to extract clean text from the SVG
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = svg
+        const textNodes = tempDiv.innerText || tempDiv.textContent || ''
+        
+        if (textNodes) {
+          // Extract error message from text
+          const lines = textNodes.split('\n').map(l => l.trim()).filter(Boolean)
+          // Get first 1-2 meaningful lines
+          const errorMessage = lines.slice(0, 2).join(' ')
+          return errorMessage || 'Diagram syntax error'
+        }
+      } catch (e) {
+        // If extraction fails, return generic error
+        console.debug('Failed to extract error message from SVG:', e)
+        return 'Diagram syntax error'
+      }
+    }
+    return null
+  }
+
   // Fit diagram to container dimensions
   const fitDiagramToContainer = () => {
     if (!svgRef.current || !containerRef.current) return
@@ -191,6 +234,12 @@ export default function DiagramPreview({
                 accent: 'var(--color-accent-primary)',
                 transparent: true,
               })
+
+              // Check if the returned SVG contains mermaid error content
+              const mermaidError = detectMermaidErrorInSvg(svg)
+              if (mermaidError) {
+                throw new Error(mermaidError)
+              }
               
               if (!cancelled) {
                 setRenderError(null)
@@ -241,6 +290,12 @@ export default function DiagramPreview({
         lastRenderIdRef.current = id
         // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
         const { svg } = await mermaid.render(id, code)
+
+        // Check if the returned SVG contains mermaid error content
+        const mermaidError = detectMermaidErrorInSvg(svg)
+        if (mermaidError) {
+          throw new Error(mermaidError)
+        }
 
         if (!cancelled) {
           setRenderError(null)
