@@ -91,11 +91,13 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
       .filter(({ violation }) => filter === "all" || violation.severity === filter)
       .sort((a, b) => {
         if (sortBy === "line") {
-          const aHasLine = typeof a.violation.line === "number";
-          const bHasLine = typeof b.violation.line === "number";
+          const aLine = a.violation.line;
+          const bLine = b.violation.line;
+          const aHasLine = typeof aLine === "number";
+          const bHasLine = typeof bLine === "number";
 
           if (aHasLine && bHasLine) {
-            const lineDiff = a.violation.line - b.violation.line;
+            const lineDiff = aLine - bLine;
             return lineDiff !== 0 ? lineDiff : a.index - b.index;
           }
 
