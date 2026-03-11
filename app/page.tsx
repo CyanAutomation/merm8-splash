@@ -723,7 +723,7 @@ export default function Home() {
           diagramType={diagramType}
         />
       </Modal>
-    </div>
+      </div>
     </SnackbarProvider>
   )
 }
