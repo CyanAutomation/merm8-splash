@@ -318,7 +318,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                 </div>
               )}
 
-              {filtered.length === 0 ? (
+              {filtered.length === 0 && !parseError && !analyzeError ? (
                 <div
                   style={{
                     padding: "16px",
@@ -329,7 +329,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                 >
                   ✓ No violations found
                 </div>
-              ) : (
+              ) : filtered.length === 0 ? null : (
                 <table
                   style={{
                     width: "100%",
