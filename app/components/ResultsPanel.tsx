@@ -84,13 +84,30 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
       focus: () => panelRef.current?.focus(),
     }));
 
+    const severityOrder = { error: 0, warning: 1, info: 2 };
+
     const filtered = results
-      .filter((v) => filter === "all" || v.severity === filter)
+      .map((violation, index) => ({ violation, index }))
+      .filter(({ violation }) => filter === "all" || violation.severity === filter)
       .sort((a, b) => {
-        if (sortBy === "line") return (a.line ?? 0) - (b.line ?? 0);
-        const order = { error: 0, warning: 1, info: 2 };
-        return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
-      });
+        if (sortBy === "line") {
+          const aHasLine = typeof a.violation.line === "number";
+          const bHasLine = typeof b.violation.line === "number";
+
+          if (aHasLine && bHasLine) {
+            const lineDiff = a.violation.line - b.violation.line;
+            return lineDiff !== 0 ? lineDiff : a.index - b.index;
+          }
+
+          // Missing line numbers are ordered last so explicit source locations stay easy to scan first.
+          if (aHasLine !== bHasLine) return aHasLine ? -1 : 1;
+
+          return a.index - b.index;
+        }
+
+        return (severityOrder[a.violation.severity] ?? 3) - (severityOrder[b.violation.severity] ?? 3);
+      })
+      .map(({ violation }) => violation);
     const hasResults = results.length > 0;
 
     const filterLabel =
