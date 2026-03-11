@@ -29,7 +29,10 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     const id = ++idRef.current
     setMessages((prev) => [...prev, { id, text, tone }])
     const timerId = window.setTimeout(() => {
-      timeoutIdsRef.current.delete(timerId)
+      const wasTracked = timeoutIdsRef.current.delete(timerId)
+      if (!wasTracked) {
+        window.clearTimeout(timerId)
+      }
       setMessages((prev) => prev.filter((m) => m.id !== id))
     }, 3000)
     timeoutIdsRef.current.add(timerId)
