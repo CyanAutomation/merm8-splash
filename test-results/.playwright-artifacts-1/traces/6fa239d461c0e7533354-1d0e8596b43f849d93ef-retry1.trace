@@ -183,3 +183,393 @@
 {"type":"log","callId":"call@22","time":394149.704,"message":"  done scrolling"}
 {"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
 {"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[12,9]],"viewport":{"width":1280,"height":720},"timestamp":394153.171,"wallTime":1773266423765,"collectionTime":1.0999999998603016,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":394159.116,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":394159.136,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":394159.143,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266423842.jpeg","width":1280,"height":720,"timestamp":394229.344,"frameSwapWallTime":1773266423830.76}
+{"type":"log","callId":"call@22","time":394666.884,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":394683.884,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":394683.913,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":394687.323,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[13,9]],"viewport":{"width":1280,"height":720},"timestamp":394698.534,"wallTime":1773266424309,"collectionTime":0.7999999998137355,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":394705.893,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":394705.953,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":394705.96,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266424353.jpeg","width":1280,"height":720,"timestamp":394740.246,"frameSwapWallTime":1773266424345.075}
+{"type":"log","callId":"call@22","time":395213.559,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":395252.934,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":395252.961,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":395265.378,"message":"  done scrolling"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266424879.jpeg","width":1280,"height":720,"timestamp":395266.109,"frameSwapWallTime":1773266424854.718}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[14,9]],"viewport":{"width":1280,"height":720},"timestamp":395280.964,"wallTime":1773266424893,"collectionTime":1.9000000001396984,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":395286.449,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":395286.477,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":395286.488,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266425338.jpeg","width":1280,"height":720,"timestamp":395725.352,"frameSwapWallTime":1773266425327.606}
+{"type":"log","callId":"call@22","time":395795.909,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":395798.846,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":395798.872,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":395800.742,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[15,9]],"viewport":{"width":1280,"height":720},"timestamp":395804.463,"wallTime":1773266425416,"collectionTime":0.6999999999534339,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":395806.207,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":395806.223,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":395806.23,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266425811.jpeg","width":1280,"height":720,"timestamp":396198.421,"frameSwapWallTime":1773266425807.7222}
+{"type":"log","callId":"call@22","time":396307.324,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":396316.233,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":396316.257,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":396317.614,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[16,9]],"viewport":{"width":1280,"height":720},"timestamp":396320.932,"wallTime":1773266425933,"collectionTime":1,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":396322.091,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":396322.106,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":396322.11,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266426313.jpeg","width":1280,"height":720,"timestamp":396700.795,"frameSwapWallTime":1773266426309.63}
+{"type":"log","callId":"call@22","time":396823.713,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":396832.283,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":396832.309,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":396834.056,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[17,9]],"viewport":{"width":1280,"height":720},"timestamp":396848.043,"wallTime":1773266426448,"collectionTime":0.7999999998137355,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":396859.149,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":396859.175,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":396859.18,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266426811.jpeg","width":1280,"height":720,"timestamp":397198.357,"frameSwapWallTime":1773266426807.635}
+{"type":"log","callId":"call@22","time":397360.708,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":397365.205,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":397365.221,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":397365.971,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[18,9]],"viewport":{"width":1280,"height":720},"timestamp":397367.923,"wallTime":1773266426980,"collectionTime":0.6999999999534339,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":397368.878,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":397368.889,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":397368.893,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266427343.jpeg","width":1280,"height":720,"timestamp":397730.223,"frameSwapWallTime":1773266427334.2559}
+{"type":"log","callId":"call@22","time":397870.001,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":397882.026,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":397882.045,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":397882.944,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[19,9]],"viewport":{"width":1280,"height":720},"timestamp":397884.898,"wallTime":1773266427497,"collectionTime":0.8000000000465661,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":397885.985,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":397886.033,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":397886.039,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266427818.jpeg","width":1280,"height":720,"timestamp":398205.735,"frameSwapWallTime":1773266427813.5159}
+{"type":"log","callId":"call@22","time":398387.202,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":398399.042,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":398399.065,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":398399.498,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[20,9]],"viewport":{"width":1280,"height":720},"timestamp":398402.574,"wallTime":1773266428015,"collectionTime":0.6000000000931323,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":398403.582,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":398403.595,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":398403.598,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266428314.jpeg","width":1280,"height":720,"timestamp":398701.149,"frameSwapWallTime":1773266428310.2952}
+{"type":"log","callId":"call@22","time":398904.568,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":398915.719,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":398915.745,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":398917.218,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[21,9]],"viewport":{"width":1280,"height":720},"timestamp":398919.313,"wallTime":1773266428532,"collectionTime":0.8000000000465661,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":398920.334,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":398920.348,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":398920.351,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266428815.jpeg","width":1280,"height":720,"timestamp":399202.384,"frameSwapWallTime":1773266428811.272}
+{"type":"log","callId":"call@22","time":399421.226,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":399432.048,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":399432.069,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":399433.012,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[22,9]],"viewport":{"width":1280,"height":720},"timestamp":399435.096,"wallTime":1773266429047,"collectionTime":0.8000000000465661,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":399436.062,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":399436.075,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":399436.077,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266429327.jpeg","width":1280,"height":720,"timestamp":399714.68,"frameSwapWallTime":1773266429322.0999}
+{"type":"log","callId":"call@22","time":399938.101,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":399956.995,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":399957.022,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":399964.573,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[23,9]],"viewport":{"width":1280,"height":720},"timestamp":399974.581,"wallTime":1773266429586,"collectionTime":3.5,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":399982.313,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":399982.34,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":399982.345,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266429862.jpeg","width":1280,"height":720,"timestamp":400249.409,"frameSwapWallTime":1773266429852.211}
+{"type":"log","callId":"call@22","time":400488.919,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":400498.714,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":400498.737,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":400499.14,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[24,9]],"viewport":{"width":1280,"height":720},"timestamp":400501.307,"wallTime":1773266430114,"collectionTime":0.6000000000931323,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":400502.271,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":400502.285,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":400502.288,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266430348.jpeg","width":1280,"height":720,"timestamp":400735.567,"frameSwapWallTime":1773266430341.353}
+{"type":"log","callId":"call@22","time":401003.266,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":401015.359,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":401015.378,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":401016.299,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[25,9]],"viewport":{"width":1280,"height":720},"timestamp":401018.438,"wallTime":1773266430631,"collectionTime":0.8000000000465661,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":401019.435,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":401019.447,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":401019.45,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266430816.jpeg","width":1280,"height":720,"timestamp":401203.86,"frameSwapWallTime":1773266430812.917}
+{"type":"log","callId":"call@22","time":401520.298,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":401531.86,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":401531.882,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":401532.795,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[26,9]],"viewport":{"width":1280,"height":720},"timestamp":401535.054,"wallTime":1773266431147,"collectionTime":0.5,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":401535.965,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":401535.977,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":401535.98,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266431311.jpeg","width":1280,"height":720,"timestamp":401698.902,"frameSwapWallTime":1773266431307.602}
+{"type":"log","callId":"call@22","time":402036.891,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":402048.799,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":402048.822,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":402049.773,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[27,9]],"viewport":{"width":1280,"height":720},"timestamp":402051.918,"wallTime":1773266431664,"collectionTime":0.7000000001862645,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":402052.896,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":402052.908,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":402052.911,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266431811.jpeg","width":1280,"height":720,"timestamp":402198.168,"frameSwapWallTime":1773266431807.462}
+{"type":"log","callId":"call@22","time":402553.849,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":402565.267,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":402565.289,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":402565.799,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[28,9]],"viewport":{"width":1280,"height":720},"timestamp":402568.22,"wallTime":1773266432180,"collectionTime":0.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":402569.351,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":402569.363,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":402569.365,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266432313.jpeg","width":1280,"height":720,"timestamp":402700.14,"frameSwapWallTime":1773266432308.218}
+{"type":"log","callId":"call@22","time":403070.28,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":403081.919,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":403081.941,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":403082.967,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[29,9]],"viewport":{"width":1280,"height":720},"timestamp":403085.326,"wallTime":1773266432698,"collectionTime":0.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":403086.371,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":403086.389,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":403086.394,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266432811.jpeg","width":1280,"height":720,"timestamp":403198.621,"frameSwapWallTime":1773266432807.8599}
+{"type":"log","callId":"call@22","time":403587.547,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":403598.466,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":403598.487,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":403599.454,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[30,9]],"viewport":{"width":1280,"height":720},"timestamp":403601.774,"wallTime":1773266433214,"collectionTime":1,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":403602.832,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":403602.845,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":403602.88,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266433311.jpeg","width":1280,"height":720,"timestamp":403698.563,"frameSwapWallTime":1773266433307.84}
+{"type":"log","callId":"call@22","time":404104.166,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":404115.302,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":404115.32,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":404116.268,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[31,9]],"viewport":{"width":1280,"height":720},"timestamp":404118.4,"wallTime":1773266433731,"collectionTime":0.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":404119.377,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":404119.388,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":404119.391,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266433821.jpeg","width":1280,"height":720,"timestamp":404208.642,"frameSwapWallTime":1773266433817.39}
+{"type":"log","callId":"call@22","time":404623.867,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":404633.898,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":404633.921,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":404634.063,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[32,9]],"viewport":{"width":1280,"height":720},"timestamp":404642.769,"wallTime":1773266434254,"collectionTime":0.8000000000465661,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":404644.622,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":404644.642,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":404644.646,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266434323.jpeg","width":1280,"height":720,"timestamp":404710.333,"frameSwapWallTime":1773266434319.6052}
+{"type":"log","callId":"call@22","time":405148.088,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":405165.26,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":405165.278,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":405166.156,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[33,9]],"viewport":{"width":1280,"height":720},"timestamp":405168.23,"wallTime":1773266434781,"collectionTime":0.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":405169.165,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":405169.176,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":405169.179,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266434816.jpeg","width":1280,"height":720,"timestamp":405203.928,"frameSwapWallTime":1773266434812.613}
+{"type":"log","callId":"call@22","time":405670.592,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":405682.285,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":405682.311,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":405683.925,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[34,9]],"viewport":{"width":1280,"height":720},"timestamp":405685.969,"wallTime":1773266435298,"collectionTime":0.8000000000465661,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":405686.928,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":405686.941,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":405686.944,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266435325.jpeg","width":1280,"height":720,"timestamp":405712.906,"frameSwapWallTime":1773266435321.874}
+{"type":"log","callId":"call@22","time":406187.878,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266435814.jpeg","width":1280,"height":720,"timestamp":406201.853,"frameSwapWallTime":1773266435807.739}
+{"type":"log","callId":"call@22","time":406215.225,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":406215.246,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":406216.165,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[35,9]],"viewport":{"width":1280,"height":720},"timestamp":406218.595,"wallTime":1773266435831,"collectionTime":1,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":406219.57,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":406219.581,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":406219.584,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266436319.jpeg","width":1280,"height":720,"timestamp":406706.409,"frameSwapWallTime":1773266436314.177}
+{"type":"log","callId":"call@22","time":406722.071,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":406752.612,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":406752.64,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":406753.117,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[36,9]],"viewport":{"width":1280,"height":720},"timestamp":406756.677,"wallTime":1773266436368,"collectionTime":0.9000000001396984,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":406758.564,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":406758.579,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":406758.584,"message":"  waiting 500ms"}
+{"type":"log","callId":"call@22","time":407264.64,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":407326.664,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":407326.692,"message":"  scrolling into view if needed"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266436946.jpeg","width":1280,"height":720,"timestamp":407333.536,"frameSwapWallTime":1773266436913.09}
+{"type":"log","callId":"call@22","time":407352.823,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[37,9]],"viewport":{"width":1280,"height":720},"timestamp":407386.496,"wallTime":1773266436992,"collectionTime":1.1999999999534339,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":407409.158,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":407409.188,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":407409.192,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266437521.jpeg","width":1280,"height":720,"timestamp":407908.665,"frameSwapWallTime":1773266437463.653}
+{"type":"log","callId":"call@22","time":407938.173,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":407975.837,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":407975.862,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":407996.135,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[38,9]],"viewport":{"width":1280,"height":720},"timestamp":408027.03,"wallTime":1773266437634,"collectionTime":2.6000000000931323,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":408040.867,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":408040.906,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":408040.944,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266437967.jpeg","width":1280,"height":720,"timestamp":408354.934,"frameSwapWallTime":1773266437946.166}
+{"type":"log","callId":"call@22","time":408557.657,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":408586.101,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":408586.13,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":408604.141,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[39,9]],"viewport":{"width":1280,"height":720},"timestamp":408636.375,"wallTime":1773266438246,"collectionTime":2.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":408644.887,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":408644.917,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":408644.924,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266438376.jpeg","width":1280,"height":720,"timestamp":408763.129,"frameSwapWallTime":1773266438361.125}
+{"type":"log","callId":"call@22","time":409153.959,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":409170.316,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":409170.339,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":409174.42,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[40,9]],"viewport":{"width":1280,"height":720},"timestamp":409181.991,"wallTime":1773266438792,"collectionTime":2.6000000000931323,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":409198.052,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":409198.08,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":409198.089,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266438909.jpeg","width":1280,"height":720,"timestamp":409297.56,"frameSwapWallTime":1773266438863.1511}
+{"type":"log","callId":"call@22","time":409718.979,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":409733.529,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":409733.554,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":409737.716,"message":"  done scrolling"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266439351.jpeg","width":1280,"height":720,"timestamp":409738.444,"frameSwapWallTime":1773266439337.3188}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[41,9]],"viewport":{"width":1280,"height":720},"timestamp":409753.145,"wallTime":1773266439365,"collectionTime":3.5,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":409755.055,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":409755.077,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":409755.081,"message":"  waiting 500ms"}
+{"type":"log","callId":"call@22","time":410258.986,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266439878.jpeg","width":1280,"height":720,"timestamp":410265.319,"frameSwapWallTime":1773266439860.739}
+{"type":"log","callId":"call@22","time":410265.787,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":410265.813,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":410272.172,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[42,9]],"viewport":{"width":1280,"height":720},"timestamp":410284.04,"wallTime":1773266439896,"collectionTime":1.9000000001396984,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":410286.153,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":410286.173,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":410286.18,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266440382.jpeg","width":1280,"height":720,"timestamp":410769.738,"frameSwapWallTime":1773266440357.703}
+{"type":"log","callId":"call@22","time":410788.945,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":410808.069,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":410808.095,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":410811.008,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[43,9]],"viewport":{"width":1280,"height":720},"timestamp":410826.326,"wallTime":1773266440438,"collectionTime":0.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":410839.659,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":410839.688,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":410839.692,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266440903.jpeg","width":1280,"height":720,"timestamp":411290.775,"frameSwapWallTime":1773266440878.349}
+{"type":"log","callId":"call@22","time":411354.811,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":411367.846,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":411367.865,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":411373.112,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[44,9]],"viewport":{"width":1280,"height":720},"timestamp":411380.612,"wallTime":1773266440988,"collectionTime":1,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":411386.544,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":411386.568,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":411386.574,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266441379.jpeg","width":1280,"height":720,"timestamp":411766.828,"frameSwapWallTime":1773266441354.2322}
+{"type":"log","callId":"call@22","time":411888.666,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":411900.575,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":411900.605,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":411911.655,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[45,9]],"viewport":{"width":1280,"height":720},"timestamp":411928.194,"wallTime":1773266441539,"collectionTime":0.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":411951.089,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":411951.115,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":411951.122,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266441864.jpeg","width":1280,"height":720,"timestamp":412251.282,"frameSwapWallTime":1773266441853.826}
+{"type":"log","callId":"call@22","time":412456.818,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":412465.414,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":412465.434,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":412487.014,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[46,9]],"viewport":{"width":1280,"height":720},"timestamp":412498.076,"wallTime":1773266442110,"collectionTime":3.5,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":412501.492,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":412501.527,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":412501.533,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266442357.jpeg","width":1280,"height":720,"timestamp":412744.858,"frameSwapWallTime":1773266442341.889}
+{"type":"log","callId":"call@22","time":413014.322,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":413034.601,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":413034.624,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":413043.831,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[47,9]],"viewport":{"width":1280,"height":720},"timestamp":413062.872,"wallTime":1773266442670,"collectionTime":0.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":413071.84,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":413071.873,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":413071.88,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266442975.jpeg","width":1280,"height":720,"timestamp":413362.164,"frameSwapWallTime":1773266442947.67}
+{"type":"log","callId":"call@22","time":413579.167,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":413598.65,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":413598.808,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":413606.795,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[48,9]],"viewport":{"width":1280,"height":720},"timestamp":413616.168,"wallTime":1773266443226,"collectionTime":1,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":413663.134,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":413663.17,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":413663.181,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266443543.jpeg","width":1280,"height":720,"timestamp":413930.163,"frameSwapWallTime":1773266443484.7961}
+{"type":"log","callId":"call@22","time":414183.28,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":414322.011,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":414322.033,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":414331.173,"message":"  done scrolling"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266443951.jpeg","width":1280,"height":720,"timestamp":414338.309,"frameSwapWallTime":1773266443904.365}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[49,9]],"viewport":{"width":1280,"height":720},"timestamp":414350.58,"wallTime":1773266443958,"collectionTime":0.8999999999068677,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":414359.596,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":414359.619,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":414359.623,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266444437.jpeg","width":1280,"height":720,"timestamp":414824.764,"frameSwapWallTime":1773266444421.0579}
+{"type":"log","callId":"call@22","time":414871.864,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":414886.649,"message":"  element is visible, enabled and stable"}
+{"type":"log","callId":"call@22","time":414886.671,"message":"  scrolling into view if needed"}
+{"type":"log","callId":"call@22","time":414892.775,"message":"  done scrolling"}
+{"type":"input","callId":"call@22","point":{"x":1155.63,"y":528.18},"inputSnapshot":"input@call@22"}
+{"type":"frame-snapshot","snapshot":{"callId":"call@22","snapshotName":"input@call@22","pageId":"page@4cc6b124217acf75767b139ba9e958a6","frameId":"frame@e2ef0557435012732de21ba1e8a60470","frameUrl":"http://localhost:3000/?api=https://api.example.test","doctype":"html","html":[[50,9]],"viewport":{"width":1280,"height":720},"timestamp":414918.684,"wallTime":1773266444523,"collectionTime":6.300000000046566,"resourceOverrides":[],"isMainFrame":true}}
+{"type":"log","callId":"call@22","time":414930.536,"message":"  <div>…</div> intercepts pointer events"}
+{"type":"log","callId":"call@22","time":414930.56,"message":"retrying click action"}
+{"type":"log","callId":"call@22","time":414930.567,"message":"  waiting 500ms"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266444959.jpeg","width":1280,"height":720,"timestamp":415346.5,"frameSwapWallTime":1773266444921.457}
+{"type":"log","callId":"call@22","time":415660.082,"message":"  waiting for element to be visible, enabled and stable"}
+{"type":"screencast-frame","pageId":"page@4cc6b124217acf75767b139ba9e958a6","sha1":"page@4cc6b124217acf75767b139ba9e958a6-1773266445288.jpeg","width":1280,"height":720,"timestamp":415675.15,"frameSwapWallTime":1773266445268.87}
