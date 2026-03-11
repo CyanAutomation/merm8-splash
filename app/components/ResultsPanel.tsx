@@ -67,18 +67,22 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     const [copyErrorKey, setCopyErrorKey] = useState<string | null>(null);
     const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const copyErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isMountedRef = useRef(false);
 
-    useEffect(
-      () => () => {
+    useEffect(() => {
+      isMountedRef.current = true;
+
+      return () => {
+        isMountedRef.current = false;
+
         if (copiedTimeoutRef.current) {
           clearTimeout(copiedTimeoutRef.current);
         }
         if (copyErrorTimeoutRef.current) {
           clearTimeout(copyErrorTimeoutRef.current);
         }
-      },
-      [],
-    );
+      };
+    }, []);
 
     useImperativeHandle(ref, () => ({
       focus: () => panelRef.current?.focus(),
@@ -157,6 +161,10 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
         copied = fallbackCopyWithTextarea(text);
       }
 
+      if (!isMountedRef.current) {
+        return;
+      }
+
       if (copied) {
         if (copiedTimeoutRef.current) {
           clearTimeout(copiedTimeoutRef.current);
@@ -169,6 +177,10 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
         setCopiedKey(key);
         setCopyErrorKey(null);
         copiedTimeoutRef.current = setTimeout(() => {
+          if (!isMountedRef.current) {
+            return;
+          }
+
           setCopiedKey((current) => (current === key ? null : current));
           copiedTimeoutRef.current = null;
         }, 1500);
@@ -186,6 +198,10 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
       // Removed setCopiedKey(null) to avoid clearing other rows' success indicators
       setCopyErrorKey(key);
       copyErrorTimeoutRef.current = setTimeout(() => {
+        if (!isMountedRef.current) {
+          return;
+        }
+
         setCopyErrorKey((current) => (current === key ? null : current));
         copyErrorTimeoutRef.current = null;
       }, 2000);
