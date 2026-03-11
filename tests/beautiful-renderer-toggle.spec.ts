@@ -26,10 +26,3 @@ test('desktop preview beautiful toggle keeps final state aligned with last rapid
 
   await assertRapidToggleEndsOnLastEvent(page)
 })
-
-test('mobile preview beautiful toggle keeps final state aligned with last rapid toggle', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/')
-
-  await assertRapidToggleEndsOnLastEvent(page)
-})

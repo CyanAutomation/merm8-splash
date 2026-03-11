@@ -44,7 +44,6 @@ function sanitizeLayoutPreferences(
 
 export function useLayoutPreferences() {
   const [prefs, setPrefs] = useState<LayoutPreferences>(DEFAULT_PREFS)
-  const [isMobile, setIsMobile] = useState(false)
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -57,20 +56,6 @@ export function useLayoutPreferences() {
     } catch (err) {
       console.debug('Failed to load layout preferences:', err)
     }
-  }, [])
-
-  // Detect mobile breakpoint
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-
-    // Set initial state
-    handleResize()
-    
-    // Listen for resize
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
   }, [])
 
   // Save preferences to localStorage
@@ -100,6 +85,5 @@ export function useLayoutPreferences() {
     prefs,
     savePrefs,
     resetPrefs,
-    isMobile,
   }
 }
