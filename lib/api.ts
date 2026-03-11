@@ -72,6 +72,27 @@ function normalizeViolation(rawViolation: unknown): Violation | null {
   return normalized
 }
 
+function normalizeRule(raw: unknown): Rule | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return null
+  }
+
+  const rule = raw as Record<string, unknown>
+  const { id, name, description, severity } = rule
+
+  if (typeof id !== 'string') return null
+  if (typeof name !== 'string') return null
+  if (typeof description !== 'string') return null
+  if (severity !== 'error' && severity !== 'warning' && severity !== 'info') return null
+
+  return {
+    id,
+    name,
+    description,
+    severity,
+  }
+}
+
 function normalizeAnalyzeHints(rawHints: unknown): AnalyzeHint[] | undefined {
   if (rawHints === undefined) return undefined
   if (!Array.isArray(rawHints)) return []
@@ -140,7 +161,48 @@ function normalizeRulesResponse(rawData: unknown): Rule[] {
   const rawRules = data && 'rules' in data ? (data as { rules?: unknown }).rules : undefined
 
   if (Array.isArray(rawRules)) {
-    return rawRules as Rule[]
+    const reasonCounts = {
+      nonObject: 0,
+      missingId: 0,
+      missingName: 0,
+      missingDescription: 0,
+      invalidSeverity: 0,
+    }
+
+    const normalizedRules = rawRules
+      .map((rawRule) => {
+        const normalizedRule = normalizeRule(rawRule)
+        if (normalizedRule) return normalizedRule
+
+        if (!rawRule || typeof rawRule !== 'object' || Array.isArray(rawRule)) {
+          reasonCounts.nonObject += 1
+          return null
+        }
+
+        const rule = rawRule as Record<string, unknown>
+        if (typeof rule.id !== 'string') reasonCounts.missingId += 1
+        if (typeof rule.name !== 'string') reasonCounts.missingName += 1
+        if (typeof rule.description !== 'string') reasonCounts.missingDescription += 1
+        if (rule.severity !== 'error' && rule.severity !== 'warning' && rule.severity !== 'info') {
+          reasonCounts.invalidSeverity += 1
+        }
+
+        return null
+      })
+      .filter((rule): rule is Rule => rule !== null)
+
+    if (process.env.NODE_ENV !== 'production' && normalizedRules.length !== rawRules.length) {
+      const droppedCount = rawRules.length - normalizedRules.length
+      const reasonSummary = Object.entries(reasonCounts)
+        .filter(([, count]) => count > 0)
+        .map(([reason, count]) => `${reason}=${count}`)
+        .join(', ')
+      console.warn(
+        `[api.fetchRules] Dropped ${droppedCount} invalid rule entr${droppedCount === 1 ? 'y' : 'ies'} during normalization${reasonSummary ? ` (${reasonSummary})` : ''}`
+      )
+    }
+
+    return normalizedRules
   }
 
   if (process.env.NODE_ENV !== 'production') {

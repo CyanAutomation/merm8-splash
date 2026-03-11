@@ -391,6 +391,68 @@ test('fetchRules normalizes malformed payloads to an empty array', async () => {
   }
 })
 
+test('fetchRules filters malformed rule entries and warns with drop summary', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+  const originalWarn = console.warn
+  const warnings = []
+
+  axios.create = () => ({
+    get: async () => ({
+      data: {
+        rules: [
+          {
+            id: 'valid-rule',
+            name: 'Valid Rule',
+            description: 'A valid rule description',
+            severity: 'warning',
+          },
+          null,
+          {
+            id: 'missing-name',
+            description: 'Missing name should be removed',
+            severity: 'error',
+          },
+          {
+            id: 'bad-severity',
+            name: 'Bad Severity',
+            description: 'Unsupported severity should be removed',
+            severity: 'critical',
+          },
+        ],
+      },
+    }),
+  })
+
+  console.warn = (message) => {
+    warnings.push(String(message))
+  }
+
+  try {
+    const rules = await api.fetchRules('https://api.example.com')
+
+    assert.equal(rules.length, 1)
+    assert.equal(
+      JSON.stringify(rules[0]),
+      JSON.stringify({
+        id: 'valid-rule',
+        name: 'Valid Rule',
+        description: 'A valid rule description',
+        severity: 'warning',
+      })
+    )
+    assert.equal(
+      warnings.some((message) => message.includes('Dropped 3 invalid rule entries during normalization')),
+      true,
+      'expected warning that malformed rule entries were dropped'
+    )
+  } finally {
+    console.warn = originalWarn
+    axios.create = originalCreate
+  }
+})
+
 test('validateApiEndpoint accepts endpoint without credentials', () => {
   const { validateApiEndpoint } = loadApiModule()
 
