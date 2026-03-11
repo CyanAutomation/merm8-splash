@@ -2,6 +2,7 @@
 
 import { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
 import { Violation } from "@/lib/api";
+import { extractLineNumber } from "@/lib/errorUtils";
 
 interface ResultsPanelProps {
   results: Violation[];
@@ -31,27 +32,7 @@ const severityColor = (severity: string) => {
 const violationKey = (violation: Violation, index: number): string => {
   const { rule_id, severity, message, line, node_id } = violation;
   return [rule_id, severity, message, line ?? "", node_id ?? "", index].join("::");
-};
-
-const hintedLine = (hint: string): number | null => {
-  const match = hint.match(/\bat line (\d+)\b/i) || hint.match(/\bline (\d+)\b/i);
-  if (!match) {
-    return null;
-  }
-
-  const line = Number(match[1]);
-  return Number.isFinite(line) && line > 0 ? line : null;
-};
-
-const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
-  (
-    {
-      results,
-      isAnalyzing,
-      analyzeError,
-      analysisHints,
-      parseError,
-      onJumpToLine,
+};    onJumpToLine,
       showInternalHeader = true,
     },
     ref,
@@ -263,7 +244,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                     }}
                   >
                     {analysisHints.map((hint, index) => {
-                      const line = hintedLine(hint);
+                      const line = extractLineNumber(hint);
                       return (
                         <li key={`hint-${index}`} style={{ marginBottom: "4px" }}>
                           {hint}{" "}
