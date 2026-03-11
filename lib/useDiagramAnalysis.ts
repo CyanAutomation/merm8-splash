@@ -205,6 +205,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const requestSeqRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
   const analysisCacheRef = useRef<Map<string, AnalysisCacheEntry>>(new Map())
+  const inFlightRequestsRef = useRef<Map<string, Promise<AnalyzeResponse>>>(new Map())
   const lastInputAtRef = useRef(0)
   const rapidInputStreakRef = useRef(0)
 
@@ -238,11 +239,6 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         cancelAnalysis()
         return
       }
-
-      abortControllerRef.current?.abort()
-      const controller = new AbortController()
-      abortControllerRef.current = controller
-
       const seq = ++requestSeqRef.current
       const cacheKey = buildAnalysisCacheKey(endpoint, enabledRules, options)
       const cachedEntry = analysisCacheRef.current.get(cacheKey)
@@ -266,12 +262,57 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         analysisCacheRef.current.delete(cacheKey)
       }
 
+      const existingInFlight = inFlightRequestsRef.current.get(cacheKey)
+
+      if (existingInFlight) {
+        setIsAnalyzing(true)
+        setAnalyzeError(null)
+        setAnalysisHints([])
+
+        try {
+          const result = await existingInFlight
+
+          if (seq === requestSeqRef.current) {
+            analysisCacheRef.current.set(cacheKey, {
+              result,
+              ts: Date.now(),
+            })
+            setViolations(Array.isArray(result.results) ? result.results : [])
+            setDiagramType(result.diagram_type)
+            setAnalyzeError(null)
+            setAnalysisHints(normalizeHints(result.hints))
+          }
+        } catch (err) {
+          if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
+            return
+          }
+
+          if (seq === requestSeqRef.current) {
+            const parsedError = parseAnalysisError(err)
+            setAnalyzeError(parsedError.summary)
+            setAnalysisHints(parsedError.hints)
+            setViolations([])
+            setDiagramType(null)
+          }
+        } finally {
+          if (seq === requestSeqRef.current) {
+            setIsAnalyzing(false)
+          }
+        }
+
+        return
+      }
+
+      abortControllerRef.current?.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+
       setIsAnalyzing(true)
       setAnalyzeError(null)
       setAnalysisHints([])
 
       try {
-        const result = await analyzeCode(
+        const requestPromise = analyzeCode(
           endpoint,
           newCode,
           enabledRules,
@@ -279,6 +320,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           options,
           controller.signal
         )
+        inFlightRequestsRef.current.set(cacheKey, requestPromise)
+
+        const result = await requestPromise
 
         if (seq === requestSeqRef.current) {
           analysisCacheRef.current.set(cacheKey, {
@@ -305,6 +349,8 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           setDiagramType(null)
         }
       } finally {
+        inFlightRequestsRef.current.delete(cacheKey)
+
         if (seq === requestSeqRef.current) {
           setIsAnalyzing(false)
           if (abortControllerRef.current === controller) {
