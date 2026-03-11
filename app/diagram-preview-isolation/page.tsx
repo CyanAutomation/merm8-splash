@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import DiagramPreview from '@/app/components/DiagramPreview'
 
 export default function DiagramPreviewIsolationPage() {
   const [leftCode, setLeftCode] = useState('graph TD\nA-->B')
   const rightCode = 'graph TD\nR-->S'
 
-  const timeoutIdsRef = useRef<NodeJS.Timeout[]>([])
+  const timeoutIdsRef = useRef<number[]>([])
 
   useEffect(() => {
     return () => {
