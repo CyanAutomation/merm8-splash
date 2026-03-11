@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import axios from 'axios'
-import { analyzeCode, AnalyzeRequestOptions, Violation, Rule, AnalyzeHint } from './api'
+import { analyzeCode, AnalyzeRequestOptions, AnalyzeResponse, Violation, Rule, AnalyzeHint } from './api'
 import { DEFAULT_DIAGRAM } from './constants'
 
 export interface UseDiagramAnalysisReturn {
@@ -50,6 +50,12 @@ const NORMAL_IDLE_MIN_MS = 450
 const LARGE_IDLE_MIN_MS = 1000
 const RAPID_INPUT_EXTRA_MS = 150
 const RAPID_INPUT_EXTRA_MAX_MS = 450
+const ANALYSIS_CACHE_TTL_MS = 60_000
+
+interface AnalysisCacheEntry {
+  result: AnalyzeResponse
+  ts: number
+}
 
 interface ParsedAnalysisError {
   summary: string
@@ -153,6 +159,27 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
   }
 }
 
+function hashCode(input: string): string {
+  let hash = 5381
+  for (let i = 0; i < input.length; i += 1) {
+    hash = (hash * 33) ^ input.charCodeAt(i)
+  }
+
+  return (hash >>> 0).toString(16)
+}
+
+function buildAnalysisCacheKey(
+  endpoint: string,
+  code: string,
+  enabledRules: string[],
+  options: AnalyzeRequestOptions
+): string {
+  const normalizedEndpoint = endpoint.trim().toLowerCase()
+  const normalizedRules = [...enabledRules].sort().join(',')
+  const useServerDefaults = options.useServerDefaults === true ? '1' : '0'
+  return `${normalizedEndpoint}::${hashCode(code)}::${normalizedRules}::${useServerDefaults}`
+}
+
 export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const [code, setCodeState] = useState<string>(DEFAULT_DIAGRAM)
   const [violations, setViolations] = useState<Violation[]>([])
@@ -163,6 +190,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestSeqRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const analysisCacheRef = useRef<Map<string, AnalysisCacheEntry>>(new Map())
   const lastInputAtRef = useRef(0)
   const rapidInputStreakRef = useRef(0)
 
@@ -202,6 +230,23 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       abortControllerRef.current = controller
 
       const seq = ++requestSeqRef.current
+      const cacheKey = buildAnalysisCacheKey(endpoint, newCode, enabledRules, options)
+      const cachedEntry = analysisCacheRef.current.get(cacheKey)
+      const now = Date.now()
+
+      if (cachedEntry && now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS) {
+        setViolations(Array.isArray(cachedEntry.result.results) ? cachedEntry.result.results : [])
+        setDiagramType(cachedEntry.result.diagram_type)
+        setAnalyzeError(null)
+        setAnalysisHints(normalizeHints(cachedEntry.result.hints))
+        setIsAnalyzing(false)
+        abortControllerRef.current = null
+        return
+      }
+
+      if (cachedEntry) {
+        analysisCacheRef.current.delete(cacheKey)
+      }
 
       setIsAnalyzing(true)
       setAnalyzeError(null)
@@ -218,6 +263,10 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         )
 
         if (seq === requestSeqRef.current) {
+          analysisCacheRef.current.set(cacheKey, {
+            result,
+            ts: Date.now(),
+          })
           setViolations(Array.isArray(result.results) ? result.results : [])
           setDiagramType(result.diagram_type)
           setAnalyzeError(null)
