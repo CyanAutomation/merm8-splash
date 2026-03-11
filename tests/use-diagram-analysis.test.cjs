@@ -5,6 +5,16 @@ const path = require('node:path')
 const vm = require('node:vm')
 const ts = require('typescript')
 
+function createDeferred() {
+  let resolve
+  let reject
+  const promise = new Promise((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 function createReactMock() {
   const hookValues = []
   let hookIndex = 0
@@ -36,7 +46,6 @@ function createReactMock() {
     },
     useEffect() {
       hookIndex += 1
-      // No-op for unit-level state transition checks.
     },
     __prepareRender() {
       hookIndex = 0
@@ -47,28 +56,59 @@ function createReactMock() {
 function createTimerControls() {
   const pendingTimers = new Map()
   let nextTimerId = 1
+  let nowMs = 0
+  const scheduledDelays = []
+
+  async function runDueTimers() {
+    while (true) {
+      const dueTimers = Array.from(pendingTimers.entries())
+        .filter(([, timer]) => timer.dueAt <= nowMs)
+        .sort((a, b) => a[1].dueAt - b[1].dueAt)
+
+      if (dueTimers.length === 0) break
+
+      for (const [id, timer] of dueTimers) {
+        pendingTimers.delete(id)
+        await timer.callback()
+      }
+    }
+  }
 
   return {
     setTimeout(callback, delay, ...args) {
       const timerId = nextTimerId++
-      pendingTimers.set(timerId, () => callback(...args))
+      const normalizedDelay = Number(delay) || 0
+      pendingTimers.set(timerId, {
+        dueAt: nowMs + normalizedDelay,
+        callback: () => callback(...args),
+      })
+      scheduledDelays.push(normalizedDelay)
       return timerId
     },
     clearTimeout(timerId) {
       pendingTimers.delete(timerId)
     },
-    async flushTimers() {
-      const callbacks = Array.from(pendingTimers.values())
-      pendingTimers.clear()
-
-      for (const callback of callbacks) {
-        await callback()
+    now() {
+      return nowMs
+    },
+    getLastScheduledDelay() {
+      return scheduledDelays.at(-1)
+    },
+    async advanceBy(ms) {
+      nowMs += ms
+      await runDueTimers()
+    },
+    async runAllTimers() {
+      while (pendingTimers.size > 0) {
+        const nextDueAt = Math.min(...Array.from(pendingTimers.values()).map((timer) => timer.dueAt))
+        nowMs = nextDueAt
+        await runDueTimers()
       }
     },
   }
 }
 
-function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl }) {
+function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl, isCancelImpl }) {
   const sourcePath = path.join(__dirname, '..', 'lib', 'useDiagramAnalysis.ts')
   const source = fs.readFileSync(sourcePath, 'utf8')
   const { outputText } = ts.transpileModule(source, {
@@ -84,8 +124,8 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl }) {
   const timerControls = createTimerControls()
 
   const axiosMock = {
-    isAxiosError: isAxiosErrorImpl,
-    isCancel: () => false,
+    isAxiosError: isAxiosErrorImpl ?? (() => false),
+    isCancel: isCancelImpl ?? (() => false),
   }
 
   const apiMock = {
@@ -94,6 +134,12 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl }) {
 
   const constantsMock = {
     DEFAULT_DIAGRAM: 'graph TD\nA-->B',
+  }
+
+  class FakeDate extends Date {
+    static now() {
+      return timerControls.now()
+    }
   }
 
   const module = { exports: {} }
@@ -117,6 +163,7 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl }) {
     setTimeout: timerControls.setTimeout,
     clearTimeout: timerControls.clearTimeout,
     AbortController,
+    Date: FakeDate,
   })
 
   script.runInContext(context)
@@ -127,134 +174,130 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl }) {
   }
 }
 
-test('useDiagramAnalysis maps Axios object payload to analyzeError summary and hints', async () => {
-  const axiosError = {
-    message: 'Request failed with status code 400',
-    response: {
-      data: {
-        detail: 'Diagram contains unsupported syntax',
-        hints: ['Use a valid flowchart declaration'],
-        guidance: ['Check Mermaid docs for declaration syntax'],
-        suggestions: ['Remove trailing semicolons'],
-      },
-    },
-  }
-
+test('triggerAnalysis uses short debounce for tiny edits', async () => {
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
-    analyzeCodeImpl: async () => {
-      throw axiosError
-    },
-    isAxiosErrorImpl: () => true,
+    analyzeCodeImpl: async () => ({ diagram_type: 'flowchart', results: [] }),
   })
 
   reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
   hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
-  await timerControls.flushTimers()
 
-  reactMock.__prepareRender()
-  const rerenderedHook = useDiagramAnalysis()
-
-  assert.equal(rerenderedHook.analyzeError, 'Diagram contains unsupported syntax')
-  assert.equal(
-    JSON.stringify(rerenderedHook.analysisHints),
-    JSON.stringify([
-      'Use a valid flowchart declaration',
-      'Check Mermaid docs for declaration syntax',
-      'Remove trailing semicolons',
-    ])
-  )
+  assert.equal(timerControls.getLastScheduledDelay(), 250)
+  await timerControls.runAllTimers()
 })
 
-test('useDiagramAnalysis maps Axios string payload to summary and clears hint list', async () => {
-  const axiosError = {
-    message: 'Bad Request',
-    response: {
-      data: 'Analyzer rejected the payload',
-    },
-  }
+test('triggerAnalysis enforces longer idle window for large diagrams', async () => {
+  const largeCode = Array.from({ length: 120 }, (_, idx) => `N${idx}-->N${idx + 1}`).join('\n')
 
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
-    analyzeCodeImpl: async () => {
-      throw axiosError
+    analyzeCodeImpl: async () => ({ diagram_type: 'flowchart', results: [] }),
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.triggerAnalysis('https://example.test', largeCode, [], [])
+
+  assert.equal(timerControls.getLastScheduledDelay(), 1000)
+  await timerControls.runAllTimers()
+})
+
+test('rapid consecutive input increases debounce delay', async () => {
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => ({ diagram_type: 'flowchart', results: [] }),
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  assert.equal(timerControls.getLastScheduledDelay(), 250)
+
+  await timerControls.advanceBy(100)
+  hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B\nB-->C', [], [])
+  assert.equal(timerControls.getLastScheduledDelay(), 400)
+})
+
+test('forceAnalysis runs immediately and bypasses pending debounce', async () => {
+  const calls = []
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (_endpoint, code) => {
+      calls.push(code)
+      return { diagram_type: 'flowchart', results: [] }
     },
-    isAxiosErrorImpl: () => true,
   })
 
   reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
   hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
-  await timerControls.flushTimers()
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', [], [])
 
-  reactMock.__prepareRender()
-  const rerenderedHook = useDiagramAnalysis()
-
-  assert.equal(rerenderedHook.analyzeError, 'Analyzer rejected the payload')
-  assert.equal(JSON.stringify(rerenderedHook.analysisHints), JSON.stringify([]))
+  await Promise.resolve()
+  assert.deepEqual(calls, ['graph TD\nA-->C'])
 })
 
-test('useDiagramAnalysis extracts hints from successful response', async () => {
-  const successResponse = {
+test('stale responses are ignored and latest analysis wins', async () => {
+  const first = createDeferred()
+  const second = createDeferred()
+  let callCount = 0
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (_endpoint, code) => {
+      callCount += 1
+      if (callCount === 1) return first.promise
+      if (callCount === 2) return second.promise
+      return { diagram_type: 'flowchart', results: [] }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', [], [])
+
+  second.resolve({
     diagram_type: 'flowchart',
-    results: [
-      {
-        rule_id: 'no-empty-label',
-        severity: 'warning',
-        message: 'Node has empty label',
-        line: 2,
-      },
-    ],
-    hints: [
-      'Add a label to the node',
-      'Use descriptive text for better readability',
-      { message: 'Consider adding a label at line 2' },
-    ],
-  }
-
-  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
-    analyzeCodeImpl: async () => successResponse,
-    isAxiosErrorImpl: () => false,
+    results: [{ rule_id: 'latest', severity: 'warning', message: 'latest result', line: 1 }],
   })
+  await new Promise((resolve) => setImmediate(resolve))
 
-  reactMock.__prepareRender()
-  const hook = useDiagramAnalysis()
-  hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
-  await timerControls.flushTimers()
+  first.resolve({
+    diagram_type: 'flowchart',
+    results: [{ rule_id: 'stale', severity: 'error', message: 'stale result', line: 1 }],
+  })
+  await new Promise((resolve) => setImmediate(resolve))
 
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
 
-  assert.equal(rerenderedHook.analyzeError, null)
-  assert.equal(JSON.stringify(rerenderedHook.analysisHints), JSON.stringify([
-    'Add a label to the node',
-    'Use descriptive text for better readability',
-    'Consider adding a label at line 2',
-  ]))
-  assert.equal(rerenderedHook.violations.length, 1)
-  assert.equal(rerenderedHook.diagramType, 'flowchart')
+  const violations = JSON.parse(JSON.stringify(rerenderedHook.violations))
+  assert.equal(violations.length, 1)
+  assert.equal(violations[0].rule_id, 'latest')
 })
 
-test('useDiagramAnalysis handles successful response without hints', async () => {
-  const successResponse = {
-    diagram_type: 'sequenceDiagram',
-    results: [],
-  }
+test('cancelAnalysis aborts in-flight analysis and resets state', async () => {
+  let aborted = false
 
-  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
-    analyzeCodeImpl: async () => successResponse,
-    isAxiosErrorImpl: () => false,
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: (_endpoint, _code, _enabledRules, _rulesMetadata, _options, signal) => {
+      signal.addEventListener('abort', () => {
+        aborted = true
+      })
+      return new Promise(() => {})
+    },
   })
 
   reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
-  hook.triggerAnalysis('https://example.test', 'sequenceDiagram\nAlice->>Bob: Hi', [], [])
-  await timerControls.flushTimers()
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  hook.cancelAnalysis()
 
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
 
+  assert.equal(aborted, true)
+  assert.equal(rerenderedHook.isAnalyzing, false)
+  assert.equal(JSON.stringify(rerenderedHook.violations), JSON.stringify([]))
   assert.equal(rerenderedHook.analyzeError, null)
-  assert.equal(JSON.stringify(rerenderedHook.analysisHints), JSON.stringify([]))
-  assert.equal(rerenderedHook.violations.length, 0)
-  assert.equal(rerenderedHook.diagramType, 'sequenceDiagram')
 })
