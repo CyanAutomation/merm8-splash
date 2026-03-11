@@ -10,6 +10,8 @@ interface StatusBarProps {
   violationCount: number
   apiEndpoint: string
   diagramType?: string | null
+  onTestConnection?: () => void
+  statusMessage?: string
 }
 
 export default function StatusBar({
@@ -19,6 +21,8 @@ export default function StatusBar({
   violationCount,
   apiEndpoint,
   diagramType,
+  onTestConnection,
+  statusMessage,
 }: StatusBarProps) {
   const truncate = (url: string, max = 40) =>
     url.length > max ? url.slice(0, max - 3) + '...' : url
@@ -93,8 +97,34 @@ export default function StatusBar({
         </span>
       </div>
 
-      <div style={{ color: 'var(--color-text-secondary)' }}>
-        {truncate(apiEndpoint)}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        {statusMessage && (
+          <span
+            style={{
+              color:
+                connectionStatus === 'connected'
+                  ? 'var(--color-success)'
+                  : connectionStatus === 'error'
+                  ? 'var(--color-error)'
+                  : 'var(--color-text-secondary)',
+            }}
+          >
+            {statusMessage}
+          </span>
+        )}
+        {onTestConnection && (
+          <button
+            className="btn"
+            style={{ fontSize: '11px', padding: '2px 8px' }}
+            onClick={onTestConnection}
+            disabled={connectionStatus === 'checking'}
+          >
+            Test
+          </button>
+        )}
+        <div style={{ color: 'var(--color-text-secondary)' }}>
+          {truncate(apiEndpoint)}
+        </div>
       </div>
     </div>
   )

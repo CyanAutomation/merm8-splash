@@ -652,6 +652,8 @@ export default function Home() {
           violationCount={Array.isArray(violations) ? violations.length : 0}
           apiEndpoint={endpoint}
           diagramType={diagramType}
+          onTestConnection={handleTestConnection}
+          statusMessage={statusMessage}
         />
       </ErrorBoundary>
 

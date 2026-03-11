@@ -298,7 +298,8 @@ export default function DiagramPreview({
         const mermaid = (await import('mermaid')).default
         
         // Intercept DOM insertions to block mermaid error SVGs from being rendered
-        Element.prototype.insertAdjacentHTML = function(position: InsertPosition, html: string) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        Element.prototype.insertAdjacentHTML = function(position: any, html: string) {
           // Block mermaid error SVGs from being inserted
           if (isRenderingDiagram && html.includes('aria-roledescription="error"')) {
             console.debug('Blocked mermaid error SVG from inserting to DOM')
