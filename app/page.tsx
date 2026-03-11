@@ -48,7 +48,7 @@ export default function Home() {
   const editorRef = useRef<DiagramEditorRef>(null)
   const resultsRef = useRef<ResultsPanelRef>(null)
 
-  const { prefs, savePrefs, resetPrefs, isMobile } = useLayoutPreferences()
+  const { prefs, savePrefs, resetPrefs } = useLayoutPreferences()
 
   const {
     endpoint,
@@ -397,20 +397,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main Content - Desktop & Mobile Layout */}
+      {/* Main Content - Desktop Grid Layout */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {!isMobile ? (
-          // Desktop: 2x2 grid layout with Rules in modal
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `${prefs.leftPanelSize}% 4px 1fr`,
-              gridTemplateRows: `minmax(0, ${prefs.editorSize}%) 4px minmax(0, 1fr)`,
-              height: '100%',
-              width: '100%',
-              gap: 0,
-            }}
-          >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `${prefs.leftPanelSize}% 4px 1fr`,
+            gridTemplateRows: `minmax(0, ${prefs.editorSize}%) 4px minmax(0, 1fr)`,
+            height: '100%',
+            width: '100%',
+            gap: 0,
+          }}
+        >
             {/* Editor Panel - Top Left */}
             <div style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
               <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
@@ -566,81 +564,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-        ) : (
-          // Mobile: Vertical stack (Editor, Preview, Results)
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '4px', padding: '4px' }}>
-            <div style={{ flex: 2, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
-              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                <ErrorBoundary>
-                  <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
-                </ErrorBoundary>
-              </div>
-            </div>
-            <div style={{ flex: 1, overflow: 'hidden', borderBottom: '1px solid var(--color-border)' }}>
-              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                <ErrorBoundary resetKey={diagramPreviewResetKey}>
-                  <DiagramPreview
-                    code={code}
-                    onParseStateChange={handleParseStateChange}
-                    parseErrorMessage={parseErrorDetail}
-                    useBeautifulRenderer={prefs.useBeautifulRenderer}
-                    onToggleBeautifulRenderer={(value) => savePrefs({ useBeautifulRenderer: value })}
-                    onJumpToLine={handleJumpToLine}
-                  />
-                </ErrorBoundary>
-              </div>
-            </div>
-            <div style={{ flex: 3, overflow: 'hidden' }}>
-              <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
-                  {renderResultsHeading()}
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <ErrorBoundary>
-                      <ExportDropdown
-                        results={violations}
-                        code={code}
-                        endpoint={endpoint}
-                        enabledRules={enabledRules}
-                        rulesMetadata={rules}
-                      />
-                    </ErrorBoundary>
-                    <button
-                      className="btn"
-                      style={{ fontSize: '12px', padding: '4px 12px' }}
-                      onClick={() => setShowRulesModal(true)}
-                      title="Configure rules"
-                    >
-                      ⊞ Rules
-                    </button>
-                    <button
-                      className="btn"
-                      style={{ fontSize: '12px', padding: '4px 12px' }}
-                      onClick={handleRecheck}
-                      disabled={!canRecheck}
-                      title="Re-run analysis"
-                    >
-                      ↺ Check
-                    </button>
-                  </div>
-                </div>
-                <div style={{ flex: 1, overflow: 'auto' }}>
-                  <ErrorBoundary>
-                    <ResultsPanel
-                      ref={resultsRef}
-                      results={violations}
-                      isAnalyzing={isAnalyzing}
-                      analyzeError={analyzeError}
-                      analysisHints={analysisHints}
-                      parseError={parseErrorDetail}
-                      onJumpToLine={handleJumpToLine}
-                      showInternalHeader={false}
-                    />
-                  </ErrorBoundary>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* Status Bar */}

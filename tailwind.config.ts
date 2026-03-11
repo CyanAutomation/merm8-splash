@@ -7,6 +7,7 @@ const config: Config = {
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    screens: {}, // Desktop-only app; no responsive breakpoints
     extend: {
       colors: {
         'bt-bg-primary': '#1c1c1e',
