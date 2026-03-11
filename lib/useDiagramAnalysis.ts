@@ -60,9 +60,44 @@ interface AnalysisCacheEntry {
   ts: number
 }
 
+interface InFlightAnalysisRequest {
+  code: string
+  promise: Promise<AnalyzeResponse>
+}
+
 interface ParsedAnalysisError {
   summary: string
   hints: string[]
+}
+
+function createCanceledError(): Error {
+  const error = new Error('Canceled')
+  error.name = 'CanceledError'
+  return error
+}
+
+function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) {
+    return Promise.reject(createCanceledError())
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      signal.removeEventListener('abort', onAbort)
+      reject(createCanceledError())
+    }
+
+    signal.addEventListener('abort', onAbort, { once: true })
+
+    promise.then(
+      (result) => {
+        resolve(result)
+      },
+      (error) => {
+        reject(error)
+      }
+    )
+  })
 }
 
 function countLines(value: string): number {
@@ -205,7 +240,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const requestSeqRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
   const analysisCacheRef = useRef<Map<string, AnalysisCacheEntry>>(new Map())
-  const inFlightRequestsRef = useRef<Map<string, Promise<AnalyzeResponse>>>(new Map())
+  const inFlightRequestsRef = useRef<Map<string, InFlightAnalysisRequest>>(new Map())
   const lastInputAtRef = useRef(0)
   const rapidInputStreakRef = useRef(0)
 
@@ -262,18 +297,22 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         analysisCacheRef.current.delete(cacheKey)
       }
 
+      const controller = new AbortController()
+
       const existingInFlight = inFlightRequestsRef.current.get(cacheKey)
 
-      if (existingInFlight) {
+      if (existingInFlight && existingInFlight.code === newCode) {
+        abortControllerRef.current = controller
         setIsAnalyzing(true)
         setAnalyzeError(null)
         setAnalysisHints([])
 
         try {
-          const result = await existingInFlight
+          const result = await waitForPromiseWithSignal(existingInFlight.promise, controller.signal)
 
           if (seq === requestSeqRef.current) {
             analysisCacheRef.current.set(cacheKey, {
+              code: newCode,
               result,
               ts: Date.now(),
             })
@@ -297,6 +336,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         } finally {
           if (seq === requestSeqRef.current) {
             setIsAnalyzing(false)
+            if (abortControllerRef.current === controller) {
+              abortControllerRef.current = null
+            }
           }
         }
 
@@ -304,7 +346,6 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       }
 
       abortControllerRef.current?.abort()
-      const controller = new AbortController()
       abortControllerRef.current = controller
 
       setIsAnalyzing(true)
@@ -320,7 +361,10 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           options,
           controller.signal
         )
-        inFlightRequestsRef.current.set(cacheKey, requestPromise)
+        inFlightRequestsRef.current.set(cacheKey, {
+          code: newCode,
+          promise: requestPromise,
+        })
 
         const result = await requestPromise
 
