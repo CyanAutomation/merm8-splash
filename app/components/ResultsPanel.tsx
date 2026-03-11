@@ -91,6 +91,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
         const order = { error: 0, warning: 1, info: 2 };
         return (order[a.severity] ?? 3) - (order[b.severity] ?? 3);
       });
+    const hasResults = results.length > 0;
 
     const filterLabel =
       filter === "all" ? "All" : filter === "error" ? "Error" : filter === "warning" ? "Warning" : "Info";
@@ -358,16 +359,38 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
               )}
 
               {filtered.length === 0 ? (
-                <div
-                  style={{
-                    padding: "16px",
-                    color: "var(--color-success)",
-                    fontSize: "13px",
-                    textAlign: "center",
-                  }}
-                >
-                  ✓ No violations found
-                </div>
+                hasResults ? (
+                  <div
+                    style={{
+                      padding: "16px",
+                      color: "var(--color-text-secondary)",
+                      fontSize: "13px",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div>No results match current filter (Filter: {filterLabel})</div>
+                    {filter !== "all" && (
+                      <button
+                        className="btn"
+                        style={{ fontSize: "11px", padding: "2px 8px", marginTop: "8px" }}
+                        onClick={() => setFilter("all")}
+                      >
+                        Reset to All
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      padding: "16px",
+                      color: "var(--color-success)",
+                      fontSize: "13px",
+                      textAlign: "center",
+                    }}
+                  >
+                    ✓ No violations found
+                  </div>
+                )
               ) : (
                 <table
                   style={{
