@@ -203,8 +203,16 @@ export default function Home() {
     forceAnalysis(endpoint, code, enabledRules, rules, { useServerDefaults: rulesUnavailableForEndpoint })
   }, [code, endpoint, connectionStatus, rulesLoading, rulesLoadedEndpoint, rulesUnavailableEndpoint, enabledRules, rules, forceAnalysis])
 
+  const openApiConfigAndFocus = useCallback(() => {
+    setShowApiConfigModal(true)
+
+    requestAnimationFrame(() => {
+      apiConfigRef.current?.focusInput()
+    })
+  }, [])
+
   useKeyboardShortcuts({
-    onFocusApiInput: () => apiConfigRef.current?.focusInput(),
+    onFocusApiInput: openApiConfigAndFocus,
     onFocusEditor: () => editorRef.current?.focus(),
     onFocusResults: () => resultsRef.current?.focus(),
   })
@@ -312,7 +320,7 @@ export default function Home() {
             Ctrl+K · Ctrl+E · Ctrl+R
           </div>
           <button
-            onClick={() => setShowApiConfigModal(true)}
+            onClick={openApiConfigAndFocus}
             style={{
               padding: '4px 12px',
               fontSize: '12px',
@@ -725,18 +733,20 @@ export default function Home() {
         onClose={() => setShowApiConfigModal(false)}
         title="API Configuration"
       >
-        <ErrorBoundary>
-          <ApiConfigPanel
-            ref={apiConfigRef}
-            endpoint={endpoint}
-            onEndpointChange={setEndpoint}
-            connectionStatus={connectionStatus}
-            onTestConnection={handleTestConnection}
-            onSave={saveEndpoint}
-            configSource={configSource}
-            statusMessage={statusMessage}
-          />
-        </ErrorBoundary>
+        {showApiConfigModal && (
+          <ErrorBoundary>
+            <ApiConfigPanel
+              ref={apiConfigRef}
+              endpoint={endpoint}
+              onEndpointChange={setEndpoint}
+              connectionStatus={connectionStatus}
+              onTestConnection={handleTestConnection}
+              onSave={saveEndpoint}
+              configSource={configSource}
+              statusMessage={statusMessage}
+            />
+          </ErrorBoundary>
+        )}
       </Modal>
 
       <Modal
