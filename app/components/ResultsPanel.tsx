@@ -2,7 +2,6 @@
 
 import { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
 import { Violation } from "@/lib/api";
-import Modal from "./Modal";
 
 interface ResultsPanelProps {
   results: Violation[];
@@ -17,8 +16,6 @@ interface ResultsPanelProps {
 export interface ResultsPanelRef {
   focus: () => void;
 }
-
-type SeverityFilter = "all" | "error" | "warning" | "info";
 
 const severityColor = (severity: string) => {
   switch (severity) {
@@ -60,9 +57,6 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     ref,
   ) => {
     const panelRef = useRef<HTMLDivElement>(null);
-    const [filter, setFilter] = useState<SeverityFilter>("all");
-    const [sortBy, setSortBy] = useState<"severity" | "line">("severity");
-    const [showFilterModal, setShowFilterModal] = useState(false);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const [copyErrorKey, setCopyErrorKey] = useState<string | null>(null);
     const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -88,37 +82,8 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
       focus: () => panelRef.current?.focus(),
     }));
 
-    const severityOrder = { error: 0, warning: 1, info: 2 };
-
-    const filtered = results
-      .map((violation, index) => ({ violation, index }))
-      .filter(({ violation }) => filter === "all" || violation.severity === filter)
-      .sort((a, b) => {
-        if (sortBy === "line") {
-          const aLine = a.violation.line;
-          const bLine = b.violation.line;
-          const aHasLine = typeof aLine === "number";
-          const bHasLine = typeof bLine === "number";
-
-          if (aHasLine && bHasLine) {
-            const lineDiff = aLine - bLine;
-            return lineDiff !== 0 ? lineDiff : a.index - b.index;
-          }
-
-          // Missing line numbers are ordered last so explicit source locations stay easy to scan first.
-          if (aHasLine !== bHasLine) return aHasLine ? -1 : 1;
-
-          return a.index - b.index;
-        }
-
-        return (severityOrder[a.violation.severity] ?? 3) - (severityOrder[b.violation.severity] ?? 3);
-      })
-      .map(({ violation }) => violation);
+    const filtered = results;
     const hasResults = results.length > 0;
-
-    const filterLabel =
-      filter === "all" ? "All" : filter === "error" ? "Error" : filter === "warning" ? "Warning" : "Info";
-    const sortLabel = sortBy === "line" ? "Line" : "Severity";
 
     const fallbackCopyWithTextarea = (text: string): boolean => {
       const textarea = document.createElement("textarea");
@@ -219,64 +184,25 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
           outline: "none",
         }}
       >
-        {showInternalHeader ? (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "8px",
-              flexWrap: "wrap",
-              gap: "4px",
-            }}
-          >
-            <div className="panel-heading" style={{ marginBottom: 0 }}>
-              ▦ Results{" "}
-              {results.length > 0 && (
-                <span
-                  style={{
-                    background: results.some((r) => r.severity === "error")
-                      ? "var(--color-error)"
-                      : "var(--color-warning)",
-                    color: "var(--color-bg-primary)",
-                    padding: "0 6px",
-                    fontSize: "12px",
-                    borderRadius: "8px",
-                    marginLeft: "4px",
-                  }}
-                >
-                  {results.length}
-                </span>
-              )}
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
-                Filter: {filterLabel} • Sort: {sortLabel}
-              </span>
-              <button
-                className="btn"
-                style={{ fontSize: "12px", padding: "4px 12px" }}
-                onClick={() => setShowFilterModal(true)}
-                title="Filter and sort results"
+        {showInternalHeader && (
+          <div className="panel-heading" style={{ marginBottom: "8px" }}>
+            ▦ Results{" "}
+            {results.length > 0 && (
+              <span
+                style={{
+                  background: results.some((r) => r.severity === "error")
+                    ? "var(--color-error)"
+                    : "var(--color-warning)",
+                  color: "var(--color-bg-primary)",
+                  padding: "0 6px",
+                  fontSize: "12px",
+                  borderRadius: "8px",
+                  marginLeft: "4px",
+                }}
               >
-                ⚲ Filter
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "11px", color: "var(--color-text-secondary)" }}>
-              Filter: {filterLabel} • Sort: {sortLabel}
-            </span>
-            <button
-              className="btn"
-              style={{ fontSize: "12px", padding: "4px 12px" }}
-              onClick={() => setShowFilterModal(true)}
-              title="Filter and sort results"
-            >
-              ⚲ Filter
-            </button>
+                {results.length}
+              </span>
+            )}
           </div>
         )}
 
@@ -394,38 +320,16 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
               )}
 
               {filtered.length === 0 ? (
-                hasResults ? (
-                  <div
-                    style={{
-                      padding: "16px",
-                      color: "var(--color-text-secondary)",
-                      fontSize: "13px",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div>No results match current filter (Filter: {filterLabel})</div>
-                    {filter !== "all" && (
-                      <button
-                        className="btn"
-                        style={{ fontSize: "11px", padding: "2px 8px", marginTop: "8px" }}
-                        onClick={() => setFilter("all")}
-                      >
-                        Reset to All
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      padding: "16px",
-                      color: "var(--color-success)",
-                      fontSize: "13px",
-                      textAlign: "center",
-                    }}
-                  >
-                    ✓ No violations found
-                  </div>
-                )
+                <div
+                  style={{
+                    padding: "16px",
+                    color: "var(--color-success)",
+                    fontSize: "13px",
+                    textAlign: "center",
+                  }}
+                >
+                  ✓ No violations found
+                </div>
               ) : (
                 <table
                   style={{
@@ -530,59 +434,6 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
             </>
           )}
         </div>
-
-        <Modal
-          isOpen={showFilterModal}
-          onClose={() => setShowFilterModal(false)}
-          title="Results Filters"
-          maxWidth={420}
-        >
-          <div style={{ display: "grid", gap: "12px" }}>
-            <label htmlFor="results-filter-severity" style={{ display: "grid", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
-              Severity
-              <select
-                id="results-filter-severity"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value as SeverityFilter)}
-                style={{
-                  background: "var(--color-bg-primary)",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--color-text-secondary)",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "12px",
-                  padding: "6px 8px",
-                  borderRadius: "8px",
-                }}
-              >
-                <option value="all">All</option>
-                <option value="error">Error</option>
-                <option value="warning">Warning</option>
-                <option value="info">Info</option>
-              </select>
-            </label>
-
-            <label htmlFor="results-filter-sort" style={{ display: "grid", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
-              Sort
-              <select
-                id="results-filter-sort"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as "severity" | "line")}
-                style={{
-                  background: "var(--color-bg-primary)",
-                  border: "1px solid var(--color-border)",
-                  color: "var(--color-text-secondary)",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "12px",
-                  padding: "6px 8px",
-                  borderRadius: "8px",
-                }}
-              >
-                <option value="severity">Severity</option>
-                <option value="line">Line</option>
-              </select>
-            </label>
-          </div>
-        </Modal>
       </div>
     );
   },
