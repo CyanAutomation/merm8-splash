@@ -63,6 +63,7 @@ interface AnalysisCacheEntry {
 interface InFlightAnalysisRequest {
   code: string
   promise: Promise<AnalyzeResponse>
+  waiters: number
 }
 
 interface ParsedAnalysisError {
@@ -83,7 +84,6 @@ function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): 
 
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => {
-      signal.removeEventListener('abort', onAbort)
       reject(createCanceledError())
     }
 
@@ -302,6 +302,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       const existingInFlight = inFlightRequestsRef.current.get(cacheKey)
 
       if (existingInFlight && existingInFlight.code === newCode) {
+        existingInFlight.waiters += 1
         abortControllerRef.current = controller
         setIsAnalyzing(true)
         setAnalyzeError(null)
@@ -334,6 +335,11 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             setDiagramType(null)
           }
         } finally {
+          existingInFlight.waiters -= 1
+          if (existingInFlight.waiters <= 0) {
+            inFlightRequestsRef.current.delete(cacheKey)
+          }
+
           if (seq === requestSeqRef.current) {
             setIsAnalyzing(false)
             if (abortControllerRef.current === controller) {
@@ -352,8 +358,10 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       setAnalyzeError(null)
       setAnalysisHints([])
 
+      let requestPromise: Promise<AnalyzeResponse> | null = null
+
       try {
-        const requestPromise = analyzeCode(
+        requestPromise = analyzeCode(
           endpoint,
           newCode,
           enabledRules,
@@ -364,6 +372,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         inFlightRequestsRef.current.set(cacheKey, {
           code: newCode,
           promise: requestPromise,
+          waiters: 1,
         })
 
         const result = await requestPromise
@@ -393,7 +402,13 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           setDiagramType(null)
         }
       } finally {
-        inFlightRequestsRef.current.delete(cacheKey)
+        const currentInFlight = inFlightRequestsRef.current.get(cacheKey)
+        if (requestPromise && currentInFlight && currentInFlight.promise === requestPromise) {
+          currentInFlight.waiters -= 1
+          if (currentInFlight.waiters <= 0) {
+            inFlightRequestsRef.current.delete(cacheKey)
+          }
+        }
 
         if (seq === requestSeqRef.current) {
           setIsAnalyzing(false)
