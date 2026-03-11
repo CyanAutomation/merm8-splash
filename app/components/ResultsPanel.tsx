@@ -2,6 +2,7 @@
 
 import { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
 import { Violation } from "@/lib/api";
+import Modal from "./Modal";
 
 interface ResultsPanelProps {
   results: Violation[];
@@ -49,6 +50,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     const panelRef = useRef<HTMLDivElement>(null);
     const [filter, setFilter] = useState<SeverityFilter>("all");
     const [sortBy, setSortBy] = useState<"severity" | "line">("severity");
+    const [showFilterModal, setShowFilterModal] = useState(false);
     const [copiedKey, setCopiedKey] = useState<string | null>(null);
     const [copyErrorKey, setCopyErrorKey] = useState<string | null>(null);
     const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -195,43 +197,14 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
             )}
           </div>
 
-          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as SeverityFilter)}
-              style={{
-                background: "var(--color-bg-primary)",
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-secondary)",
-                fontFamily: "var(--font-sans)",
-                fontSize: "12px",
-                padding: "4px 8px",
-                borderRadius: "8px",
-              }}
-            >
-              <option value="all">All</option>
-              <option value="error">Error</option>
-              <option value="warning">Warning</option>
-              <option value="info">Info</option>
-            </select>
-
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "severity" | "line")}
-              style={{
-                background: "var(--color-bg-primary)",
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-secondary)",
-                fontFamily: "var(--font-sans)",
-                fontSize: "12px",
-                padding: "4px 8px",
-                borderRadius: "8px",
-              }}
-            >
-              <option value="severity">Sort: Severity</option>
-              <option value="line">Sort: Line</option>
-            </select>
-          </div>
+          <button
+            className="btn"
+            style={{ fontSize: "12px", padding: "4px 12px" }}
+            onClick={() => setShowFilterModal(true)}
+            title="Filter and sort results"
+          >
+            ⚲ Filter
+          </button>
         </div>
 
         <div style={{ flex: 1, overflow: "auto" }}>
@@ -460,6 +433,57 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
             </>
           )}
         </div>
+
+        <Modal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          title="Results Filters"
+          maxWidth={420}
+        >
+          <div style={{ display: "grid", gap: "12px" }}>
+            <label style={{ display: "grid", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+              Severity
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as SeverityFilter)}
+                style={{
+                  background: "var(--color-bg-primary)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text-secondary)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "12px",
+                  padding: "6px 8px",
+                  borderRadius: "8px",
+                }}
+              >
+                <option value="all">All</option>
+                <option value="error">Error</option>
+                <option value="warning">Warning</option>
+                <option value="info">Info</option>
+              </select>
+            </label>
+
+            <label style={{ display: "grid", gap: "6px", fontSize: "12px", color: "var(--color-text-secondary)" }}>
+              Sort
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as "severity" | "line")}
+                style={{
+                  background: "var(--color-bg-primary)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--color-text-secondary)",
+                  fontFamily: "var(--font-sans)",
+                  fontSize: "12px",
+                  padding: "6px 8px",
+                  borderRadius: "8px",
+                }}
+              >
+                <option value="severity">Severity</option>
+                <option value="line">Line</option>
+              </select>
+            </label>
+          </div>
+        </Modal>
       </div>
     );
   },
