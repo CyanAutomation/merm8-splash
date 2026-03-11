@@ -7,6 +7,15 @@ export default function DiagramPreviewIsolationPage() {
   const [leftCode, setLeftCode] = useState('graph TD\nA-->B')
   const rightCode = 'graph TD\nR-->S'
 
+  const timeoutIdsRef = useRef<NodeJS.Timeout[]>([])
+
+  useEffect(() => {
+    return () => {
+      timeoutIdsRef.current.forEach((id) => clearTimeout(id))
+      timeoutIdsRef.current = []
+    }
+  }, [])
+
   const triggerRapidLeftChanges = () => {
     const updates = [
       'graph TD\nA-->C',
@@ -16,7 +25,8 @@ export default function DiagramPreviewIsolationPage() {
     ]
 
     updates.forEach((nextCode, index) => {
-      window.setTimeout(() => setLeftCode(nextCode), index * 10)
+      const timeoutId = window.setTimeout(() => setLeftCode(nextCode), index * 10)
+      timeoutIdsRef.current.push(timeoutId)
     })
   }
 
