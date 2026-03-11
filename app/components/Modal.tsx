@@ -15,6 +15,8 @@ function lockBodyScroll() {
 }
 
 function unlockBodyScroll() {
+  if (typeof document === 'undefined') return
+
   openModalCount = Math.max(0, openModalCount - 1)
 
   if (openModalCount === 0) {
