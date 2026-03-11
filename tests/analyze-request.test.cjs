@@ -498,6 +498,99 @@ test('analyzeCode drops unsupported nested hint values', async () => {
   }
 })
 
+test('analyzeCode filters malformed violations and keeps only safe entries', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+  const originalWarn = console.warn
+  const warnings = []
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        diagram_type: 'flowchart',
+        results: [
+          null,
+          {
+            rule_id: 'valid-rule',
+            severity: 'warning',
+            message: 'Keep labels short',
+            line: 12,
+          },
+          {
+            rule_id: 'no-severity',
+            message: 'Missing severity should be dropped',
+          },
+          {
+            rule_id: 'numeric-message',
+            severity: 'error',
+            message: 123,
+          },
+        ],
+      },
+    }),
+  })
+
+  console.warn = (message) => {
+    warnings.push(String(message))
+  }
+
+  try {
+    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+
+    assert.equal(response.results.length, 1)
+    assert.equal(
+      JSON.stringify(response.results[0]),
+      JSON.stringify({
+        rule_id: 'valid-rule',
+        severity: 'warning',
+        message: 'Keep labels short',
+        line: 12,
+      })
+    )
+    assert.equal(
+      warnings.some((message) => message.includes('invalid entries in `results`')),
+      true,
+      'expected a warning for malformed results'
+    )
+  } finally {
+    console.warn = originalWarn
+    axios.create = originalCreate
+  }
+})
+
+test('analyzeCode ignores non-numeric line values on violations', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        diagram_type: 'flowchart',
+        results: [
+          {
+            rule_id: 'line-string',
+            severity: 'info',
+            message: 'String line should be ignored',
+            line: '42',
+          },
+        ],
+      },
+    }),
+  })
+
+  try {
+    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+
+    assert.equal(response.results.length, 1)
+    assert.equal('line' in response.results[0], false)
+    assert.equal(response.results[0].message, 'String line should be ignored')
+  } finally {
+    axios.create = originalCreate
+  }
+})
+
 test('validateApiEndpoint blocks normalized local/private bypass forms in production', () => {
   const { validateApiEndpoint } = loadApiModule()
   const originalNodeEnv = process.env.NODE_ENV
