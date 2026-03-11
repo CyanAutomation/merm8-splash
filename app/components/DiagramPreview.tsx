@@ -31,6 +31,7 @@ export default function DiagramPreview({
   const nestedRafIdRef = useRef<number | null>(null)
   const renderSequenceRef = useRef(0)
   const lastRenderIdRef = useRef<string | null>(null)
+  const ownedRenderIdsRef = useRef<Set<string>>(new Set())
 
   const removeMermaidFallbackNodes = (renderId?: string) => {
     if (typeof document === 'undefined') return
@@ -41,12 +42,24 @@ export default function DiagramPreview({
         .forEach((node) => node.remove())
     }
 
-    const targetRenderIds = [renderId, lastRenderIdRef.current].filter(
-      (id): id is string => Boolean(id)
-    )
+    if (renderId) {
+      ownedRenderIdsRef.current.add(renderId)
+    }
+
+    const targetRenderIds = new Set<string>()
+    if (lastRenderIdRef.current && ownedRenderIdsRef.current.has(lastRenderIdRef.current)) {
+      targetRenderIds.add(lastRenderIdRef.current)
+    }
+    for (const ownedRenderId of ownedRenderIdsRef.current) {
+      targetRenderIds.add(ownedRenderId)
+    }
 
     for (const targetRenderId of targetRenderIds) {
-      document.getElementById(`d${targetRenderId}`)?.remove()
+      const fallbackNode = document.getElementById(`d${targetRenderId}`)
+      if (fallbackNode) {
+        fallbackNode.remove()
+        ownedRenderIdsRef.current.delete(targetRenderId)
+      }
     }
   }
 
@@ -212,6 +225,7 @@ export default function DiagramPreview({
         })
 
         const id = `mermaid-${++idCounterRef.current}`
+        ownedRenderIdsRef.current.add(id)
         lastRenderIdRef.current = id
         removeMermaidFallbackNodes(id)
         // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
