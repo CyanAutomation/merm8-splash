@@ -340,6 +340,50 @@ test('cancelAnalysis aborts in-flight analysis and resets state', async () => {
 
 
 
+
+test('different concurrent forceAnalysis calls do not coalesce when code differs', async () => {
+  const first = createDeferred()
+  const second = createDeferred()
+  const calls = []
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (_endpoint, code) => {
+      calls.push(code)
+      if (code.includes('A-->B')) return first.promise
+      return second.promise
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', ['r1'], [])
+
+  assert.deepEqual(calls, ['graph TD\nA-->B', 'graph TD\nA-->C'])
+
+  second.resolve({
+    diagram_type: 'sequence',
+    hints: ['use async flow'],
+    results: [{ rule_id: 'latest', severity: 'warning', message: 'latest result', line: 2 }],
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  first.resolve({
+    diagram_type: 'flowchart',
+    hints: ['stale hint'],
+    results: [{ rule_id: 'stale', severity: 'error', message: 'stale result', line: 1 }],
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+
+  assert.equal(rerenderedHook.violations[0].rule_id, 'latest')
+  assert.equal(rerenderedHook.diagramType, 'sequence')
+  assert.deepEqual(JSON.parse(JSON.stringify(rerenderedHook.analysisHints)), ['use async flow'])
+})
+
 test('identical concurrent forceAnalysis calls coalesce into one API request', async () => {
   const deferred = createDeferred()
   let callCount = 0
