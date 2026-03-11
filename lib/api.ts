@@ -116,11 +116,33 @@ function normalizeHost(hostname: string): string {
 
 function parseIpv4(host: string): number[] | null {
   const parts = host.split('.')
-  if (parts.length !== 4) return null
+  if (parts.length < 1 || parts.length > 4) return null
   if (!parts.every((part) => /^\d+$/.test(part))) return null
 
-  const octets = parts.map((part) => Number(part))
-  if (octets.some((octet) => octet < 0 || octet > 255)) return null
+  const values = parts.map((part) => Number(part))
+
+  const maxValuesByLength = [0, 0xffff_ffff, 0xff_ff_ff, 0xff_ff, 0xff]
+  if (values.some((value, index) => value < 0 || value > maxValuesByLength[parts.length - index])) {
+    return null
+  }
+
+  const ipv4AsInt =
+    parts.length === 1
+      ? values[0]
+      : parts.length === 2
+        ? values[0] * 0x01_00_00_00 + values[1]
+        : parts.length === 3
+          ? values[0] * 0x01_00_00_00 + values[1] * 0x01_00_00 + values[2]
+          : values[0] * 0x01_00_00_00 + values[1] * 0x01_00_00 + values[2] * 0x01_00 + values[3]
+
+  if (ipv4AsInt < 0 || ipv4AsInt > 0xffff_ffff) return null
+
+  const octets = [
+    (ipv4AsInt >>> 24) & 0xff,
+    (ipv4AsInt >>> 16) & 0xff,
+    (ipv4AsInt >>> 8) & 0xff,
+    ipv4AsInt & 0xff,
+  ]
 
   return octets
 }
