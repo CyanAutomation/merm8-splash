@@ -43,6 +43,7 @@ test('diagram mode toggle updates state and preview SVG theme output', async ({ 
 
   const initialMarkup = await getSvgMarkup(svg)
   const initialTheme = detectThemeFromSvg(initialMarkup)
+  expect(initialTheme).not.toBe('unknown')
 
   await toggle.click()
 
