@@ -91,7 +91,7 @@ function loadRulesStateModule() {
   return module.exports
 }
 
-test('buildAnalyzeRequest omits rules and keeps schema-version in server-default fallback mode', () => {
+test('buildAnalyzeRequest includes empty rules object and keeps schema-version in server-default fallback mode', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -110,7 +110,7 @@ test('buildAnalyzeRequest omits rules and keeps schema-version in server-default
 
   assert.equal(request.code, 'graph TD; A-->B')
   assert.equal(request.config['schema-version'], 'v1')
-  assert.ok(!('rules' in request.config), 'rules must be omitted in fallback mode')
+  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}), 'rules must be an empty object in fallback mode')
 })
 
 
@@ -137,7 +137,7 @@ test('rules availability marks endpoint unavailable when rules request fails or 
   assert.equal(shouldTreatRulesPayloadAsUnavailable('transport_failure'), true)
 })
 
-test('buildAnalyzeRequest omits rules when endpoint is marked unavailable due to malformed metadata', () => {
+test('buildAnalyzeRequest includes empty rules when endpoint is marked unavailable due to malformed metadata', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -149,7 +149,7 @@ test('buildAnalyzeRequest omits rules when endpoint is marked unavailable due to
 
   assert.equal(request.code, 'graph TD; A-->B')
   assert.equal(request.config['schema-version'], 'v1')
-  assert.ok(!('rules' in request.config), 'rules must be omitted when fallback enables server defaults')
+  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}), 'rules must be an empty object when fallback enables server defaults')
 })
 
 test('buildAnalyzeRequest includes explicit rule config when metadata is available', () => {
@@ -352,6 +352,43 @@ test('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule fil
 })
 
 
+
+
+test('analyzeCode sends compatibility payload with empty rules when using server defaults', async () => {
+  const api = loadApiModule()
+  const axios = require('axios')
+  const originalCreate = axios.create
+  const requests = []
+
+  axios.create = () => ({
+    post: async (_url, requestBody) => {
+      requests.push(requestBody)
+      return {
+        data: {
+          diagram_type: 'flowchart',
+          results: [],
+        },
+      }
+    },
+  })
+
+  try {
+    const response = await api.analyzeCode(
+      'https://example.test',
+      'graph TD; A-->B',
+      ['no-empty-label'],
+      [],
+      { useServerDefaults: true }
+    )
+
+    assert.equal(response.diagram_type, 'flowchart')
+    assert.equal(requests.length, 1)
+    assert.equal(requests[0].config['schema-version'], 'v1')
+    assert.equal(JSON.stringify(requests[0].config.rules), JSON.stringify({}))
+  } finally {
+    axios.create = originalCreate
+  }
+})
 test('analyzeCode normalizes missing results to empty array', async () => {
   const axios = require('axios')
   const originalCreate = axios.create
