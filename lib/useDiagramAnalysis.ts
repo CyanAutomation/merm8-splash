@@ -63,6 +63,7 @@ interface AnalysisCacheEntry {
 interface InFlightAnalysisRequest {
   code: string
   promise: Promise<AnalyzeResponse>
+  abortController: AbortController
   waiters: number
 }
 
@@ -305,6 +306,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestSeqRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const waiterAbortControllerRef = useRef<AbortController | null>(null)
   const analysisCacheRef = useRef<Map<string, AnalysisCacheEntry>>(new Map())
   const inFlightRequestsRef = useRef<Map<string, InFlightAnalysisRequest>>(new Map())
   const lastInputAtRef = useRef(0)
@@ -319,7 +321,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     if (abortControllerRef.current) {
       requestSeqRef.current += 1
     }
-    abortControllerRef.current?.abort()
+    waiterAbortControllerRef.current?.abort()
+    waiterAbortControllerRef.current = null
+    abortControllerRef.current = null
     abortControllerRef.current = null
     setViolations([])
     setAnalyzeError(null)
@@ -364,19 +368,24 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         analysisCacheRef.current.delete(cacheKey)
       }
 
-      const controller = new AbortController()
+      const waiterController = new AbortController()
+      waiterAbortControllerRef.current?.abort()
+      waiterAbortControllerRef.current = waiterController
 
       const existingInFlight = inFlightRequestsRef.current.get(inFlightKey)
 
       if (existingInFlight && existingInFlight.code === newCode) {
         existingInFlight.waiters += 1
-        abortControllerRef.current = controller
+        abortControllerRef.current = existingInFlight.abortController
         setIsAnalyzing(true)
         setAnalyzeError(null)
         setAnalysisHints([])
 
         try {
-          const result = await waitForPromiseWithSignal(existingInFlight.promise, controller.signal)
+          const result = await waitForPromiseWithSignal(
+            existingInFlight.promise,
+            waiterController.signal
+          )
 
           if (seq === requestSeqRef.current) {
             analysisCacheRef.current.set(cacheKey, {
@@ -409,14 +418,19 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
 
           if (seq === requestSeqRef.current) {
             setIsAnalyzing(false)
-            if (abortControllerRef.current === controller) {
+            if (abortControllerRef.current === existingInFlight.abortController) {
               abortControllerRef.current = null
+            }
+            if (waiterAbortControllerRef.current === waiterController) {
+              waiterAbortControllerRef.current = null
             }
           }
         }
 
         return
       }
+
+      const controller = new AbortController()
 
       abortControllerRef.current?.abort()
       abortControllerRef.current = controller
@@ -439,10 +453,11 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         inFlightRequestsRef.current.set(inFlightKey, {
           code: newCode,
           promise: requestPromise,
+          abortController: controller,
           waiters: 1,
         })
 
-        const result = await requestPromise
+        const result = await waitForPromiseWithSignal(requestPromise, waiterController.signal)
 
         if (seq === requestSeqRef.current) {
           analysisCacheRef.current.set(cacheKey, {
@@ -481,6 +496,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           setIsAnalyzing(false)
           if (abortControllerRef.current === controller) {
             abortControllerRef.current = null
+          }
+          if (waiterAbortControllerRef.current === waiterController) {
+            waiterAbortControllerRef.current = null
           }
         }
       }
@@ -555,6 +573,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
+      waiterAbortControllerRef.current?.abort()
       abortControllerRef.current?.abort()
       clearInterval(cleanupInterval)
     }
