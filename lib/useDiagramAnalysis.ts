@@ -328,7 +328,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       }
     }
 
-    if (waiterCount > 1) {
+    if (!matchingKey || waiterCount > 1) {
       return
     }
 
