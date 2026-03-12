@@ -572,7 +572,8 @@ export function buildAnalyzeRequest(
     'schema-version': 'v1',
   }
 
-  config.rules = useServerDefaults ? {} : rulesConfig
+  const hasConfiguredLintRules = filteredRules.length > 0
+  config.rules = useServerDefaults || !hasConfiguredLintRules ? {} : rulesConfig
 
   return {
     code,

@@ -152,6 +152,33 @@ test('buildAnalyzeRequest includes empty rules when endpoint is marked unavailab
   assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}), 'rules must be an empty object when fallback enables server defaults')
 })
 
+test('buildAnalyzeRequest sends empty rules object when no rules are selected', () => {
+  const { buildAnalyzeRequest } = loadApiModule()
+
+  const request = buildAnalyzeRequest(
+    'graph TD; A-->B',
+    [],
+    [
+      {
+        id: 'no-empty-label',
+        name: 'No Empty Label',
+        description: 'Prevent empty labels',
+        severity: 'warning',
+      },
+      {
+        id: 'max-edges',
+        name: 'Max Edges',
+        description: 'Limit edges',
+        severity: 'info',
+      },
+    ]
+  )
+
+  assert.equal(request.config['schema-version'], 'v1')
+  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}))
+})
+
+
 test('buildAnalyzeRequest includes explicit rule config when metadata is available', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
