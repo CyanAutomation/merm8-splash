@@ -7,6 +7,7 @@ interface LayoutPreferences {
   editorSize: number // percentage of left column
   previewSize: number // percentage of right column
   useBeautifulRenderer: boolean
+  diagramPreviewMode: 'light' | 'dark'
 }
 
 const DEFAULT_PREFS: LayoutPreferences = {
@@ -14,6 +15,7 @@ const DEFAULT_PREFS: LayoutPreferences = {
   editorSize: 70,
   previewSize: 55,
   useBeautifulRenderer: false,
+  diagramPreviewMode: 'dark',
 }
 
 const STORAGE_KEY = 'merm8-layout-prefs'
@@ -39,6 +41,9 @@ function sanitizeLayoutPreferences(
     editorSize: sanitizeValue(values.editorSize, 30, 70, DEFAULT_PREFS.editorSize),
     previewSize: sanitizeValue(values.previewSize, 25, 75, DEFAULT_PREFS.previewSize),
     useBeautifulRenderer: typeof values.useBeautifulRenderer === 'boolean' ? values.useBeautifulRenderer : false,
+    diagramPreviewMode: values.diagramPreviewMode === 'light' || values.diagramPreviewMode === 'dark'
+      ? values.diagramPreviewMode
+      : DEFAULT_PREFS.diagramPreviewMode,
   }
 }
 
