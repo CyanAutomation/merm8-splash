@@ -62,6 +62,35 @@ function loadApiModule() {
   return loadTranspiledTsModule(sourcePath)
 }
 
+
+function loadRulesStateModule() {
+  const sourcePath = path.join(__dirname, '..', 'lib', 'rulesState.ts')
+  const source = fs.readFileSync(sourcePath, 'utf8')
+  const { outputText } = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2019,
+      esModuleInterop: true,
+    },
+    fileName: sourcePath,
+  })
+
+  const module = { exports: {} }
+  const script = new vm.Script(outputText, { filename: `${path.basename(sourcePath)}.transpiled.cjs` })
+  const context = vm.createContext({
+    module,
+    exports: module.exports,
+    require,
+    __dirname: path.dirname(sourcePath),
+    __filename: sourcePath,
+    process,
+    console,
+  })
+
+  script.runInContext(context)
+  return module.exports
+}
+
 test('buildAnalyzeRequest omits rules and keeps schema-version in server-default fallback mode', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
@@ -82,6 +111,38 @@ test('buildAnalyzeRequest omits rules and keeps schema-version in server-default
   assert.equal(request.code, 'graph TD; A-->B')
   assert.equal(request.config['schema-version'], 'v1')
   assert.ok(!('rules' in request.config), 'rules must be omitted in fallback mode')
+})
+
+
+test('resolveRulesAvailabilityState marks endpoint unavailable when rules payload normalizes to empty', () => {
+  const { resolveRulesAvailabilityState, shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
+
+  const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable(0)
+  assert.equal(rulesAreUnavailable, true)
+
+  const availability = resolveRulesAvailabilityState(
+    'https://example.test',
+    null,
+    rulesAreUnavailable ? 'https://example.test' : null
+  )
+
+  assert.equal(availability.isAvailable, false)
+  assert.equal(availability.isUnavailable, true)
+})
+
+test('buildAnalyzeRequest omits rules when endpoint is marked unavailable due to malformed metadata', () => {
+  const { buildAnalyzeRequest } = loadApiModule()
+
+  const request = buildAnalyzeRequest(
+    'graph TD; A-->B',
+    ['no-empty-label'],
+    [],
+    { useServerDefaults: true }
+  )
+
+  assert.equal(request.code, 'graph TD; A-->B')
+  assert.equal(request.config['schema-version'], 'v1')
+  assert.ok(!('rules' in request.config), 'rules must be omitted when fallback enables server defaults')
 })
 
 test('buildAnalyzeRequest includes explicit rule config when metadata is available', () => {

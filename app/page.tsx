@@ -19,6 +19,7 @@ import { useKeyboardShortcuts } from '@/lib/keyboard'
 import { useLayoutPreferences } from '@/lib/useLayoutPreferences'
 import { fetchRules, Rule } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
+import { resolveRulesAvailabilityState, shouldTreatRulesPayloadAsUnavailable } from '@/lib/rulesState'
 
 export default function Home() {
   const headerControlButtonStyle = {
@@ -107,6 +108,7 @@ export default function Home() {
       const fetched = await fetchRules(requestEndpoint, controller.signal)
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
         const normalizedFetched = Array.isArray(fetched) ? fetched : []
+        const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable(normalizedFetched.length)
 
         setRules(normalizedFetched)
         setEnabledRules((prev) => {
@@ -118,8 +120,8 @@ export default function Home() {
             ? preservedSelection
             : normalizedFetched.map((r) => r.id)
         })
-        setRulesLoadedEndpoint(requestEndpoint)
-        setRulesUnavailableEndpoint(null)
+        setRulesLoadedEndpoint(rulesAreUnavailable ? null : requestEndpoint)
+        setRulesUnavailableEndpoint(rulesAreUnavailable ? requestEndpoint : null)
       }
     } catch {
       if (controller.signal.aborted) {
@@ -187,8 +189,10 @@ export default function Home() {
     }
 
     const isConnected = connectionStatus === 'connected'
-    const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
-    const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+    const {
+      isAvailable: rulesReadyForEndpoint,
+      isUnavailable: rulesUnavailableForEndpoint,
+    } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
     const useServerDefaultRules = rulesUnavailableForEndpoint
     const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
 
@@ -229,8 +233,10 @@ export default function Home() {
 
   const handleRecheck = useCallback(() => {
     const isConnected = connectionStatus === 'connected'
-    const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
-    const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+    const {
+      isAvailable: rulesReadyForEndpoint,
+      isUnavailable: rulesUnavailableForEndpoint,
+    } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
     const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
 
     if (!code.trim() || !endpoint || !canAnalyze) {
@@ -304,8 +310,10 @@ export default function Home() {
   const diagramPreviewResetKey = code
 
   const isConnected = connectionStatus === 'connected'
-  const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
-  const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+  const {
+    isAvailable: rulesReadyForEndpoint,
+    isUnavailable: rulesUnavailableForEndpoint,
+  } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
   const canRecheck = !!code.trim() && !!endpoint && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint) && !isAnalyzing
 
   const resultsHasErrors = violations.some((violation) => violation.severity === 'error')
@@ -578,7 +586,11 @@ export default function Home() {
           apiEndpoint={endpoint}
           diagramType={diagramType}
           onTestConnection={handleTestConnection}
-          statusMessage={statusMessage}
+          statusMessage={
+            rulesUnavailableForEndpoint
+              ? 'Rule metadata unavailable; using server defaults'
+              : statusMessage
+          }
         />
       </ErrorBoundary>
 
