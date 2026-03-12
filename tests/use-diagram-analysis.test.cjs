@@ -531,3 +531,78 @@ test('expired cache entry triggers fresh network analysis', async () => {
 
   assert.equal(callCount, 2)
 })
+
+test('parseAnalysisError builds fallback summary for object payloads without standard keys', async () => {
+  const axiosError = {
+    __isAxiosError: true,
+    message: 'Request failed with status code 400',
+    response: {
+      data: {
+        status: 'invalid_request',
+        reason: 'Node references an undeclared target',
+        fields: ['line', 'node_id'],
+      },
+      headers: {
+        'x-request-id': 'req-400-fallback',
+      },
+    },
+  }
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      throw axiosError
+    },
+    isAxiosErrorImpl: (err) => Boolean(err && err.__isAxiosError),
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+
+  assert.match(rerenderedHook.analyzeError || '', /status: invalid_request/)
+  assert.match(rerenderedHook.analyzeError || '', /reason: Node references an undeclared target/)
+  assert.deepEqual(JSON.parse(JSON.stringify(rerenderedHook.analysisHints)), ['Request ID: req-400-fallback'])
+})
+
+test('parseAnalysisError adds request id hint alongside API-provided hints', async () => {
+  const axiosError = {
+    __isAxiosError: true,
+    message: 'Request failed with status code 400',
+    response: {
+      data: {
+        title: 'Validation failed',
+        hints: ['Fix syntax around line 2'],
+      },
+      headers: {
+        'x-request-id': 'req-400-with-hints',
+      },
+    },
+  }
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      throw axiosError
+    },
+    isAxiosErrorImpl: (err) => Boolean(err && err.__isAxiosError),
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+
+  assert.equal(rerenderedHook.analyzeError, 'Validation failed')
+  assert.deepEqual(JSON.parse(JSON.stringify(rerenderedHook.analysisHints)), [
+    'Fix syntax around line 2',
+    'Request ID: req-400-with-hints',
+  ])
+})

@@ -71,6 +71,10 @@ interface ParsedAnalysisError {
   hints: string[]
 }
 
+const MAX_FALLBACK_PAIRS = 3
+const MAX_FALLBACK_VALUE_LENGTH = 120
+const MAX_FALLBACK_SUMMARY_LENGTH = 220
+
 function createCanceledError(): Error {
   const error = new Error('Canceled')
   error.name = 'CanceledError'
@@ -160,11 +164,22 @@ function normalizeHints(hints: AnalyzeHint[] | undefined): string[] {
 function parseAnalysisError(err: unknown): ParsedAnalysisError {
   if (axios.isAxiosError(err)) {
     const responseData = err.response?.data
+    const responseHeaders = err.response?.headers
+
+    const requestIdHeader =
+      typeof responseHeaders?.get === 'function'
+        ? responseHeaders.get('x-request-id')
+        : responseHeaders?.['x-request-id']
+
+    const requestIdHint =
+      typeof requestIdHeader === 'string' && requestIdHeader.trim().length > 0
+        ? `Request ID: ${requestIdHeader.trim()}`
+        : null
 
     if (typeof responseData === 'string' && responseData.trim().length > 0) {
       return {
         summary: responseData,
-        hints: [],
+        hints: requestIdHint ? [requestIdHint] : [],
       }
     }
 
@@ -175,6 +190,32 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
         (typeof data.detail === 'string' && data.detail) ||
         (typeof data.error === 'string' && data.error) ||
         (typeof data.title === 'string' && data.title) ||
+        Object.entries(data)
+          .filter(([, value]) => value !== null && value !== undefined)
+          .slice(0, MAX_FALLBACK_PAIRS)
+          .map(([key, value]) => {
+            const serializedValue =
+              typeof value === 'string'
+                ? value
+                : Array.isArray(value)
+                  ? value.join(', ')
+                  : JSON.stringify(value)
+
+            const safeValue =
+              typeof serializedValue === 'string' && serializedValue.length > 0
+                ? serializedValue
+                : String(value)
+
+            const compactValue = safeValue.replace(/\s+/g, ' ').trim()
+            const truncatedValue =
+              compactValue.length > MAX_FALLBACK_VALUE_LENGTH
+                ? `${compactValue.slice(0, MAX_FALLBACK_VALUE_LENGTH)}…`
+                : compactValue
+
+            return `${key}: ${truncatedValue}`
+          })
+          .join(' | ')
+          .slice(0, MAX_FALLBACK_SUMMARY_LENGTH) ||
         err.message ||
         'Analysis failed'
 
@@ -182,6 +223,7 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
         ...normalizeHintsFromUnknown(data.hints),
         ...normalizeHintsFromUnknown(data.guidance),
         ...normalizeHintsFromUnknown(data.suggestions),
+        ...(requestIdHint ? [requestIdHint] : []),
       ]
 
       return {
