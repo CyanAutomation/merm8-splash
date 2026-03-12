@@ -264,6 +264,12 @@ function isPrivateOrLoopbackIpv4(host: string): boolean {
   const octets = parseIpv4(host)
   if (!octets) return false
 
+  return isPrivateOrLoopbackIpv4Octets(octets)
+}
+
+function isPrivateOrLoopbackIpv4Octets(octets: number[]): boolean {
+  if (octets.length !== 4) return false
+
   const [first, second] = octets
 
   return (
@@ -279,20 +285,34 @@ function isPrivateOrLoopbackIpv4(host: string): boolean {
 function parseIpv6ToBigInt(host: string): bigint | null {
   const IPV6_SEGMENT_BITS = BigInt(16)
   const BIGINT_ZERO = BigInt(0)
+  let normalizedHost = host.toLowerCase()
 
-  if (!host.includes(':')) return null
+  if (normalizedHost.includes('.')) {
+    const lastColonIndex = normalizedHost.lastIndexOf(':')
+    if (lastColonIndex === -1) return null
 
-  const [left, right] = host.split('::')
-  if (host.split('::').length > 2) return null
+    const embeddedIpv4 = normalizedHost.slice(lastColonIndex + 1)
+    const octets = parseIpv4(embeddedIpv4)
+    if (!octets) return null
+
+    const highWord = ((octets[0] << 8) | octets[1]).toString(16)
+    const lowWord = ((octets[2] << 8) | octets[3]).toString(16)
+    normalizedHost = `${normalizedHost.slice(0, lastColonIndex)}:${highWord}:${lowWord}`
+  }
+
+  if (!normalizedHost.includes(':')) return null
+
+  const [left, right] = normalizedHost.split('::')
+  if (normalizedHost.split('::').length > 2) return null
 
   const leftParts = left ? left.split(':').filter(Boolean) : []
   const rightParts = right ? right.split(':').filter(Boolean) : []
   const totalParts = leftParts.length + rightParts.length
 
-  if (!host.includes('::') && totalParts !== 8) return null
-  if (host.includes('::') && totalParts >= 8) return null
+  if (!normalizedHost.includes('::') && totalParts !== 8) return null
+  if (normalizedHost.includes('::') && totalParts >= 8) return null
 
-  const expandedParts = host.includes('::')
+  const expandedParts = normalizedHost.includes('::')
     ? [...leftParts, ...Array(8 - totalParts).fill('0'), ...rightParts]
     : [...leftParts, ...rightParts]
 
@@ -310,10 +330,24 @@ function isPrivateOrLoopbackIpv6(host: string): boolean {
   if (parsed === null) return false
 
   const BIGINT_ONE = BigInt(1)
+  const ipv4MappedPrefix = BigInt('0x00000000000000000000ffff00000000')
+  const ipv4MappedMask = BigInt('0xffffffffffffffffffffffff00000000')
   const fe80Prefix = BigInt('0xfe800000000000000000000000000000')
   const fe80Mask = BigInt('0xffc00000000000000000000000000000')
   const fc00Prefix = BigInt('0xfc000000000000000000000000000000')
   const fc00Mask = BigInt('0xfe000000000000000000000000000000')
+
+  if ((parsed & ipv4MappedMask) === ipv4MappedPrefix) {
+    const embeddedIpv4 = Number(parsed & BigInt(0xffff_ffff))
+    const octets = [
+      (embeddedIpv4 >>> 24) & 0xff,
+      (embeddedIpv4 >>> 16) & 0xff,
+      (embeddedIpv4 >>> 8) & 0xff,
+      embeddedIpv4 & 0xff,
+    ]
+
+    return isPrivateOrLoopbackIpv4Octets(octets)
+  }
 
   return parsed === BIGINT_ONE || (parsed & fe80Mask) === fe80Prefix || (parsed & fc00Mask) === fc00Prefix
 }
@@ -393,14 +427,10 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
     // Reject localhost and internal IPs in production
     if (process.env.NODE_ENV === 'production') {
       const normalizedHostname = normalizeHost(parsed.hostname)
-      const mappedIpv4 = normalizedHostname.startsWith('::ffff:')
-        ? normalizedHostname.slice('::ffff:'.length)
-        : null
 
       if (
         normalizedHostname === 'localhost' ||
         isPrivateOrLoopbackIpv4(normalizedHostname) ||
-        (mappedIpv4 !== null && isPrivateOrLoopbackIpv4(mappedIpv4)) ||
         isPrivateOrLoopbackIpv6(normalizedHostname)
       ) {
         return {

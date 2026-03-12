@@ -715,6 +715,56 @@ test('validateApiEndpoint blocks normalized local/private bypass forms in produc
   }
 })
 
+test('validateApiEndpoint blocks private/loopback IPv4-mapped IPv6 hosts in production', () => {
+  const { validateApiEndpoint } = loadApiModule()
+  const originalNodeEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+
+  try {
+    const blockedUrls = [
+      'http://[::ffff:127.0.0.1]',
+      'http://[::ffff:10.0.0.1]',
+      'http://[::ffff:192.168.1.20]',
+      'http://[::ffff:172.16.10.25]',
+      'http://[::ffff:169.254.10.20]',
+      'http://[::ffff:7f00:1]',
+      'http://[::ffff:c0a8:114]',
+      'http://[::ffff:ac10:a19]',
+    ]
+
+    for (const blockedUrl of blockedUrls) {
+      const result = validateApiEndpoint(blockedUrl)
+      assert.equal(result.valid, false, `expected ${blockedUrl} to be rejected`)
+      assert.equal(result.message, 'Local/private network endpoints are not allowed in production.')
+    }
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv
+  }
+})
+
+test('validateApiEndpoint allows public IPv6 hosts in production', () => {
+  const { validateApiEndpoint } = loadApiModule()
+  const originalNodeEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = 'production'
+
+  try {
+    const allowedUrls = [
+      'https://[2001:4860:4860::8888]',
+      'https://[2606:4700:4700::1111]',
+      'https://[::ffff:8.8.8.8]',
+      'https://[::ffff:808:808]',
+    ]
+
+    for (const allowedUrl of allowedUrls) {
+      const result = validateApiEndpoint(allowedUrl)
+      assert.equal(result.valid, true, `expected ${allowedUrl} to be allowed`)
+      assert.equal(result.message, undefined)
+    }
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv
+  }
+})
+
 test('validateApiEndpoint allows public hosts in production', () => {
   const { validateApiEndpoint } = loadApiModule()
   const originalNodeEnv = process.env.NODE_ENV
