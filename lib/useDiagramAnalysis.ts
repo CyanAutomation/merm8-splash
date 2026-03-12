@@ -312,25 +312,51 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const lastInputAtRef = useRef(0)
   const rapidInputStreakRef = useRef(0)
 
+  const abortTransportIfUnshared = useCallback((controller: AbortController | null) => {
+    if (!controller) {
+      return
+    }
+
+    let matchingKey: string | null = null
+    let waiterCount = 0
+
+    for (const [key, request] of inFlightRequestsRef.current.entries()) {
+      if (request.abortController === controller) {
+        matchingKey = key
+        waiterCount = request.waiters
+        break
+      }
+    }
+
+    if (!matchingKey || waiterCount > 1) {
+      return
+    }
+
+    controller.abort()
+    if (matchingKey) {
+      inFlightRequestsRef.current.delete(matchingKey)
+    }
+  }, [])
+
   const cancelAnalysis = useCallback(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
       debounceRef.current = null
     }
 
-    if (abortControllerRef.current) {
+    if (abortControllerRef.current || waiterAbortControllerRef.current) {
       requestSeqRef.current += 1
     }
     waiterAbortControllerRef.current?.abort()
     waiterAbortControllerRef.current = null
-    abortControllerRef.current = null
+    abortTransportIfUnshared(abortControllerRef.current)
     abortControllerRef.current = null
     setViolations([])
     setAnalyzeError(null)
     setAnalysisHints([])
     setDiagramType(null)
     setIsAnalyzing(false)
-  }, [])
+  }, [abortTransportIfUnshared])
 
   const runAnalysis = useCallback(
     async (
@@ -432,7 +458,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
 
       const controller = new AbortController()
 
-      abortControllerRef.current?.abort()
+      abortTransportIfUnshared(abortControllerRef.current)
       abortControllerRef.current = controller
 
       setIsAnalyzing(true)
@@ -503,7 +529,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         }
       }
     },
-    [cancelAnalysis]
+    [abortTransportIfUnshared, cancelAnalysis]
   )
 
   const triggerAnalysis = useCallback(
