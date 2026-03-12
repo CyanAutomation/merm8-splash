@@ -412,6 +412,11 @@ test('identical concurrent forceAnalysis calls coalesce into one API request', a
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
   assert.equal(rerenderedHook.violations[0].rule_id, 'coalesced')
+
+  rerenderedHook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(callCount, 1)
 })
 
 test('coalesced request cancellation exits analyzing state without waiting for shared promise', async () => {
