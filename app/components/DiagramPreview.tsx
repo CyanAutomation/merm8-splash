@@ -17,6 +17,62 @@ interface DiagramPreviewProps {
   onJumpToLine?: (line: number) => void
 }
 
+type DiagramColorMode = 'dark' | 'light'
+
+const BEAUTIFUL_RENDER_TOKENS: Record<DiagramColorMode, { bg: string; fg: string; accent: string }> = {
+  dark: {
+    bg: '#1c1c1e',
+    fg: '#e1e1e1',
+    accent: '#0a84ff',
+  },
+  light: {
+    bg: '#ffffff',
+    fg: '#1f2937',
+    accent: '#0a84ff',
+  },
+}
+
+const MERMAID_THEME_CONFIG: Record<
+  DiagramColorMode,
+  {
+    theme: 'dark' | 'default'
+    darkMode: boolean
+    themeVariables: {
+      primaryColor: string
+      primaryTextColor: string
+      primaryBorderColor: string
+      lineColor: string
+      background: string
+      mainBkg: string
+    }
+  }
+> = {
+  dark: {
+    theme: 'dark',
+    darkMode: true,
+    themeVariables: {
+      primaryColor: '#0a84ff',
+      primaryTextColor: '#e1e1e1',
+      primaryBorderColor: '#444444',
+      lineColor: '#a0a0a0',
+      background: '#1c1c1e',
+      mainBkg: '#2c2c2e',
+    },
+  },
+  light: {
+    theme: 'default',
+    darkMode: false,
+    themeVariables: {
+      primaryColor: '#0a84ff',
+      primaryTextColor: '#1f2937',
+      primaryBorderColor: '#9ca3af',
+      lineColor: '#4b5563',
+      background: '#ffffff',
+      mainBkg: '#f9fafb',
+    },
+  },
+}
+
 export default function DiagramPreview({ 
   code, 
   onParseStateChange, 
@@ -29,6 +85,7 @@ export default function DiagramPreview({
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
   const [fullRenderError, setFullRenderError] = useState<string | null>(null)
+  const [diagramColorMode] = useState<DiagramColorMode>('dark')
   const [isErrorExpanded, setIsErrorExpanded] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
   const idCounterRef = useRef(0)
@@ -251,10 +308,11 @@ export default function DiagramPreview({
           if (diagramType && BM_SUPPORTED.has(diagramType)) {
             try {
               const beautifulMermaid = await import('beautiful-mermaid')
+              const beautifulRenderTokens = BEAUTIFUL_RENDER_TOKENS[diagramColorMode]
               const svg = beautifulMermaid.renderMermaidSVG(code, {
-                bg: 'var(--color-bg-primary)',
-                fg: 'var(--color-text-primary)',
-                accent: 'var(--color-accent-primary)',
+                bg: beautifulRenderTokens.bg,
+                fg: beautifulRenderTokens.fg,
+                accent: beautifulRenderTokens.accent,
                 transparent: true,
               })
 
@@ -299,6 +357,7 @@ export default function DiagramPreview({
         }
 
         const mermaid = (await import('mermaid')).default
+        const mermaidThemeConfig = MERMAID_THEME_CONFIG[diagramColorMode]
         
         // Intercept DOM insertions to block mermaid error SVGs from being rendered
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -313,16 +372,9 @@ export default function DiagramPreview({
         
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'dark',
-          darkMode: true,
-          themeVariables: {
-            primaryColor: '#0a84ff',
-            primaryTextColor: '#e1e1e1',
-            primaryBorderColor: '#444444',
-            lineColor: '#a0a0a0',
-            background: '#1c1c1e',
-            mainBkg: '#2c2c2e',
-          },
+          theme: mermaidThemeConfig.theme,
+          darkMode: mermaidThemeConfig.darkMode,
+          themeVariables: mermaidThemeConfig.themeVariables,
           securityLevel: 'strict',
           logLevel: 'error',
         })
@@ -416,7 +468,7 @@ export default function DiagramPreview({
       cancelled = true
       clearPendingFitRaf()
     }
-  }, [code, onParseStateChange, useBeautifulRenderer])
+  }, [code, diagramColorMode, onParseStateChange, useBeautifulRenderer])
 
   useEffect(() => {
     return () => {
