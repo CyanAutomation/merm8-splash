@@ -486,7 +486,7 @@ export default function DiagramPreview({
               onClick={() => setDiagramColorMode((prevMode) => (prevMode === 'dark' ? 'light' : 'dark'))}
               title={`Switch to ${diagramColorMode === 'dark' ? 'light' : 'dark'} diagram mode`}
               aria-label={`Toggle diagram mode. Current mode: ${diagramColorMode}`}
-              aria-pressed={diagramColorMode === 'dark'}
+              aria-label={`Toggle diagram mode. Current mode: ${diagramColorMode}`}
               style={{
                 padding: '4px 8px',
                 fontSize: '12px',
