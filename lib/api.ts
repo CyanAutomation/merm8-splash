@@ -337,7 +337,7 @@ function isPrivateOrLoopbackIpv6(host: string): boolean {
   const fc00Prefix = BigInt('0xfc000000000000000000000000000000')
   const fc00Mask = BigInt('0xfe000000000000000000000000000000')
 
-  if ((parsed & ipv4MappedMask) === ipv4MappedPrefix) {
+  if ((parsed & BigInt('0xffffffffffffffffffffffff00000000')) === BigInt('0x00000000000000000000ffff00000000')) {
     const embeddedIpv4 = Number(parsed & BigInt(0xffff_ffff))
     const octets = [
       (embeddedIpv4 >>> 24) & 0xff,
