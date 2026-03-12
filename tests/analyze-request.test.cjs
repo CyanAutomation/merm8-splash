@@ -703,6 +703,11 @@ test('validateApiEndpoint blocks normalized local/private bypass forms in produc
       'http://127.0.1.1',
       'http://[::1]',
       'http://[fe80::1]',
+      'http://100.64.0.1',
+      'http://100.127.255.254',
+      'http://192.0.0.1',
+      'http://198.51.100.5',
+      'http://240.0.0.1',
     ]
 
     for (const blockedUrl of blockedUrls) {
@@ -727,6 +732,7 @@ test('validateApiEndpoint blocks private/loopback IPv4-mapped IPv6 hosts in prod
       'http://[::ffff:192.168.1.20]',
       'http://[::ffff:172.16.10.25]',
       'http://[::ffff:169.254.10.20]',
+      'http://[::ffff:100.64.10.20]',
       'http://[::ffff:7f00:1]',
       'http://[::ffff:c0a8:114]',
       'http://[::ffff:ac10:a19]',
@@ -753,6 +759,7 @@ test('validateApiEndpoint allows public IPv6 hosts in production', () => {
       'https://[2606:4700:4700::1111]',
       'https://[::ffff:8.8.8.8]',
       'https://[::ffff:808:808]',
+      'https://[::ffff:1.1.1.1]',
     ]
 
     for (const allowedUrl of allowedUrls) {
@@ -771,10 +778,20 @@ test('validateApiEndpoint allows public hosts in production', () => {
   process.env.NODE_ENV = 'production'
 
   try {
-    const result = validateApiEndpoint('https://api.example.com')
+    const allowedUrls = [
+      'https://api.example.com',
+      'https://8.8.8.8',
+      'https://1.1.1.1',
+      'https://100.63.255.255',
+      'https://100.128.0.1',
+      'https://192.0.1.1',
+    ]
 
-    assert.equal(result.valid, true)
-    assert.equal(result.message, undefined)
+    for (const allowedUrl of allowedUrls) {
+      const result = validateApiEndpoint(allowedUrl)
+      assert.equal(result.valid, true, `expected ${allowedUrl} to be allowed`)
+      assert.equal(result.message, undefined)
+    }
   } finally {
     process.env.NODE_ENV = originalNodeEnv
   }
