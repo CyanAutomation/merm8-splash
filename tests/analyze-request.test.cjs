@@ -91,7 +91,7 @@ function loadRulesStateModule() {
   return module.exports
 }
 
-test('buildAnalyzeRequest omits rules and keeps schema-version in server-default fallback mode', () => {
+test('buildAnalyzeRequest keeps schema-version and sends empty rules in server-default fallback mode', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -110,7 +110,7 @@ test('buildAnalyzeRequest omits rules and keeps schema-version in server-default
 
   assert.equal(request.code, 'graph TD; A-->B')
   assert.equal(request.config['schema-version'], 'v1')
-  assert.ok(!('rules' in request.config), 'rules must be omitted in fallback mode')
+  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}), 'rules must be an empty object in fallback mode')
 })
 
 
@@ -137,7 +137,7 @@ test('rules availability marks endpoint unavailable when rules request fails or 
   assert.equal(shouldTreatRulesPayloadAsUnavailable('transport_failure'), true)
 })
 
-test('buildAnalyzeRequest omits rules when endpoint is marked unavailable due to malformed metadata', () => {
+test('buildAnalyzeRequest sends empty rules when endpoint is marked unavailable due to malformed metadata', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -149,7 +149,7 @@ test('buildAnalyzeRequest omits rules when endpoint is marked unavailable due to
 
   assert.equal(request.code, 'graph TD; A-->B')
   assert.equal(request.config['schema-version'], 'v1')
-  assert.ok(!('rules' in request.config), 'rules must be omitted when fallback enables server defaults')
+  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}), 'rules must be an empty object when fallback enables server defaults')
 })
 
 test('buildAnalyzeRequest includes explicit rule config when metadata is available', () => {
@@ -183,6 +183,16 @@ test('buildAnalyzeRequest includes explicit rule config when metadata is availab
   )
 })
 
+
+test('buildAnalyzeRequest sends empty rules object when no rules are configured', () => {
+  const { buildAnalyzeRequest } = loadApiModule()
+
+  const request = buildAnalyzeRequest('graph TD; A-->B', [], [])
+
+  assert.equal(request.code, 'graph TD; A-->B')
+  assert.equal(request.config['schema-version'], 'v1')
+  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}))
+})
 
 test('buildAnalyzeRequest keeps universal rules enabled for known diagram types', () => {
   const { buildAnalyzeRequest } = loadApiModule()

@@ -570,10 +570,7 @@ export function buildAnalyzeRequest(
 
   const config: AnalyzeRequest['config'] = {
     'schema-version': 'v1',
-  }
-
-  if (!useServerDefaults) {
-    config.rules = rulesConfig
+    rules: useServerDefaults ? {} : rulesConfig,
   }
 
   return {
