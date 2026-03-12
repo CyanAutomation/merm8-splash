@@ -14,6 +14,8 @@ interface DiagramPreviewProps {
   parseErrorMessage?: string | null
   useBeautifulRenderer?: boolean
   onToggleBeautifulRenderer?: (value: boolean) => void
+  diagramColorMode?: DiagramColorMode
+  onToggleDiagramColorMode?: (value: DiagramColorMode) => void
   onJumpToLine?: (line: number) => void
 }
 
@@ -79,6 +81,8 @@ export default function DiagramPreview({
   parseErrorMessage,
   useBeautifulRenderer = false,
   onToggleBeautifulRenderer,
+  diagramColorMode: controlledDiagramColorMode,
+  onToggleDiagramColorMode,
   onJumpToLine,
 }: DiagramPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -86,6 +90,7 @@ export default function DiagramPreview({
   const [renderError, setRenderError] = useState<string | null>(null)
   const [fullRenderError, setFullRenderError] = useState<string | null>(null)
   const [diagramColorMode, setDiagramColorMode] = useState<DiagramColorMode>('dark')
+  const effectiveDiagramColorMode = controlledDiagramColorMode ?? diagramColorMode
   const [isErrorExpanded, setIsErrorExpanded] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
   const idCounterRef = useRef(0)
@@ -308,7 +313,7 @@ export default function DiagramPreview({
           if (diagramType && BM_SUPPORTED.has(diagramType)) {
             try {
               const beautifulMermaid = await import('beautiful-mermaid')
-              const beautifulRenderTokens = BEAUTIFUL_RENDER_TOKENS[diagramColorMode]
+              const beautifulRenderTokens = BEAUTIFUL_RENDER_TOKENS[effectiveDiagramColorMode]
               const svg = beautifulMermaid.renderMermaidSVG(code, {
                 bg: beautifulRenderTokens.bg,
                 fg: beautifulRenderTokens.fg,
@@ -357,7 +362,7 @@ export default function DiagramPreview({
         }
 
         const mermaid = (await import('mermaid')).default
-        const mermaidThemeConfig = MERMAID_THEME_CONFIG[diagramColorMode]
+        const mermaidThemeConfig = MERMAID_THEME_CONFIG[effectiveDiagramColorMode]
         
         // Intercept DOM insertions to block mermaid error SVGs from being rendered
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -468,7 +473,7 @@ export default function DiagramPreview({
       cancelled = true
       clearPendingFitRaf()
     }
-  }, [code, diagramColorMode, onParseStateChange, useBeautifulRenderer])
+  }, [code, effectiveDiagramColorMode, onParseStateChange, useBeautifulRenderer])
 
   useEffect(() => {
     return () => {
@@ -483,10 +488,16 @@ export default function DiagramPreview({
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {!parseErrorMessage && !renderError && code.trim() !== '' && (
             <button
-              onClick={() => setDiagramColorMode((prevMode) => (prevMode === 'dark' ? 'light' : 'dark'))}
-              title={`Switch to ${diagramColorMode === 'dark' ? 'light' : 'dark'} diagram mode`}
-              aria-label={`Toggle diagram mode. Current mode: ${diagramColorMode}`}
-              aria-label={`Toggle diagram mode. Current mode: ${diagramColorMode}`}
+              onClick={() => {
+                const nextMode = effectiveDiagramColorMode === 'dark' ? 'light' : 'dark'
+                if (onToggleDiagramColorMode) {
+                  onToggleDiagramColorMode(nextMode)
+                  return
+                }
+                setDiagramColorMode(nextMode)
+              }}
+              title={`Switch to ${effectiveDiagramColorMode === 'dark' ? 'light' : 'dark'} diagram mode`}
+              aria-label={`Toggle diagram mode. Current mode: ${effectiveDiagramColorMode}`}
               style={{
                 padding: '4px 8px',
                 fontSize: '12px',
@@ -506,7 +517,7 @@ export default function DiagramPreview({
                 ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'
               }}
             >
-              {diagramColorMode === 'dark' ? '☾ Dark' : '☀︎ Light'}
+              {effectiveDiagramColorMode === 'dark' ? '☾ Dark' : '☀︎ Light'}
             </button>
           )}
           {!parseErrorMessage && !renderError && code.trim() !== '' && (
