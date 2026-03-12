@@ -267,19 +267,59 @@ function isPrivateOrLoopbackIpv4(host: string): boolean {
   return isPrivateOrLoopbackIpv4Octets(octets)
 }
 
+interface Ipv4Range {
+  name: string
+  start: number
+  end: number
+}
+
+function ipv4OctetsToInt(octets: number[]): number | null {
+  if (octets.length !== 4) return null
+
+  const [first, second, third, fourth] = octets
+
+  return first * 0x01_00_00_00 + second * 0x01_00_00 + third * 0x01_00 + fourth
+}
+
+function ipv4CidrToRange(base: [number, number, number, number], prefixLength: number): Ipv4Range {
+  const network = ipv4OctetsToInt(base)
+  if (network === null || prefixLength < 0 || prefixLength > 32) {
+    throw new Error('Invalid IPv4 CIDR range configuration')
+  }
+
+  const hostBits = 32 - prefixLength
+  const mask = hostBits === 0 ? 0 : 2 ** hostBits - 1
+
+  return {
+    name: `${base.join('.')}/${prefixLength}`,
+    start: network,
+    end: network + mask,
+  }
+}
+
+const NON_PUBLIC_IPV4_RANGES: Ipv4Range[] = [
+  ipv4CidrToRange([0, 0, 0, 0], 8), // "this" network
+  ipv4CidrToRange([10, 0, 0, 0], 8), // RFC1918
+  ipv4CidrToRange([100, 64, 0, 0], 10), // Carrier-grade NAT
+  ipv4CidrToRange([127, 0, 0, 0], 8), // Loopback
+  ipv4CidrToRange([169, 254, 0, 0], 16), // Link-local
+  ipv4CidrToRange([172, 16, 0, 0], 12), // RFC1918
+  ipv4CidrToRange([192, 0, 0, 0], 24), // IETF protocol assignments
+  ipv4CidrToRange([192, 0, 2, 0], 24), // TEST-NET-1
+  ipv4CidrToRange([192, 88, 99, 0], 24), // Deprecated 6to4 relay anycast
+  ipv4CidrToRange([192, 168, 0, 0], 16), // RFC1918
+  ipv4CidrToRange([198, 18, 0, 0], 15), // Benchmarking
+  ipv4CidrToRange([198, 51, 100, 0], 24), // TEST-NET-2
+  ipv4CidrToRange([203, 0, 113, 0], 24), // TEST-NET-3
+  ipv4CidrToRange([224, 0, 0, 0], 4), // Multicast
+  ipv4CidrToRange([240, 0, 0, 0], 4), // Reserved + limited broadcast
+]
+
 function isPrivateOrLoopbackIpv4Octets(octets: number[]): boolean {
-  if (octets.length !== 4) return false
+  const ipv4Int = ipv4OctetsToInt(octets)
+  if (ipv4Int === null) return false
 
-  const [first, second] = octets
-
-  return (
-    first === 0 ||
-    first === 10 ||
-    first === 127 ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 168)
-  )
+  return NON_PUBLIC_IPV4_RANGES.some((range) => ipv4Int >= range.start && ipv4Int <= range.end)
 }
 
 function parseIpv6ToBigInt(host: string): bigint | null {
@@ -330,8 +370,6 @@ function isPrivateOrLoopbackIpv6(host: string): boolean {
   if (parsed === null) return false
 
   const BIGINT_ONE = BigInt(1)
-  const ipv4MappedPrefix = BigInt('0x00000000000000000000ffff00000000')
-  const ipv4MappedMask = BigInt('0xffffffffffffffffffffffff00000000')
   const fe80Prefix = BigInt('0xfe800000000000000000000000000000')
   const fe80Mask = BigInt('0xffc00000000000000000000000000000')
   const fc00Prefix = BigInt('0xfc000000000000000000000000000000')
