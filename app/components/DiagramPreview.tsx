@@ -85,7 +85,7 @@ export default function DiagramPreview({
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [renderError, setRenderError] = useState<string | null>(null)
   const [fullRenderError, setFullRenderError] = useState<string | null>(null)
-  const [diagramColorMode] = useState<DiagramColorMode>('dark')
+  const [diagramColorMode, setDiagramColorMode] = useState<DiagramColorMode>('dark')
   const [isErrorExpanded, setIsErrorExpanded] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
   const idCounterRef = useRef(0)
@@ -481,6 +481,34 @@ export default function DiagramPreview({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <div className="panel-heading" style={{ marginBottom: 0 }}>◈ Diagram Preview</div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {!parseErrorMessage && !renderError && code.trim() !== '' && (
+            <button
+              onClick={() => setDiagramColorMode((prevMode) => (prevMode === 'dark' ? 'light' : 'dark'))}
+              title={`Switch to ${diagramColorMode === 'dark' ? 'light' : 'dark'} diagram mode`}
+              aria-label={`Toggle diagram mode. Current mode: ${diagramColorMode}`}
+              aria-pressed={diagramColorMode === 'dark'}
+              style={{
+                padding: '4px 8px',
+                fontSize: '12px',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-primary)'
+                ;(e.currentTarget as HTMLButtonElement).style.color = '#000'
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg-secondary)'
+                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'
+              }}
+            >
+              {diagramColorMode === 'dark' ? '☾ Dark' : '☀︎ Light'}
+            </button>
+          )}
           {!parseErrorMessage && !renderError && code.trim() !== '' && (
             <button
               onClick={fitDiagramToContainer}
