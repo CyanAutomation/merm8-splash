@@ -156,7 +156,14 @@ export interface EndpointValidationResult {
   message?: string
 }
 
-function normalizeRulesResponse(rawData: unknown): Rule[] {
+export type RulesFetchStatus = 'success' | 'malformed_payload'
+
+interface NormalizedRulesResponse {
+  rules: Rule[]
+  status: RulesFetchStatus
+}
+
+function normalizeRulesResponse(rawData: unknown): NormalizedRulesResponse {
   const data = rawData && typeof rawData === 'object' && !Array.isArray(rawData) ? rawData : null
   const rawRules = data && 'rules' in data ? (data as { rules?: unknown }).rules : undefined
 
@@ -202,7 +209,10 @@ function normalizeRulesResponse(rawData: unknown): Rule[] {
       )
     }
 
-    return normalizedRules
+    return {
+      rules: normalizedRules,
+      status: 'success',
+    }
   }
 
   if (process.env.NODE_ENV !== 'production') {
@@ -210,7 +220,10 @@ function normalizeRulesResponse(rawData: unknown): Rule[] {
     console.warn(`[api.fetchRules] Normalized malformed rules response: ${reason}`)
   }
 
-  return []
+  return {
+    rules: [],
+    status: 'malformed_payload',
+  }
 }
 
 function normalizeHost(hostname: string): string {
@@ -506,7 +519,12 @@ export async function fetchHealthz(
   return response.data
 }
 
-export async function fetchRules(endpoint: string, signal?: AbortSignal): Promise<Rule[]> {
+export interface FetchRulesResult {
+  rules: Rule[]
+  status: RulesFetchStatus
+}
+
+export async function fetchRules(endpoint: string, signal?: AbortSignal): Promise<FetchRulesResult> {
   const client = createApiClient(endpoint)
   const response = await client.get<{ rules: Rule[] }>('/v1/rules', { signal })
   return normalizeRulesResponse(response?.data)
