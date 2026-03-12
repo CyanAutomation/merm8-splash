@@ -87,7 +87,12 @@ function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): 
   }
 
   return new Promise<T>((resolve, reject) => {
+    const cleanup = () => {
+      signal.removeEventListener('abort', onAbort)
+    }
+
     const onAbort = () => {
+      cleanup()
       reject(createCanceledError())
     }
 
@@ -95,9 +100,11 @@ function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): 
 
     promise.then(
       (result) => {
+        cleanup()
         resolve(result)
       },
       (error) => {
+        cleanup()
         reject(error)
       }
     )
