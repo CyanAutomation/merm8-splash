@@ -516,6 +516,8 @@ export default function Home() {
                     parseErrorMessage={parseErrorDetail}
                     useBeautifulRenderer={prefs.useBeautifulRenderer}
                     onToggleBeautifulRenderer={(value) => savePrefs({ useBeautifulRenderer: value })}
+                    diagramColorMode={prefs.diagramPreviewMode}
+                    onToggleDiagramColorMode={(value) => savePrefs({ diagramPreviewMode: value })}
                     onJumpToLine={handleJumpToLine}
                   />
                 </ErrorBoundary>
