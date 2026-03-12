@@ -323,7 +323,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     }
     waiterAbortControllerRef.current?.abort()
     waiterAbortControllerRef.current = null
-    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
     abortControllerRef.current = null
     setViolations([])
     setAnalyzeError(null)
