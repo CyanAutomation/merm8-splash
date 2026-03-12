@@ -107,8 +107,8 @@ export default function Home() {
     try {
       const fetched = await fetchRules(requestEndpoint, controller.signal)
       if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
-        const normalizedFetched = Array.isArray(fetched) ? fetched : []
-        const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable(normalizedFetched.length)
+        const normalizedFetched = Array.isArray(fetched.rules) ? fetched.rules : []
+        const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable(fetched.status)
 
         setRules(normalizedFetched)
         setEnabledRules((prev) => {

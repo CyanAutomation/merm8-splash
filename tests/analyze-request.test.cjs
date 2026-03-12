@@ -114,20 +114,27 @@ test('buildAnalyzeRequest omits rules and keeps schema-version in server-default
 })
 
 
-test('resolveRulesAvailabilityState marks endpoint unavailable when rules payload normalizes to empty', () => {
+test('rules availability keeps endpoint available when rules response is empty but successful', () => {
   const { resolveRulesAvailabilityState, shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
 
-  const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable(0)
-  assert.equal(rulesAreUnavailable, true)
+  const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable('success')
+  assert.equal(rulesAreUnavailable, false)
 
   const availability = resolveRulesAvailabilityState(
     'https://example.test',
-    null,
+    rulesAreUnavailable ? null : 'https://example.test',
     rulesAreUnavailable ? 'https://example.test' : null
   )
 
-  assert.equal(availability.isAvailable, false)
-  assert.equal(availability.isUnavailable, true)
+  assert.equal(availability.isAvailable, true)
+  assert.equal(availability.isUnavailable, false)
+})
+
+test('rules availability marks endpoint unavailable when rules request fails or payload is malformed', () => {
+  const { shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
+
+  assert.equal(shouldTreatRulesPayloadAsUnavailable('malformed_payload'), true)
+  assert.equal(shouldTreatRulesPayloadAsUnavailable('transport_failure'), true)
 })
 
 test('buildAnalyzeRequest omits rules when endpoint is marked unavailable due to malformed metadata', () => {
@@ -416,7 +423,7 @@ test('analyzeCode normalizes missing data payload to UI-safe defaults', async ()
   }
 })
 
-test('fetchRules normalizes malformed payloads to an empty array', async () => {
+test('fetchRules normalizes malformed payloads to an empty rules list with malformed status', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -437,10 +444,12 @@ test('fetchRules normalizes malformed payloads to an empty array', async () => {
     const first = await api.fetchRules('https://api.example.com')
     const second = await api.fetchRules('https://api.example.com')
 
-    assert.ok(Array.isArray(first))
-    assert.ok(Array.isArray(second))
-    assert.equal(first.length, 0)
-    assert.equal(second.length, 0)
+    assert.ok(Array.isArray(first.rules))
+    assert.ok(Array.isArray(second.rules))
+    assert.equal(first.rules.length, 0)
+    assert.equal(second.rules.length, 0)
+    assert.equal(first.status, 'malformed_payload')
+    assert.equal(second.status, 'malformed_payload')
     assert.equal(
       warnings.some((message) => message.includes('[api.fetchRules] Normalized malformed rules response')),
       true,
@@ -491,11 +500,12 @@ test('fetchRules filters malformed rule entries and warns with drop summary', as
   }
 
   try {
-    const rules = await api.fetchRules('https://api.example.com')
+    const result = await api.fetchRules('https://api.example.com')
 
-    assert.equal(rules.length, 1)
+    assert.equal(result.status, 'success')
+    assert.equal(result.rules.length, 1)
     assert.equal(
-      JSON.stringify(rules[0]),
+      JSON.stringify(result.rules[0]),
       JSON.stringify({
         id: 'valid-rule',
         name: 'Valid Rule',
