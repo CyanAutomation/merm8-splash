@@ -3,6 +3,8 @@ export interface RulesAvailabilityState {
   isUnavailable: boolean
 }
 
+export type RulesAvailabilitySignal = 'success' | 'malformed_payload' | 'transport_failure'
+
 export function resolveRulesAvailabilityState(
   endpoint: string,
   rulesLoadedEndpoint: string | null,
@@ -14,6 +16,6 @@ export function resolveRulesAvailabilityState(
   }
 }
 
-export function shouldTreatRulesPayloadAsUnavailable(rulesCount: number): boolean {
-  return rulesCount === 0
+export function shouldTreatRulesPayloadAsUnavailable(signal: RulesAvailabilitySignal): boolean {
+  return signal === 'transport_failure' || signal === 'malformed_payload'
 }
