@@ -26,3 +26,17 @@ test('rapid left preview updates keep right preview rendered', async ({ page }) 
   await expect(page.locator('#left-preview').getByText('⚠ Syntax Error')).toBeVisible()
   await expect(page.locator('#right-preview svg')).toHaveCount(1)
 })
+
+test('overlapping preview renders keep right preview alive while left errors', async ({ page }) => {
+  await page.goto('/diagram-preview-isolation')
+
+  await expect(page.locator('#right-preview svg')).toHaveCount(1)
+  await expect(page.locator('#left-preview svg')).toHaveCount(1)
+
+  await page.click('#overlap-renders-btn')
+
+  await page.waitForTimeout(50)
+
+  await expect(page.locator('#left-preview').getByText('⚠ Syntax Error')).toBeVisible()
+  await expect(page.locator('#right-preview svg')).toHaveCount(1)
+})
