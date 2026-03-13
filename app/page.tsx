@@ -20,6 +20,26 @@ import { fetchRules, Rule } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
 import { resolveRulesAvailabilityState, shouldTreatRulesPayloadAsUnavailable } from '@/lib/rulesState'
 
+function MetricItem({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '4px 8px',
+        background: 'var(--color-bg-primary)',
+        borderRadius: '4px',
+      }}
+    >
+      <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+      <span style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontFamily: 'monospace' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
 export default function Home() {
   const headerControlButtonStyle = {
     padding: '4px 12px',
@@ -68,6 +88,7 @@ export default function Home() {
     analyzeError,
     analysisHints,
     diagramType,
+    metrics,
     triggerAnalysis,
     forceAnalysis,
     cancelAnalysis,
@@ -84,6 +105,7 @@ export default function Home() {
   const [showRulesModal, setShowRulesModal] = useState(false)
   const [showApiConfigModal, setShowApiConfigModal] = useState(false)
   const [showFullscreenDiagram, setShowFullscreenDiagram] = useState(false)
+  const [showMetrics, setShowMetrics] = useState(false)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
@@ -533,6 +555,19 @@ export default function Home() {
                     </ErrorBoundary>
                     <button
                       className="btn"
+                      style={{
+                        fontSize: '12px',
+                        padding: '4px 12px',
+                        ...(showMetrics ? { background: 'var(--color-accent-primary)', color: '#000' } : {}),
+                      }}
+                      onClick={() => setShowMetrics(!showMetrics)}
+                      title="Toggle diagram metrics"
+                      disabled={!metrics}
+                    >
+                      📊 Metrics
+                    </button>
+                    <button
+                      className="btn"
                       style={{ fontSize: '12px', padding: '4px 12px' }}
                       onClick={() => setShowRulesModal(true)}
                       title="Configure rules"
@@ -564,6 +599,43 @@ export default function Home() {
                     />
                   </ErrorBoundary>
                 </div>
+                {showMetrics && metrics && (
+                  <div
+                    style={{
+                      marginTop: '8px',
+                      padding: '12px',
+                      background: 'var(--color-bg-secondary)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        color: 'var(--color-text-primary)',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      Diagram Metrics
+                    </div>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                        gap: '8px',
+                      }}
+                    >
+                      <MetricItem label="Diagram Type" value={metrics.diagramType} />
+                      <MetricItem label="Nodes" value={metrics.nodeCount} />
+                      <MetricItem label="Edges" value={metrics.edgeCount} />
+                      <MetricItem label="Disconnected" value={metrics.disconnectedNodeCount} />
+                      <MetricItem label="Duplicates" value={metrics.duplicateNodeCount} />
+                      <MetricItem label="Max Fan-in" value={metrics.maxFanin} />
+                      <MetricItem label="Max Fan-out" value={metrics.maxFanout} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
         </div>

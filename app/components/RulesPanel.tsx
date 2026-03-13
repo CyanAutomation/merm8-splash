@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Rule } from '@/lib/api'
+import { Rule, deriveDisplayName } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
 
 interface RulesPanelProps {
@@ -147,7 +147,16 @@ export default function RulesPanel({
                         fontWeight: 600,
                       }}
                     >
-                      {rule.id}
+                      {deriveDisplayName(rule.id)}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        color: 'var(--color-text-secondary)',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      ({rule.id})
                     </span>
                     <span
                       style={{

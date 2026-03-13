@@ -100,7 +100,6 @@ test('buildAnalyzeRequest includes empty rules object and keeps schema-version i
     [
       {
         id: 'no-empty-label',
-        name: 'No Empty Label',
         description: 'Prevent empty labels',
         severity: 'warning',
       },
@@ -161,13 +160,11 @@ test('buildAnalyzeRequest sends empty rules object when no rules are selected', 
     [
       {
         id: 'no-empty-label',
-        name: 'No Empty Label',
         description: 'Prevent empty labels',
         severity: 'warning',
       },
       {
         id: 'max-edges',
-        name: 'Max Edges',
         description: 'Limit edges',
         severity: 'info',
       },
@@ -188,13 +185,11 @@ test('buildAnalyzeRequest includes explicit rule config when metadata is availab
     [
       {
         id: 'no-empty-label',
-        name: 'No Empty Label',
         description: 'Prevent empty labels',
         severity: 'warning',
       },
       {
         id: 'max-edges',
-        name: 'Max Edges',
         description: 'Limit edges',
         severity: 'info',
       },
@@ -220,19 +215,16 @@ test('buildAnalyzeRequest keeps universal rules enabled for known diagram types'
     [
       {
         id: 'max-depth',
-        name: 'Max Depth',
         description: 'Limit depth',
         severity: 'warning',
       },
       {
         id: 'sequence-max-participants',
-        name: 'Sequence Max Participants',
         description: 'Limit participants',
         severity: 'warning',
       },
       {
         id: 'no-empty-label',
-        name: 'No Empty Label',
         description: 'Prevent empty labels',
         severity: 'warning',
       },
@@ -254,19 +246,16 @@ test('buildAnalyzeRequest detects diagram type after leading Mermaid comments an
     [
       {
         id: 'max-depth',
-        name: 'Max Depth',
         description: 'Limit depth',
         severity: 'warning',
       },
       {
         id: 'sequence-max-participants',
-        name: 'Sequence Max Participants',
         description: 'Limit participants',
         severity: 'warning',
       },
       {
         id: 'no-empty-label',
-        name: 'No Empty Label',
         description: 'Prevent empty labels',
         severity: 'warning',
       },
@@ -287,19 +276,16 @@ test('buildAnalyzeRequest detects diagram type after multi-line Mermaid init blo
     [
       {
         id: 'sequence-max-participants',
-        name: 'Sequence Max Participants',
         description: 'Limit participants',
         severity: 'warning',
       },
       {
         id: 'max-depth',
-        name: 'Max Depth',
         description: 'Limit depth',
         severity: 'warning',
       },
       {
         id: 'no-empty-label',
-        name: 'No Empty Label',
         description: 'Prevent empty labels',
         severity: 'warning',
       },
@@ -322,19 +308,16 @@ test('buildAnalyzeRequest detects flowchart declarations with tab whitespace', (
     [
       {
         id: 'max-depth',
-        name: 'Max Depth',
         description: 'Limit depth',
         severity: 'warning',
       },
       {
         id: 'sequence-max-participants',
-        name: 'Sequence Max Participants',
         description: 'Limit participants',
         severity: 'warning',
       },
       {
         id: 'no-empty-label',
-        name: 'No Empty Label',
         description: 'Prevent empty labels',
         severity: 'warning',
       },
@@ -354,19 +337,16 @@ test('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule fil
     [
       {
         id: 'state-no-unreachable-states',
-        name: 'State No Unreachable States',
         description: 'No unreachable states',
         severity: 'warning',
       },
       {
         id: 'max-depth',
-        name: 'Max Depth',
         description: 'Limit depth',
         severity: 'warning',
       },
       {
         id: 'no-empty-label',
-        name: 'No Empty Label',
         description: 'Prevent empty labels',
         severity: 'warning',
       },
@@ -538,21 +518,24 @@ test('fetchRules filters malformed rule entries and warns with drop summary', as
         rules: [
           {
             id: 'valid-rule',
-            name: 'Valid Rule',
             description: 'A valid rule description',
             severity: 'warning',
           },
           null,
           {
-            id: 'missing-name',
-            description: 'Missing name should be removed',
+            id: 'missing-description',
             severity: 'error',
           },
           {
             id: 'bad-severity',
-            name: 'Bad Severity',
             description: 'Unsupported severity should be removed',
             severity: 'critical',
+          },
+          {
+            id: 'planned-rule',
+            description: 'Planned rule should be filtered out',
+            severity: 'info',
+            state: 'planned',
           },
         ],
       },
@@ -572,13 +555,12 @@ test('fetchRules filters malformed rule entries and warns with drop summary', as
       JSON.stringify(result.rules[0]),
       JSON.stringify({
         id: 'valid-rule',
-        name: 'Valid Rule',
         description: 'A valid rule description',
         severity: 'warning',
       })
     )
     assert.equal(
-      warnings.some((message) => message.includes('Dropped 3 invalid rule entries during normalization')),
+      warnings.some((message) => message.includes('Dropped 4 invalid rule entries during normalization')),
       true,
       'expected warning that malformed rule entries were dropped'
     )
