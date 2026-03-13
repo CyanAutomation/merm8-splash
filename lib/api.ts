@@ -295,7 +295,9 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
         ? rawDiagramType
         : diagramTypeFromMetrics ?? '',
     results: normalizedResults,
-    ...(combinedHints.length > 0 ? { hints: combinedHints } : {}),
+    // Include hints property when rawHints was present (even if empty after normalization)
+    // or when we have error suggestions to surface
+    ...(rawHints !== undefined || combinedHints.length > 0 ? { hints: combinedHints } : {}),
   }
 
   // New API fields
@@ -338,6 +340,13 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
     }
     if (typeof rawDiagramType !== 'string' && !diagramTypeFromMetrics) {
       malformedReasons.push('missing/invalid `diagram_type`/`metrics.diagram-type`')
+    }
+    if (rawHints !== undefined) {
+      if (!Array.isArray(rawHints)) {
+        malformedReasons.push('non-array `hints`')
+      } else if (normalizedHints && normalizedHints.length !== rawHints.length) {
+        malformedReasons.push('invalid entries in `hints`')
+      }
     }
 
     if (malformedReasons.length > 0) {
