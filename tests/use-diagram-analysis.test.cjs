@@ -384,6 +384,49 @@ test('different concurrent forceAnalysis calls do not coalesce when code differs
   assert.deepEqual(JSON.parse(JSON.stringify(rerenderedHook.analysisHints)), ['use async flow'])
 })
 
+
+test('hash-colliding legacy code strings never share in-flight entries', async () => {
+  const first = createDeferred()
+  const second = createDeferred()
+  const calls = []
+
+  const legacyCollisionA = '>EDBBE>-DC>D-EC-ADB'
+  const legacyCollisionB = 'BEAE>A- E ->BB\n'
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (_endpoint, code) => {
+      calls.push(code)
+      if (code === legacyCollisionA) {
+        return first.promise
+      }
+      return second.promise
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', legacyCollisionA, ['r1'], [])
+  hook.forceAnalysis('https://example.test', legacyCollisionB, ['r1'], [])
+
+  assert.deepEqual(calls, [legacyCollisionA, legacyCollisionB])
+
+  second.resolve({
+    diagram_type: 'flowchart',
+    results: [{ rule_id: 'second', severity: 'warning', message: 'second result', line: 1 }],
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  first.resolve({
+    diagram_type: 'flowchart',
+    results: [{ rule_id: 'first', severity: 'warning', message: 'first result', line: 1 }],
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+  assert.equal(rerenderedHook.violations[0].rule_id, 'second')
+})
 test('identical concurrent forceAnalysis calls coalesce into one API request', async () => {
   const deferred = createDeferred()
   let callCount = 0
