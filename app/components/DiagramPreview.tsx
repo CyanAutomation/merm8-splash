@@ -78,6 +78,7 @@ const MERMAID_THEME_CONFIG: Record<
 let patchRefCount = 0
 let nativeInsertAdjacentHTML: typeof Element.prototype.insertAdjacentHTML | null = null
 const activeInsertAdjacentHtmlBlockers = new Set<() => boolean>()
+let previewInstanceCounter = 0
 
 const isMermaidErrorHtml = (html: string): boolean =>
   html.includes('aria-roledescription="error"') && html.includes('dmermaid-')
@@ -143,28 +144,37 @@ export default function DiagramPreview({
   const renderSequenceRef = useRef(0)
   const lastRenderIdRef = useRef<string | null>(null)
   const ownedRenderIdsRef = useRef<Set<string>>(new Set())
+  const previewIdRef = useRef(`diagram-preview-${++previewInstanceCounter}`)
+
+  const markOwnedRenderedNodes = (renderId?: string) => {
+    if (!containerRef.current) return
+
+    containerRef.current
+      .querySelectorAll('svg')
+      .forEach((node) => {
+        node.setAttribute('data-preview-id', previewIdRef.current)
+        if (renderId) {
+          node.setAttribute('data-render-id', renderId)
+        } else {
+          node.removeAttribute('data-render-id')
+        }
+      })
+  }
 
   const removeMermaidFallbackNodes = (renderId?: string) => {
-    if (typeof document === 'undefined') return
+    if (!containerRef.current) return
 
-    if (containerRef.current) {
-      // Remove fallback error nodes injected by mermaid
-      containerRef.current
-        .querySelectorAll('[id^="dmermaid-"]')
-        .forEach((node) => node.remove())
+    const container = containerRef.current
 
-      // Also remove any error SVGs that mermaid might have created
-      containerRef.current
-        .querySelectorAll('svg[aria-roledescription="error"]')
-        .forEach((node) => node.remove())
-    }
+    // Remove fallback error nodes injected by mermaid in this preview container only.
+    container
+      .querySelectorAll('[id^="dmermaid-"]')
+      .forEach((node) => node.remove())
 
-    // Remove error nodes from the document body as well
-    document.querySelectorAll('svg[aria-roledescription="error"]').forEach((node) => {
-      if (!containerRef.current?.contains(node)) {
-        node.remove()
-      }
-    })
+    // Remove any locally rendered error SVGs owned by this preview instance.
+    container
+      .querySelectorAll(`svg[aria-roledescription="error"][data-preview-id="${previewIdRef.current}"]`)
+      .forEach((node) => node.remove())
 
     const targetRenderIds = new Set<string>()
     if (renderId && ownedRenderIdsRef.current.has(renderId)) {
@@ -177,7 +187,7 @@ export default function DiagramPreview({
       targetRenderIds.add(ownedRenderId)
     }
     for (const targetRenderId of targetRenderIds) {
-      const fallbackNode = containerRef.current?.querySelector(`#d${targetRenderId}`)
+      const fallbackNode = container.querySelector(`#d${targetRenderId}`)
       if (fallbackNode) {
         fallbackNode.remove()
       }
@@ -374,6 +384,7 @@ export default function DiagramPreview({
 
                 if (containerRef.current) {
                   containerRef.current.innerHTML = svg
+                  markOwnedRenderedNodes()
                   
                   // Safety check: remove any error SVGs that might have been rendered
                   containerRef.current.querySelectorAll('svg[aria-roledescription="error"]').forEach(node => {
@@ -449,6 +460,7 @@ export default function DiagramPreview({
 
           if (containerRef.current) {
             containerRef.current.innerHTML = svg
+            markOwnedRenderedNodes(id)
             
             // Safety check: remove any error SVGs that might have been rendered
             containerRef.current.querySelectorAll('svg[aria-roledescription="error"]').forEach(node => {
@@ -484,12 +496,6 @@ export default function DiagramPreview({
           if (containerRef.current) {
             containerRef.current.innerHTML = ''
           }
-          
-          // Remove any error SVGs that might have been rendered elsewhere on the page
-          document.querySelectorAll('svg[aria-roledescription="error"]').forEach(node => {
-            console.debug('Removing stray error SVG from page')
-            node.remove()
-          })
         }
       } finally {
         if (!cancelled) setIsRendering(false)
@@ -666,6 +672,7 @@ export default function DiagramPreview({
 
       <div
         ref={containerRef}
+        data-preview-id={previewIdRef.current}
         style={{
           flex: 1,
           overflow: 'auto',
