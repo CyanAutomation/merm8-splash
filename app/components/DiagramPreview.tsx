@@ -75,6 +75,50 @@ const MERMAID_THEME_CONFIG: Record<
   },
 }
 
+let patchRefCount = 0
+let nativeInsertAdjacentHTML: typeof Element.prototype.insertAdjacentHTML | null = null
+const activeInsertAdjacentHtmlBlockers = new Set<() => boolean>()
+
+const isMermaidErrorHtml = (html: string): boolean =>
+  html.includes('aria-roledescription="error"') && html.includes('dmermaid-')
+
+const releaseInsertAdjacentHtmlPatch = () => {
+  if (patchRefCount === 0) return
+
+  patchRefCount -= 1
+  if (patchRefCount === 0 && nativeInsertAdjacentHTML) {
+    Element.prototype.insertAdjacentHTML = nativeInsertAdjacentHTML
+    nativeInsertAdjacentHTML = null
+  }
+}
+
+const acquireInsertAdjacentHtmlPatch = (shouldBlock: () => boolean): (() => void) => {
+  activeInsertAdjacentHtmlBlockers.add(shouldBlock)
+
+  if (patchRefCount === 0) {
+    nativeInsertAdjacentHTML = Element.prototype.insertAdjacentHTML
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Element.prototype.insertAdjacentHTML = function(position: any, html: string) {
+      const shouldBlockAnyRender = Array.from(activeInsertAdjacentHtmlBlockers).some((blocker) => blocker())
+      if (shouldBlockAnyRender && isMermaidErrorHtml(html)) {
+        console.debug('Blocked mermaid error SVG from inserting to DOM')
+        return
+      }
+      return nativeInsertAdjacentHTML!.call(this, position, html)
+    }
+  }
+
+  patchRefCount += 1
+
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    activeInsertAdjacentHtmlBlockers.delete(shouldBlock)
+    releaseInsertAdjacentHtmlPatch()
+  }
+}
+
 export default function DiagramPreview({ 
   code, 
   onParseStateChange, 
@@ -298,11 +342,6 @@ export default function DiagramPreview({
     let cancelled = false
     setIsRendering(true)
 
-    // Save original insertAdjacentHTML to restore later and block error SVG injection
-    const originalInsertAdjacentHTML = Element.prototype.insertAdjacentHTML as (
-      position: InsertPosition,
-      html: string
-    ) => void
     let isRenderingDiagram = false
 
     const renderDiagram = async () => {
@@ -364,17 +403,6 @@ export default function DiagramPreview({
         const mermaid = (await import('mermaid')).default
         const mermaidThemeConfig = MERMAID_THEME_CONFIG[effectiveDiagramColorMode]
         
-        // Intercept DOM insertions to block mermaid error SVGs from being rendered
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        Element.prototype.insertAdjacentHTML = function(position: any, html: string) {
-          // Block mermaid error SVGs from being inserted
-          if (isRenderingDiagram && html.includes('aria-roledescription="error"')) {
-            console.debug('Blocked mermaid error SVG from inserting to DOM')
-            return
-          }
-          return originalInsertAdjacentHTML.call(this, position, html)
-        }
-        
         mermaid.initialize({
           startOnLoad: false,
           theme: mermaidThemeConfig.theme,
@@ -390,6 +418,7 @@ export default function DiagramPreview({
         lastRenderIdRef.current = id
         
         let svg: string = ''
+        const releasePatch = acquireInsertAdjacentHtmlPatch(() => isRenderingDiagram)
         try {
           isRenderingDiagram = true
           // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
@@ -397,8 +426,7 @@ export default function DiagramPreview({
           svg = result.svg
         } finally {
           isRenderingDiagram = false
-          // Restore original insertAdjacentHTML
-          Element.prototype.insertAdjacentHTML = originalInsertAdjacentHTML
+          releasePatch()
         }
 
         // Check if the returned SVG contains mermaid error content
