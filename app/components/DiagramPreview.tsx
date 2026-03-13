@@ -144,7 +144,10 @@ export default function DiagramPreview({
   const renderSequenceRef = useRef(0)
   const lastRenderIdRef = useRef<string | null>(null)
   const ownedRenderIdsRef = useRef<Set<string>>(new Set())
-  const previewIdRef = useRef(`diagram-preview-${++previewInstanceCounter}`)
+  const previewIdRef = useRef<string | null>(null)
+  if (!previewIdRef.current) {
+    previewIdRef.current = `diagram-preview-${++previewInstanceCounter}`
+  }
 
   const markOwnedRenderedNodes = (renderId?: string) => {
     if (!containerRef.current) return
