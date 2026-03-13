@@ -35,6 +35,8 @@ test('overlapping preview renders keep right preview alive while left errors', a
 
   await page.click('#overlap-renders-btn')
 
+  await page.waitForTimeout(50)
+
   await expect(page.locator('#left-preview').getByText('⚠ Syntax Error')).toBeVisible()
   await expect(page.locator('#right-preview svg')).toHaveCount(1)
 })
