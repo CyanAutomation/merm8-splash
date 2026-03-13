@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import axios from 'axios'
-import { analyzeCode, AnalyzeRequestOptions, AnalyzeResponse, Violation, Rule, AnalyzeHint } from './api'
+import { analyzeCode, AnalyzeRequestOptions, AnalyzeResponse, Violation, Rule, AnalyzeHint, AnalysisMetrics } from './api'
 import { DEFAULT_DIAGRAM } from './constants'
 
 export interface UseDiagramAnalysisReturn {
@@ -13,6 +13,7 @@ export interface UseDiagramAnalysisReturn {
   analyzeError: string | null
   analysisHints: string[]
   diagramType: string | null
+  metrics: AnalysisMetrics | null
   triggerAnalysis: (
     endpoint: string,
     code: string,
@@ -53,6 +54,8 @@ const RAPID_INPUT_EXTRA_MAX_MS = 450
 const ANALYSIS_CACHE_TTL_MS = 60_000
 const ANALYSIS_CACHE_MAX_ENTRIES = 100
 const ANALYSIS_CACHE_CLEANUP_INTERVAL_MS = 30_000
+const ANALYSIS_MAX_RETRIES = 2
+const ANALYSIS_RETRY_DELAY_MS = 1000
 
 interface AnalysisCacheEntry {
   code: string
@@ -80,6 +83,32 @@ function createCanceledError(): Error {
   const error = new Error('Canceled')
   error.name = 'CanceledError'
   return error
+}
+
+function isRetryableError(err: unknown): boolean {
+  if (axios.isAxiosError(err)) {
+    const status = err.response?.status
+    // Retry on 504 (Gateway Timeout) and 503 (Service Unavailable)
+    if (status === 504 || status === 503) {
+      return true
+    }
+    // Also check for parser_timeout error code in response
+    const data = err.response?.data
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      const errorObj = (data as Record<string, unknown>).error
+      if (errorObj && typeof errorObj === 'object' && !Array.isArray(errorObj)) {
+        const code = (errorObj as Record<string, unknown>).code
+        if (code === 'parser_timeout') {
+          return true
+        }
+      }
+    }
+  }
+  return false
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -234,6 +263,18 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
         ...(requestIdHint ? [requestIdHint] : []),
       ]
 
+      // Extract suggestion from new API error format: error.details.suggestion
+      const errorObj = data.error
+      if (errorObj && typeof errorObj === 'object' && !Array.isArray(errorObj)) {
+        const errorDetails = (errorObj as Record<string, unknown>).details
+        if (errorDetails && typeof errorDetails === 'object' && !Array.isArray(errorDetails)) {
+          const suggestion = (errorDetails as Record<string, unknown>).suggestion
+          if (typeof suggestion === 'string' && suggestion.trim().length > 0) {
+            hints.push(suggestion.trim())
+          }
+        }
+      }
+
       return {
         summary,
         hints,
@@ -295,6 +336,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [analysisHints, setAnalysisHints] = useState<string[]>([])
   const [diagramType, setDiagramType] = useState<string | null>(null)
+  const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestSeqRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -347,6 +389,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     setAnalyzeError(null)
     setAnalysisHints([])
     setDiagramType(null)
+    setMetrics(null)
     setIsAnalyzing(false)
   }, [abortTransportIfUnshared])
 
@@ -375,6 +418,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       ) {
         setViolations(Array.isArray(cachedEntry.result.results) ? cachedEntry.result.results : [])
         setDiagramType(cachedEntry.result.diagram_type)
+        setMetrics(cachedEntry.result.metrics ?? null)
         setAnalyzeError(null)
         setAnalysisHints(normalizeHints(cachedEntry.result.hints))
         setIsAnalyzing(false)
@@ -413,6 +457,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             })
             setViolations(Array.isArray(result.results) ? result.results : [])
             setDiagramType(result.diagram_type)
+            setMetrics(result.metrics ?? null)
             setAnalyzeError(null)
             setAnalysisHints(normalizeHints(result.hints))
           }
@@ -427,6 +472,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             setAnalysisHints(parsedError.hints)
             setViolations([])
             setDiagramType(null)
+            setMetrics(null)
           }
         } finally {
           existingInFlight.waiters -= 1
@@ -458,50 +504,78 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       setAnalysisHints([])
 
       let requestPromise: Promise<AnalyzeResponse> | null = null
+      let lastError: unknown = null
+      let result: AnalyzeResponse | null = null
 
-      try {
-        requestPromise = analyzeCode(
-          endpoint,
-          newCode,
-          enabledRules,
-          rulesMetadata,
-          options,
-          controller.signal
-        )
-        inFlightRequestsRef.current.set(inFlightKey, {
-          code: newCode,
-          promise: requestPromise,
-          abortController: controller,
-          waiters: 1,
-        })
+      // Retry loop for transient errors (504 timeout, 503 unavailable)
+      for (let attempt = 0; attempt <= ANALYSIS_MAX_RETRIES; attempt += 1) {
+        if (attempt > 0) {
+          // Wait before retrying
+          await delay(ANALYSIS_RETRY_DELAY_MS * attempt)
+          // Check if we should still proceed (seq hasn't changed)
+          if (seq !== requestSeqRef.current) {
+            return
+          }
+        }
 
-        const result = await waitForPromiseWithSignal(requestPromise, waiterController.signal)
-
-        if (seq === requestSeqRef.current) {
-          analysisCacheRef.current.set(cacheKey, {
+        try {
+          requestPromise = analyzeCode(
+            endpoint,
+            newCode,
+            enabledRules,
+            rulesMetadata,
+            options,
+            controller.signal
+          )
+          inFlightRequestsRef.current.set(inFlightKey, {
             code: newCode,
-            result,
-            ts: Date.now(),
+            promise: requestPromise,
+            abortController: controller,
+            waiters: 1,
           })
-          pruneAnalysisCache(analysisCacheRef.current, Date.now())
-          setViolations(Array.isArray(result.results) ? result.results : [])
-          setDiagramType(result.diagram_type)
-          setAnalyzeError(null)
-          setAnalysisHints(normalizeHints(result.hints))
-        }
-      } catch (err) {
-        if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
-          return
-        }
 
+          result = await waitForPromiseWithSignal(requestPromise, waiterController.signal)
+          lastError = null
+          break // Success, exit retry loop
+        } catch (err) {
+          lastError = err
+          if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
+            return
+          }
+          if (!isRetryableError(err) || attempt === ANALYSIS_MAX_RETRIES) {
+            break // Not retryable or max retries reached
+          }
+          // Will retry on next iteration
+        }
+      }
+
+      if (lastError) {
+        // All retries failed
         if (seq === requestSeqRef.current) {
-          const parsedError = parseAnalysisError(err)
+          const parsedError = parseAnalysisError(lastError)
           setAnalyzeError(parsedError.summary)
           setAnalysisHints(parsedError.hints)
           setViolations([])
           setDiagramType(null)
+          setMetrics(null)
         }
-      } finally {
+      } else if (result && seq === requestSeqRef.current) {
+        // Success
+        analysisCacheRef.current.set(cacheKey, {
+          code: newCode,
+          result,
+          ts: Date.now(),
+        })
+        pruneAnalysisCache(analysisCacheRef.current, Date.now())
+        setViolations(Array.isArray(result.results) ? result.results : [])
+        setDiagramType(result.diagram_type)
+        setMetrics(result.metrics ?? null)
+        setAnalyzeError(null)
+        setAnalysisHints(normalizeHints(result.hints))
+      }
+      // Note: We don't use a traditional finally block here because the retry logic
+      // needs to handle cleanup differently
+      {
         const currentInFlight = inFlightRequestsRef.current.get(inFlightKey)
         if (requestPromise && currentInFlight && currentInFlight.promise === requestPromise) {
           currentInFlight.waiters -= 1
@@ -609,6 +683,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     analyzeError,
     analysisHints,
     diagramType,
+    metrics,
     triggerAnalysis,
     forceAnalysis,
     cancelAnalysis,

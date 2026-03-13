@@ -3,9 +3,18 @@ import { parseDiagramType, filterRulesByDiagramType } from './diagramTypes'
 
 export interface Rule {
   id: string
-  name: string
   description: string
   severity: 'error' | 'warning' | 'info'
+  state?: 'implemented' | 'planned'
+  availability?: string
+  defaultConfig?: Record<string, unknown>
+  configurableOptions?: Array<{
+    name: string
+    type: string
+    description: string
+    constraints: string
+  }>
+  diagramExamples?: string[]
 }
 
 export interface RulesConfig {
@@ -35,13 +44,51 @@ export interface Violation {
   line?: number
 }
 
+export interface AnalysisMetrics {
+  nodeCount: number
+  edgeCount: number
+  disconnectedNodeCount: number
+  duplicateNodeCount: number
+  maxFanin: number
+  maxFanout: number
+  diagramType: string
+  issueCounts: {
+    bySeverity: Record<string, number>
+    byRule: Record<string, number>
+  }
+}
+
+export interface AnalysisError {
+  code: string
+  message: string
+  details?: Record<string, unknown>
+}
+
 export interface AnalyzeResponse {
   diagram_type: string
   results: Violation[]
   hints?: AnalyzeHint[]
+  valid?: boolean
+  lintSupported?: boolean
+  syntaxError?: string | null
+  error?: AnalysisError | null
+  metrics?: AnalysisMetrics
+  requestId?: string
+  timestamp?: number
 }
 
 export type AnalyzeHint = string | Record<string, unknown>
+
+/**
+ * Derive a human-readable display name from a rule ID.
+ * Examples: "no-cycles" → "No Cycles", "max-fanout" → "Max Fanout"
+ */
+export function deriveDisplayName(ruleId: string): string {
+  return ruleId
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
 
 function normalizeViolation(rawViolation: unknown): Violation | null {
   if (!rawViolation || typeof rawViolation !== 'object' || Array.isArray(rawViolation)) {
@@ -78,19 +125,60 @@ function normalizeRule(raw: unknown): Rule | null {
   }
 
   const rule = raw as Record<string, unknown>
-  const { id, name, description, severity } = rule
+  const { id, description, severity, state, availability } = rule
 
   if (typeof id !== 'string') return null
-  if (typeof name !== 'string') return null
   if (typeof description !== 'string') return null
   if (severity !== 'error' && severity !== 'warning' && severity !== 'info') return null
 
-  return {
+  const normalized: Rule = {
     id,
-    name,
     description,
     severity,
   }
+
+  // Optional state field (implemented | planned)
+  if (state === 'implemented' || state === 'planned') {
+    normalized.state = state
+  }
+
+  // Optional availability string (typically for planned rules)
+  if (typeof availability === 'string') {
+    normalized.availability = availability
+  }
+
+  // Map default-config to defaultConfig
+  const defaultConfig = (rule as Record<string, unknown>)['default-config']
+  if (defaultConfig && typeof defaultConfig === 'object' && !Array.isArray(defaultConfig)) {
+    normalized.defaultConfig = defaultConfig as Record<string, unknown>
+  }
+
+  // Map configurable-options to configurableOptions
+  const configurableOptions = (rule as Record<string, unknown>)['configurable-options']
+  if (Array.isArray(configurableOptions)) {
+    normalized.configurableOptions = configurableOptions
+      .filter(
+        (opt): opt is Record<string, unknown> =>
+          opt !== null && typeof opt === 'object' && !Array.isArray(opt)
+      )
+      .map((opt) => ({
+        name: typeof opt.name === 'string' ? opt.name : '',
+        type: typeof opt.type === 'string' ? opt.type : '',
+        description: typeof opt.description === 'string' ? opt.description : '',
+        constraints: typeof opt.constraints === 'string' ? opt.constraints : '',
+      }))
+      .filter((opt) => opt.name) // Only keep options with valid names
+  }
+
+  // Map diagram-examples to diagramExamples
+  const diagramExamples = (rule as Record<string, unknown>)['diagram-examples']
+  if (Array.isArray(diagramExamples)) {
+    normalized.diagramExamples = diagramExamples.filter(
+      (ex): ex is string => typeof ex === 'string'
+    )
+  }
+
+  return normalized
 }
 
 function normalizeAnalyzeHints(rawHints: unknown): AnalyzeHint[] | undefined {
@@ -103,38 +191,153 @@ function normalizeAnalyzeHints(rawHints: unknown): AnalyzeHint[] | undefined {
   )
 }
 
+function normalizeMetrics(rawMetrics: unknown): AnalysisMetrics | undefined {
+  if (!rawMetrics || typeof rawMetrics !== 'object' || Array.isArray(rawMetrics)) {
+    return undefined
+  }
+
+  const m = rawMetrics as Record<string, unknown>
+  const rawIssueCounts = m['issue-counts']
+
+  let issueCounts: AnalysisMetrics['issueCounts'] = { bySeverity: {}, byRule: {} }
+  if (rawIssueCounts && typeof rawIssueCounts === 'object' && !Array.isArray(rawIssueCounts)) {
+    const ic = rawIssueCounts as Record<string, unknown>
+    const bySeverity = ic['by-severity']
+    const byRule = ic['by-rule']
+    issueCounts = {
+      bySeverity:
+        bySeverity && typeof bySeverity === 'object' && !Array.isArray(bySeverity)
+          ? (bySeverity as Record<string, number>)
+          : {},
+      byRule:
+        byRule && typeof byRule === 'object' && !Array.isArray(byRule)
+          ? (byRule as Record<string, number>)
+          : {},
+    }
+  }
+
+  return {
+    nodeCount: typeof m['node-count'] === 'number' ? (m['node-count'] as number) : 0,
+    edgeCount: typeof m['edge-count'] === 'number' ? (m['edge-count'] as number) : 0,
+    disconnectedNodeCount:
+      typeof m['disconnected-node-count'] === 'number'
+        ? (m['disconnected-node-count'] as number)
+        : 0,
+    duplicateNodeCount:
+      typeof m['duplicate-node-count'] === 'number' ? (m['duplicate-node-count'] as number) : 0,
+    maxFanin: typeof m['max-fanin'] === 'number' ? (m['max-fanin'] as number) : 0,
+    maxFanout: typeof m['max-fanout'] === 'number' ? (m['max-fanout'] as number) : 0,
+    diagramType: typeof m['diagram-type'] === 'string' ? (m['diagram-type'] as string) : 'unknown',
+    issueCounts,
+  }
+}
+
+function normalizeAnalysisError(rawError: unknown): AnalysisError | null {
+  if (!rawError || typeof rawError !== 'object' || Array.isArray(rawError)) {
+    return null
+  }
+
+  const err = rawError as Record<string, unknown>
+  const code = typeof err.code === 'string' ? err.code : 'unknown'
+  const message = typeof err.message === 'string' ? err.message : 'Unknown error'
+  const details =
+    err.details && typeof err.details === 'object' && !Array.isArray(err.details)
+      ? (err.details as Record<string, unknown>)
+      : undefined
+
+  return { code, message, details }
+}
+
 function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
   const data = rawData && typeof rawData === 'object' ? rawData : null
-  const rawResults = data && 'results' in data ? (data as { results?: unknown }).results : undefined
+
+  // Support both old format (results) and new format (issues)
+  const rawResults =
+    data && 'results' in data
+      ? (data as { results?: unknown }).results
+      : data && 'issues' in data
+        ? (data as { issues?: unknown }).issues
+        : undefined
+
+  // Support both old format (diagram_type) and new format (metrics.diagram-type)
   const rawDiagramType =
-    data && 'diagram_type' in data ? (data as { diagram_type?: unknown }).diagram_type : undefined
+    data && 'diagram_type' in data
+      ? (data as { diagram_type?: unknown }).diagram_type
+      : undefined
+  const rawMetrics = data && 'metrics' in data ? (data as { metrics?: unknown }).metrics : undefined
+  const normalizedMetrics = normalizeMetrics(rawMetrics)
+  const diagramTypeFromMetrics = normalizedMetrics?.diagramType
+
   const rawHints = data && 'hints' in data ? (data as { hints?: unknown }).hints : undefined
   const normalizedHints = normalizeAnalyzeHints(rawHints)
+
+  // Extract hints from error.details.suggestion if present
+  const rawError = data && 'error' in data ? (data as { error?: unknown }).error : undefined
+  const normalizedError = normalizeAnalysisError(rawError)
+  const errorSuggestion =
+    normalizedError?.details && typeof normalizedError.details.suggestion === 'string'
+      ? normalizedError.details.suggestion
+      : undefined
+
   const normalizedResults = Array.isArray(rawResults)
     ? rawResults.map(normalizeViolation).filter((result): result is Violation => result !== null)
     : []
 
+  // Combine explicit hints with error suggestion
+  const combinedHints: AnalyzeHint[] = [...(normalizedHints ?? [])]
+  if (errorSuggestion) {
+    combinedHints.push(errorSuggestion)
+  }
+
   const normalized: AnalyzeResponse = {
-    diagram_type: typeof rawDiagramType === 'string' ? rawDiagramType : '',
+    diagram_type:
+      typeof rawDiagramType === 'string'
+        ? rawDiagramType
+        : diagramTypeFromMetrics ?? '',
     results: normalizedResults,
-    ...(normalizedHints !== undefined ? { hints: normalizedHints } : {}),
+    ...(combinedHints.length > 0 ? { hints: combinedHints } : {}),
+  }
+
+  // New API fields
+  if (data && 'valid' in data) {
+    normalized.valid = typeof (data as { valid?: unknown }).valid === 'boolean'
+      ? (data as { valid: boolean }).valid
+      : undefined
+  }
+  if (data && 'lint-supported' in data) {
+    normalized.lintSupported = typeof (data as { 'lint-supported'?: unknown })['lint-supported'] === 'boolean'
+      ? (data as { 'lint-supported': boolean })['lint-supported']
+      : undefined
+  }
+  if (data && 'syntax-error' in data) {
+    const se = (data as { 'syntax-error'?: unknown })['syntax-error']
+    normalized.syntaxError = typeof se === 'string' ? se : se === null ? null : undefined
+  }
+  if (normalizedError) {
+    normalized.error = normalizedError
+  }
+  if (normalizedMetrics) {
+    normalized.metrics = normalizedMetrics
+  }
+  if (data && 'request-id' in data) {
+    const rid = (data as { 'request-id'?: unknown })['request-id']
+    normalized.requestId = typeof rid === 'string' ? rid : undefined
+  }
+  if (data && 'timestamp' in data) {
+    const ts = (data as { timestamp?: unknown }).timestamp
+    normalized.timestamp = typeof ts === 'number' ? ts : undefined
   }
 
   if (process.env.NODE_ENV !== 'production') {
     const malformedReasons: string[] = []
 
     if (!data) malformedReasons.push('missing `data` payload')
-    if (!Array.isArray(rawResults)) malformedReasons.push('non-array `results`')
+    if (!Array.isArray(rawResults)) malformedReasons.push('non-array `results`/`issues`')
     if (Array.isArray(rawResults) && normalizedResults.length !== rawResults.length) {
-      malformedReasons.push('invalid entries in `results`')
+      malformedReasons.push('invalid entries in `results`/`issues`')
     }
-    if (typeof rawDiagramType !== 'string') malformedReasons.push('missing/invalid `diagram_type`')
-    if (rawHints !== undefined) {
-      if (!Array.isArray(rawHints)) {
-        malformedReasons.push('non-array `hints`')
-      } else if (normalizedHints && normalizedHints.length !== rawHints.length) {
-        malformedReasons.push('invalid entries in `hints`')
-      }
+    if (typeof rawDiagramType !== 'string' && !diagramTypeFromMetrics) {
+      malformedReasons.push('missing/invalid `diagram_type`/`metrics.diagram-type`')
     }
 
     if (malformedReasons.length > 0) {
@@ -171,30 +374,37 @@ function normalizeRulesResponse(rawData: unknown): NormalizedRulesResponse {
     const reasonCounts = {
       nonObject: 0,
       missingId: 0,
-      missingName: 0,
       missingDescription: 0,
       invalidSeverity: 0,
+      planned: 0,
     }
 
     const normalizedRules = rawRules
       .map((rawRule) => {
         const normalizedRule = normalizeRule(rawRule)
-        if (normalizedRule) return normalizedRule
+        if (!normalizedRule) {
+          if (!rawRule || typeof rawRule !== 'object' || Array.isArray(rawRule)) {
+            reasonCounts.nonObject += 1
+            return null
+          }
 
-        if (!rawRule || typeof rawRule !== 'object' || Array.isArray(rawRule)) {
-          reasonCounts.nonObject += 1
+          const rule = rawRule as Record<string, unknown>
+          if (typeof rule.id !== 'string') reasonCounts.missingId += 1
+          if (typeof rule.description !== 'string') reasonCounts.missingDescription += 1
+          if (rule.severity !== 'error' && rule.severity !== 'warning' && rule.severity !== 'info') {
+            reasonCounts.invalidSeverity += 1
+          }
+
           return null
         }
 
-        const rule = rawRule as Record<string, unknown>
-        if (typeof rule.id !== 'string') reasonCounts.missingId += 1
-        if (typeof rule.name !== 'string') reasonCounts.missingName += 1
-        if (typeof rule.description !== 'string') reasonCounts.missingDescription += 1
-        if (rule.severity !== 'error' && rule.severity !== 'warning' && rule.severity !== 'info') {
-          reasonCounts.invalidSeverity += 1
+        // Filter out planned rules — they are not yet available for linting
+        if (normalizedRule.state === 'planned') {
+          reasonCounts.planned += 1
+          return null
         }
 
-        return null
+        return normalizedRule
       })
       .filter((rule): rule is Rule => rule !== null)
 
