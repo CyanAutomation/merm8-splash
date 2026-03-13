@@ -76,7 +76,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
             marginBottom: '6px',
           }}
         >
-          Ctrl+E to focus · Paste Mermaid diagram code below
+          Paste Mermaid diagram code below
         </div>
 
         <div
