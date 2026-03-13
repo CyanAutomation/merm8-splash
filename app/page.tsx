@@ -83,6 +83,7 @@ export default function Home() {
   const [showResetConfirmation, setShowResetConfirmation] = useState(false)
   const [showRulesModal, setShowRulesModal] = useState(false)
   const [showApiConfigModal, setShowApiConfigModal] = useState(false)
+  const [showFullscreenDiagram, setShowFullscreenDiagram] = useState(false)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
@@ -509,6 +510,7 @@ export default function Home() {
                     diagramColorMode={prefs.diagramPreviewMode}
                     onToggleDiagramColorMode={(value) => savePrefs({ diagramPreviewMode: value })}
                     onJumpToLine={handleJumpToLine}
+                    onExpandToFullscreen={() => setShowFullscreenDiagram(true)}
                   />
                 </ErrorBoundary>
               </div>
@@ -725,6 +727,24 @@ export default function Home() {
           isUnavailable={rulesUnavailableEndpoint === endpoint}
           diagramType={diagramType}
         />
+      </Modal>
+
+      {/* Fullscreen Diagram Modal */}
+      <Modal
+        isOpen={showFullscreenDiagram}
+        onClose={() => setShowFullscreenDiagram(false)}
+        title="Diagram Preview"
+        maxWidth="95vw"
+        maxHeight="95vh"
+      >
+        <div style={{ height: '80vh' }}>
+          <DiagramPreview
+            code={code}
+            parseErrorMessage={parseErrorDetail}
+            useBeautifulRenderer={prefs.useBeautifulRenderer}
+            diagramColorMode={prefs.diagramPreviewMode}
+          />
+        </div>
       </Modal>
       </div>
     </SnackbarProvider>

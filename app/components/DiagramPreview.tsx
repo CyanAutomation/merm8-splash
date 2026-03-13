@@ -17,6 +17,7 @@ interface DiagramPreviewProps {
   diagramColorMode?: DiagramColorMode
   onToggleDiagramColorMode?: (value: DiagramColorMode) => void
   onJumpToLine?: (line: number) => void
+  onExpandToFullscreen?: () => void
 }
 
 type DiagramColorMode = 'dark' | 'light'
@@ -128,6 +129,7 @@ export default function DiagramPreview({
   diagramColorMode: controlledDiagramColorMode,
   onToggleDiagramColorMode,
   onJumpToLine,
+  onExpandToFullscreen,
 }: DiagramPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
@@ -585,6 +587,32 @@ export default function DiagramPreview({
               }}
             >
               ↔ Fit
+            </button>
+          )}
+          {!parseErrorMessage && !renderError && code.trim() !== '' && onExpandToFullscreen && (
+            <button
+              onClick={onExpandToFullscreen}
+              title="Expand diagram to full screen"
+              style={{
+                padding: '4px 8px',
+                fontSize: '12px',
+                border: '1px solid var(--color-border)',
+                background: 'var(--color-bg-secondary)',
+                color: 'var(--color-text-primary)',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-primary)'
+                ;(e.currentTarget as HTMLButtonElement).style.color = '#000'
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg-secondary)'
+                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'
+              }}
+            >
+              ⛶ Expand
             </button>
           )}
           {!parseErrorMessage && !renderError && code.trim() !== '' && onToggleBeautifulRenderer && (
