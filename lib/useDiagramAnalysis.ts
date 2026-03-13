@@ -258,21 +258,13 @@ function buildAnalysisCacheKey(
   return `${normalizedEndpoint}::${normalizedRules}::${useServerDefaults}`
 }
 
-function hashCodeContent(newCode: string): string {
-  let hash = 0
-  for (let i = 0; i < newCode.length; i += 1) {
-    hash = (hash * 31 + newCode.charCodeAt(i)) >>> 0
-  }
-  return hash.toString(16)
-}
-
 function buildInFlightAnalysisKey(
   endpoint: string,
   enabledRules: string[],
   options: AnalyzeRequestOptions,
   newCode: string
 ): string {
-  return `${buildAnalysisCacheKey(endpoint, enabledRules, options)}::${hashCodeContent(newCode)}`
+  return `${buildAnalysisCacheKey(endpoint, enabledRules, options)}::${newCode}`
 }
 
 function pruneAnalysisCache(cache: Map<string, AnalysisCacheEntry>, now: number): void {
