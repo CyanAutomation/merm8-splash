@@ -88,9 +88,6 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
               </span>
             </span>
             <span>Source: {SOURCE_LABELS[configSource] ?? configSource}</span>
-            <span style={{ color: 'var(--color-text-secondary)' }}>
-              Ctrl+K to focus
-            </span>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -153,7 +150,6 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
             <button
               className="btn"
               onClick={onTestConnection}
-              title="Ctrl+K to focus"
               disabled={connectionStatus === 'checking' || !endpointValidation.valid}
             >
               Test

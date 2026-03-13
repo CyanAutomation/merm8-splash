@@ -21,18 +21,10 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 The easiest way to try merm8-splash is to use the cloud-hosted version:
 
 1. Navigate to the live application (URL provided by your deployment)
-2. Enter your merm8 API endpoint URL in the API Config panel (Cmd/Ctrl+K)
+2. Enter your merm8 API endpoint URL in the API Config panel
 3. Start writing Mermaid diagram code in the editor
 4. View real-time linting results and rule violations
 5. Configure which rules to enforce using the Rules panel
-
-### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>K</kbd> | Focus API Configuration panel |
-| <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>E</kbd> | Focus Diagram Editor |
-| <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>R</kbd> | Focus Results panel |
 
 ## Development
 
@@ -90,7 +82,7 @@ The application needs to connect to a merm8 API instance. Configure it via:
    ```
 
 2. **UI Configuration** (at runtime):
-   - Use the API Config panel (Cmd/Ctrl+K)
+   - Use the API Config panel
    - Enter any merm8 API endpoint URL
    - The app saves your selection in browser storage
 

@@ -15,7 +15,6 @@ import ErrorBoundary from './components/ErrorBoundary'
 import Modal from './components/Modal'
 import { useApiEndpoint } from '@/lib/useApiEndpoint'
 import { useDiagramAnalysis } from '@/lib/useDiagramAnalysis'
-import { useKeyboardShortcuts } from '@/lib/keyboard'
 import { useLayoutPreferences } from '@/lib/useLayoutPreferences'
 import { fetchRules, Rule } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
@@ -254,12 +253,6 @@ export default function Home() {
     })
   }, [])
 
-  useKeyboardShortcuts({
-    onFocusApiInput: openApiConfigAndFocus,
-    onFocusEditor: () => editorRef.current?.focus(),
-    onFocusResults: () => resultsRef.current?.focus(),
-  })
-
   const toggleRule = useCallback((ruleId: string) => {
     setEnabledRules((prev) =>
       prev.includes(ruleId)
@@ -383,9 +376,6 @@ export default function Home() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
-            Ctrl+K (API) · Ctrl+E · Ctrl+R
-          </div>
           <button
             onClick={openApiConfigAndFocus}
             style={headerControlButtonStyle}
