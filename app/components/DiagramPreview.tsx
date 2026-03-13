@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { parseDiagramType } from '@/lib/diagramTypes'
 import { extractLineNumber } from '@/lib/errorUtils'
 import ToggleSlider from './ToggleSlider'
@@ -147,7 +147,7 @@ export default function DiagramPreview({
   const ownedRenderIdsRef = useRef<Set<string>>(new Set())
   const previewId = `diagram-preview-${useId()}`
 
-  const markOwnedRenderedNodes = (renderId?: string) => {
+  const markOwnedRenderedNodes = useCallback((renderId?: string) => {
     if (!containerRef.current) return
 
     containerRef.current
@@ -168,9 +168,9 @@ export default function DiagramPreview({
         fallbackNode.setAttribute('data-render-id', renderId)
       }
     }
-  }
+  }, [previewId])
 
-  const removeMermaidFallbackNodes = (renderId?: string) => {
+  const removeMermaidFallbackNodes = useCallback((renderId?: string) => {
     if (!containerRef.current) return
 
     const container = containerRef.current
@@ -202,7 +202,7 @@ export default function DiagramPreview({
       }
       ownedRenderIdsRef.current.delete(targetRenderId)
     }
-  }
+  }, [previewId])
 
   const clearPendingFitRaf = () => {
     if (rafIdRef.current !== null) {
@@ -516,7 +516,7 @@ export default function DiagramPreview({
       cancelled = true
       clearPendingFitRaf()
     }
-  }, [code, effectiveDiagramColorMode, onParseStateChange, useBeautifulRenderer])
+  }, [code, effectiveDiagramColorMode, onParseStateChange, useBeautifulRenderer, markOwnedRenderedNodes, removeMermaidFallbackNodes])
 
   useEffect(() => {
     return () => {
