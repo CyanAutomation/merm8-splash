@@ -32,6 +32,9 @@ export default function RulesPanel({
   const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
   const displayedRules = rules.filter((rule) => applicableRuleIds.has(rule.id))
   const applicableEnabledRules = enabledRules.filter((id) => applicableRuleIds.has(id))
+  const rulesBadgeLabel = isUnavailable
+    ? 'Server defaults'
+    : `${applicableEnabledRules.length}/${displayedRules.length}`
 
   const severityColor = (severity: string) => {
     switch (severity) {
@@ -65,7 +68,7 @@ export default function RulesPanel({
               marginLeft: '4px',
             }}
           >
-            {applicableEnabledRules.length}/{displayedRules.length}
+            {rulesBadgeLabel}
           </span>
         </div>
         {!collapsed && (
