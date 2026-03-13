@@ -679,7 +679,7 @@ export default function DiagramPreview({
 
       <div
         ref={containerRef}
-        data-preview-id={previewIdRef.current}
+        data-preview-id={previewId}
         style={{
           flex: 1,
           overflow: 'auto',
