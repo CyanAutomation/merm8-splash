@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { parseDiagramType } from '@/lib/diagramTypes'
 import { extractLineNumber } from '@/lib/errorUtils'
 import ToggleSlider from './ToggleSlider'
@@ -78,7 +78,6 @@ const MERMAID_THEME_CONFIG: Record<
 let patchRefCount = 0
 let nativeInsertAdjacentHTML: typeof Element.prototype.insertAdjacentHTML | null = null
 const activeInsertAdjacentHtmlBlockers = new Set<() => boolean>()
-let previewInstanceCounter = 0
 
 const isMermaidErrorHtml = (html: string): boolean =>
   html.includes('aria-roledescription="error"') && html.includes('dmermaid-')
@@ -144,10 +143,7 @@ export default function DiagramPreview({
   const renderSequenceRef = useRef(0)
   const lastRenderIdRef = useRef<string | null>(null)
   const ownedRenderIdsRef = useRef<Set<string>>(new Set())
-  const previewIdRef = useRef<string | null>(null)
-  if (!previewIdRef.current) {
-    previewIdRef.current = `diagram-preview-${++previewInstanceCounter}`
-  }
+  const previewId = `diagram-preview-${useId()}`
 
   const markOwnedRenderedNodes = (renderId?: string) => {
     if (!containerRef.current) return
@@ -155,13 +151,21 @@ export default function DiagramPreview({
     containerRef.current
       .querySelectorAll('svg')
       .forEach((node) => {
-        node.setAttribute('data-preview-id', previewIdRef.current)
+        node.setAttribute('data-preview-id', previewId)
         if (renderId) {
           node.setAttribute('data-render-id', renderId)
         } else {
           node.removeAttribute('data-render-id')
         }
       })
+
+    if (renderId) {
+      const fallbackNode = containerRef.current.querySelector(`#d${renderId}`)
+      if (fallbackNode) {
+        fallbackNode.setAttribute('data-preview-id', previewId)
+        fallbackNode.setAttribute('data-render-id', renderId)
+      }
+    }
   }
 
   const removeMermaidFallbackNodes = (renderId?: string) => {
@@ -176,7 +180,7 @@ export default function DiagramPreview({
 
     // Remove any locally rendered error SVGs owned by this preview instance.
     container
-      .querySelectorAll(`svg[aria-roledescription="error"][data-preview-id="${previewIdRef.current}"]`)
+      .querySelectorAll(`svg[aria-roledescription="error"][data-preview-id="${previewId}"]`)
       .forEach((node) => node.remove())
 
     const targetRenderIds = new Set<string>()
@@ -191,7 +195,7 @@ export default function DiagramPreview({
     }
     for (const targetRenderId of targetRenderIds) {
       const fallbackNode = container.querySelector(`#d${targetRenderId}`)
-      if (fallbackNode) {
+      if (fallbackNode?.getAttribute('data-preview-id') === previewId) {
         fallbackNode.remove()
       }
       ownedRenderIdsRef.current.delete(targetRenderId)
