@@ -9,7 +9,7 @@ import DiagramPreview from './components/DiagramPreview'
 import RulesPanel from './components/RulesPanel'
 import ResultsPanel, { ResultsPanelRef } from './components/ResultsPanel'
 import StatusBar from './components/StatusBar'
-import { SnackbarProvider } from './components/Snackbar'
+import { SnackbarProvider, useSnackbar } from './components/Snackbar'
 import ExportDropdown from './components/ExportDropdown'
 import ErrorBoundary from './components/ErrorBoundary'
 import Modal from './components/Modal'
@@ -40,7 +40,7 @@ function MetricItem({ label, value }: { label: string; value: string | number })
   )
 }
 
-export default function Home() {
+function HomeContent() {
   const headerControlButtonStyle = {
     padding: '4px 12px',
     fontSize: '12px',
@@ -79,6 +79,7 @@ export default function Home() {
     configSource,
     statusMessage,
   } = useApiEndpoint()
+  const { show: showSnackbar } = useSnackbar()
 
   const {
     code,
@@ -111,6 +112,9 @@ export default function Home() {
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
   const dragCleanupFnsRef = useRef<Set<() => void>>(new Set())
   const previousAnalysisCodeRef = useRef(code)
+  const previousConnectionStatusRef = useRef(connectionStatus)
+  const previousStatusMessageRef = useRef(statusMessage)
+  const pendingSnackbarActionRef = useRef<'test-connection' | 'save-endpoint' | null>(null)
 
   // Load rules when connected
   const loadRules = useCallback(async () => {
@@ -250,8 +254,56 @@ export default function Home() {
   ])
 
   const handleTestConnection = useCallback(async () => {
+    pendingSnackbarActionRef.current = 'test-connection'
     await testConnection()
   }, [testConnection])
+
+  const handleSaveEndpoint = useCallback(() => {
+    pendingSnackbarActionRef.current = 'save-endpoint'
+    saveEndpoint()
+  }, [saveEndpoint])
+
+  useEffect(() => {
+    const previousConnectionStatus = previousConnectionStatusRef.current
+    const previousStatusMessage = previousStatusMessageRef.current
+    const statusChanged = previousConnectionStatus !== connectionStatus
+    const messageChanged = previousStatusMessage !== statusMessage
+
+    if (pendingSnackbarActionRef.current === 'test-connection' && (statusChanged || messageChanged)) {
+      if (connectionStatus === 'connected' && previousConnectionStatus !== 'connected') {
+        showSnackbar('Connection verified.', 'success')
+        pendingSnackbarActionRef.current = null
+      } else if (connectionStatus === 'error' && (previousConnectionStatus !== 'error' || messageChanged)) {
+        const normalizedMessage = (statusMessage || '').toLowerCase()
+        const isInvalidEndpoint = normalizedMessage.includes('invalid endpoint')
+        showSnackbar(
+          isInvalidEndpoint
+            ? 'Invalid endpoint. Check URL format and try again.'
+            : 'Endpoint unreachable. Verify server status and URL.',
+          'error'
+        )
+        pendingSnackbarActionRef.current = null
+      }
+    }
+
+    if (pendingSnackbarActionRef.current === 'save-endpoint' && messageChanged) {
+      const normalizedMessage = (statusMessage || '').toLowerCase()
+
+      if (normalizedMessage.includes('saved to localstorage')) {
+        showSnackbar('Endpoint saved.', 'success')
+        pendingSnackbarActionRef.current = null
+      } else if (normalizedMessage.includes('invalid endpoint')) {
+        showSnackbar('Save blocked: invalid endpoint.', 'error')
+        pendingSnackbarActionRef.current = null
+      } else if (normalizedMessage.includes('could not save endpoint')) {
+        showSnackbar('Save blocked in this browser context.', 'error')
+        pendingSnackbarActionRef.current = null
+      }
+    }
+
+    previousConnectionStatusRef.current = connectionStatus
+    previousStatusMessageRef.current = statusMessage
+  }, [connectionStatus, statusMessage, showSnackbar])
 
   const handleRecheck = useCallback(() => {
     const isConnected = connectionStatus === 'connected'
@@ -355,7 +407,6 @@ export default function Home() {
   )
 
   return (
-    <SnackbarProvider>
       <div
         style={{
           display: 'flex',
@@ -775,7 +826,7 @@ export default function Home() {
               onEndpointChange={setEndpoint}
               connectionStatus={connectionStatus}
               onTestConnection={handleTestConnection}
-              onSave={saveEndpoint}
+              onSave={handleSaveEndpoint}
               configSource={configSource}
               statusMessage={statusMessage}
             />
@@ -819,6 +870,13 @@ export default function Home() {
         </div>
       </Modal>
       </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <SnackbarProvider>
+      <HomeContent />
     </SnackbarProvider>
   )
 }
