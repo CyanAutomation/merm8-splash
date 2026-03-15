@@ -9,7 +9,7 @@ test('shows success feedback for a valid endpoint after connection test', async 
     })
   })
 
-  await page.goto('http://localhost:3000/?api=https://api.example.test')
+  await page.goto('/?api=')
   await page.getByRole('button', { name: 'Test' }).click()
 
   const successMessage = page.getByText('Connection successful.')
