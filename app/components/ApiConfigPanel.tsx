@@ -56,6 +56,15 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
     const endpointValidation = validateApiEndpoint(endpoint)
     const isEndpointInvalid = !endpointValidation.valid
     const endpointFeedback = isEndpointInvalid ? endpointValidation.message : statusMessage
+    const endpointFeedbackColor = isEndpointInvalid
+      ? 'var(--color-error)'
+      : connectionStatus === 'connected'
+      ? 'var(--color-success)'
+      : connectionStatus === 'error'
+      ? 'var(--color-error)'
+      : connectionStatus === 'checking'
+      ? 'var(--color-warning)'
+      : 'var(--color-text-secondary)'
 
     return (
       <div className="panel" style={{ borderColor: 'var(--color-border)' }}>
@@ -160,12 +169,12 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
           </div>
         </div>
 
-        {isEndpointInvalid && endpointFeedback && (
+        {endpointFeedback && (
           <div
             style={{
               marginTop: '6px',
               fontSize: '11px',
-              color: 'var(--color-error)',
+              color: endpointFeedbackColor,
             }}
           >
             {endpointFeedback}
