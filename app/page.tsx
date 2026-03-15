@@ -287,7 +287,7 @@ function HomeContent() {
     }
 
     if (pendingSnackbarActionRef.current === 'save-endpoint' && messageChanged) {
-      const normalizedMessage = statusMessage.toLowerCase()
+      const normalizedMessage = (statusMessage || '').toLowerCase()
 
       if (normalizedMessage.includes('saved to localstorage')) {
         showSnackbar('Endpoint saved.', 'success')
