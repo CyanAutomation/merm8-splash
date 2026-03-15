@@ -437,12 +437,17 @@ export default function DiagramPreview({
         ownedRenderIdsRef.current.add(id)
         lastRenderIdRef.current = id
         
+        const renderContainer = containerRef.current
+        if (!renderContainer) {
+          return
+        }
+
         let svg: string = ''
         const releasePatch = acquireInsertAdjacentHtmlPatch(() => isRenderingDiagram)
         try {
           isRenderingDiagram = true
           // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
-          const result = await mermaid.render(id, code)
+          const result = await mermaid.render(id, code, renderContainer ?? undefined)
           svg = result.svg
         } finally {
           isRenderingDiagram = false
