@@ -452,7 +452,8 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       newCode: string,
       enabledRules: string[],
       rulesMetadata: Rule[],
-      options: AnalyzeRequestOptions = {}
+      options: AnalyzeRequestOptions = {},
+      source: AnalysisRunSource
     ) => {
       if (!endpoint || !newCode.trim()) {
         cancelAnalysis()
