@@ -427,6 +427,55 @@ test('hash-colliding legacy code strings never share in-flight entries', async (
   const rerenderedHook = useDiagramAnalysis()
   assert.equal(rerenderedHook.violations[0].rule_id, 'second')
 })
+test('coalesced joiner waits for retry lifecycle and receives eventual success', async () => {
+  const firstAttempt = createDeferred()
+  let callCount = 0
+
+  const retryableAxiosError = {
+    __isAxiosError: true,
+    response: {
+      status: 504,
+    },
+  }
+
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      callCount += 1
+      if (callCount === 1) {
+        return firstAttempt.promise
+      }
+      return {
+        diagram_type: 'flowchart',
+        results: [{ rule_id: 'retried', severity: 'warning', message: 'eventual success', line: 1 }],
+      }
+    },
+    isAxiosErrorImpl: (err) => Boolean(err && err.__isAxiosError),
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+
+  assert.equal(callCount, 1)
+
+  firstAttempt.reject(retryableAxiosError)
+  await new Promise((resolve) => setImmediate(resolve))
+
+  await timerControls.advanceBy(1000)
+  await new Promise((resolve) => setImmediate(resolve))
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(callCount, 2)
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+
+  assert.equal(rerenderedHook.violations[0].rule_id, 'retried')
+  assert.equal(rerenderedHook.analyzeError, null)
+})
+
 test('identical concurrent forceAnalysis calls coalesce into one API request', async () => {
   const deferred = createDeferred()
   let callCount = 0
