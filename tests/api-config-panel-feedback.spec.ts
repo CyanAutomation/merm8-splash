@@ -26,7 +26,7 @@ test('shows unreachable feedback for a valid endpoint when health check fails', 
     })
   })
 
-  await page.goto('http://localhost:3000/?api=https://api.example.test')
+  await page.goto('/?api=')
   await page.getByRole('button', { name: 'Test' }).click()
 
   const unreachableMessage = page.getByText('Could not reach endpoint. Check URL and server status.')
