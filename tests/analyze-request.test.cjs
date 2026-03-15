@@ -816,8 +816,10 @@ test('validateApiEndpoint blocks normalized local/private bypass forms in produc
       'http://localhost.',
       'http://2130706433',
       'http://127.1',
+      'http://127.999',
       'http://127.0.1',
       'http://127.0.1.1',
+      'http://10.1.65535',
       'http://[::1]',
       'http://[fe80::1]',
       'http://100.64.0.1',
@@ -831,6 +833,14 @@ test('validateApiEndpoint blocks normalized local/private bypass forms in produc
       const result = validateApiEndpoint(blockedUrl)
       assert.equal(result.valid, false, `expected ${blockedUrl} to be rejected`)
       assert.equal(result.message, 'Local/private network endpoints are not allowed in production.')
+    }
+
+    const invalidUrls = ['http://1.999.1.1', 'http://10.1.70000']
+
+    for (const invalidUrl of invalidUrls) {
+      const result = validateApiEndpoint(invalidUrl)
+      assert.equal(result.valid, false, `expected ${invalidUrl} to be rejected as invalid`)
+      assert.equal(result.message, 'Enter a valid URL (example: https://api.merm8.app).')
     }
   } finally {
     process.env.NODE_ENV = originalNodeEnv
