@@ -395,7 +395,8 @@ function HomeContent() {
   const handleReset = useCallback(() => {
     resetPrefs()
     setShowResetConfirmation(false)
-  }, [resetPrefs])
+    showSnackbar('Layout reset to defaults.', 'success')
+  }, [resetPrefs, showSnackbar])
 
   const parseStatus: 'idle' | 'valid' | 'error' =
     hasParseError ? 'error' : code.trim() ? 'valid' : 'idle'
