@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useImperativeHandle, forwardRef } from 'react'
+import { useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
 
 interface DiagramEditorProps {
@@ -13,12 +13,24 @@ export interface DiagramEditorRef {
   highlightLine: (lineNum: number | null) => void
 }
 
+type CopyStatus = 'idle' | 'success' | 'error'
+
 const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
   ({ value, onChange }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const editorContainerRef = useRef<HTMLDivElement>(null)
     const [currentExampleIndex, setCurrentExampleIndex] = useState(0)
     const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
+    const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
+    const copyStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+      return () => {
+        if (copyStatusTimeoutRef.current) {
+          clearTimeout(copyStatusTimeoutRef.current)
+        }
+      }
+    }, [])
 
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
@@ -58,18 +70,37 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
 
     const handleCopyClick = async () => {
       const hasClipboardApi = typeof navigator !== 'undefined' && !!navigator.clipboard?.writeText
+      let copied = false
 
       if (hasClipboardApi) {
         try {
           await navigator.clipboard.writeText(value)
-          return
+          copied = true
         } catch {
-          fallbackCopyWithTextarea(value)
-          return
+          copied = fallbackCopyWithTextarea(value)
         }
+      } else {
+        copied = fallbackCopyWithTextarea(value)
       }
 
-      fallbackCopyWithTextarea(value)
+      if (copyStatusTimeoutRef.current) {
+        clearTimeout(copyStatusTimeoutRef.current)
+      }
+
+      if (copied) {
+        setCopyStatus('success')
+        copyStatusTimeoutRef.current = setTimeout(() => {
+          setCopyStatus('idle')
+          copyStatusTimeoutRef.current = null
+        }, 1300)
+        return
+      }
+
+      setCopyStatus('error')
+      copyStatusTimeoutRef.current = setTimeout(() => {
+        setCopyStatus('idle')
+        copyStatusTimeoutRef.current = null
+      }, 1700)
     }
 
     const handleLineNumberClick = (lineNum: number) => {
@@ -106,7 +137,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
               title="Copy diagram code"
               aria-label="Copy diagram code"
             >
-              ⎘
+              {copyStatus === 'success' ? '✓' : copyStatus === 'error' ? '⚠' : '⎘'}
             </button>
             <button
               className="btn"
