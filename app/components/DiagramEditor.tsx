@@ -2,6 +2,7 @@
 
 import { useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
+import { useSnackbar } from '@/app/components/Snackbar'
 
 interface DiagramEditorProps {
   value: string
@@ -17,6 +18,10 @@ type CopyStatus = 'idle' | 'success' | 'error'
 
 const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
   ({ value, onChange }, ref) => {
+    const snackbar = useSnackbar()
+    if (!snackbar) {
+      throw new Error('DiagramEditor must be used within a SnackbarProvider')
+    }
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const editorContainerRef = useRef<HTMLDivElement>(null)
     const [currentExampleIndex, setCurrentExampleIndex] = useState(0)
@@ -39,9 +44,11 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
 
     const handleExampleClick = () => {
       const nextIndex = (currentExampleIndex + 1) % EXAMPLE_DIAGRAMS.length
+      const nextExample = EXAMPLE_DIAGRAMS[nextIndex]
       setCurrentExampleIndex(nextIndex)
-      onChange(EXAMPLE_DIAGRAMS[nextIndex].code)
+      onChange(nextExample.code)
       setHighlightedLine(null)
+      snackbar.show(`Loaded example ${nextIndex + 1} (${nextExample.type}).`)
     }
 
     const fallbackCopyWithTextarea = (text: string): boolean => {
@@ -89,6 +96,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
 
       if (copied) {
         setCopyStatus('success')
+        snackbar.show('Diagram code copied.')
         copyStatusTimeoutRef.current = setTimeout(() => {
           setCopyStatus('idle')
           copyStatusTimeoutRef.current = null
@@ -97,6 +105,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       }
 
       setCopyStatus('error')
+      snackbar.show('Copy failed.', 'error')
       copyStatusTimeoutRef.current = setTimeout(() => {
         setCopyStatus('idle')
         copyStatusTimeoutRef.current = null
@@ -142,7 +151,10 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
             <button
               className="btn"
               style={{ fontSize: '12px', padding: '4px 12px' }}
-              onClick={() => onChange('')}
+              onClick={() => {
+                onChange('')
+                snackbar.show('Editor cleared.')
+              }}
             >
               Clear
             </button>
