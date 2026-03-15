@@ -572,6 +572,33 @@ test('identical forceAnalysis request reuses fresh cache entry', async () => {
   assert.equal(rerenderedHook.violations[0].rule_id, 'cached')
 })
 
+
+
+test('cache key changes when rules metadata changes with same code and enabled rules', async () => {
+  let callCount = 0
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      callCount += 1
+      return { diagram_type: 'flowchart', results: [] }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [
+    { id: 'r1', description: 'Rule 1', severity: 'warning', defaultConfig: { limit: 1 } },
+  ])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [
+    { id: 'r1', description: 'Rule 1', severity: 'warning', defaultConfig: { limit: 2 } },
+  ])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(callCount, 2)
+})
 test('cache key changes when code/rules/endpoint change', async () => {
   const calls = []
 

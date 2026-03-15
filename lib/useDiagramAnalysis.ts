@@ -291,21 +291,61 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
 function buildAnalysisCacheKey(
   endpoint: string,
   enabledRules: string[],
+  rulesMetadata: Rule[],
   options: AnalyzeRequestOptions
 ): string {
   const normalizedEndpoint = endpoint.trim().toLowerCase()
   const normalizedRules = [...enabledRules].sort().join(',')
+  const metadataFingerprint = buildRulesMetadataFingerprint(rulesMetadata)
   const useServerDefaults = options.useServerDefaults === true ? '1' : '0'
-  return `${normalizedEndpoint}::${normalizedRules}::${useServerDefaults}`
+  return `${normalizedEndpoint}::${normalizedRules}::${metadataFingerprint}::${useServerDefaults}`
 }
 
 function buildInFlightAnalysisKey(
   endpoint: string,
   enabledRules: string[],
+  rulesMetadata: Rule[],
   options: AnalyzeRequestOptions,
   newCode: string
 ): string {
-  return `${buildAnalysisCacheKey(endpoint, enabledRules, options)}::${newCode}`
+  return `${buildAnalysisCacheKey(endpoint, enabledRules, rulesMetadata, options)}::${newCode}`
+}
+
+function stableSerializeUnknown(value: unknown): string {
+  if (value === null) return 'null'
+  if (value === undefined) return 'undefined'
+  if (typeof value === 'string') return JSON.stringify(value)
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableSerializeUnknown(item)).join(',')}]`
+  }
+
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+      a.localeCompare(b)
+    )
+    return `{${entries
+      .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerializeUnknown(entryValue)}`)
+      .join(',')}}`
+  }
+
+  return String(value)
+}
+
+function buildRulesMetadataFingerprint(rulesMetadata: Rule[]): string {
+  return [...rulesMetadata]
+    .map((rule) => ({
+      id: rule.id,
+      severity: rule.severity,
+      state: rule.state,
+      availability: rule.availability,
+      defaultConfig: rule.defaultConfig,
+      configurableOptions: rule.configurableOptions,
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((rule) => stableSerializeUnknown(rule))
+    .join('|')
 }
 
 function pruneAnalysisCache(cache: Map<string, AnalysisCacheEntry>, now: number): void {
@@ -406,8 +446,8 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         return
       }
       const seq = ++requestSeqRef.current
-      const cacheKey = buildAnalysisCacheKey(endpoint, enabledRules, options)
-      const inFlightKey = buildInFlightAnalysisKey(endpoint, enabledRules, options, newCode)
+      const cacheKey = buildAnalysisCacheKey(endpoint, enabledRules, rulesMetadata, options)
+      const inFlightKey = buildInFlightAnalysisKey(endpoint, enabledRules, rulesMetadata, options, newCode)
       const cachedEntry = analysisCacheRef.current.get(cacheKey)
       const now = Date.now()
 
