@@ -90,6 +90,7 @@ function HomeContent() {
     analysisHints,
     diagramType,
     metrics,
+    lastCompletedRun,
     triggerAnalysis,
     forceAnalysis,
     cancelAnalysis,
@@ -115,6 +116,8 @@ function HomeContent() {
   const previousConnectionStatusRef = useRef(connectionStatus)
   const previousStatusMessageRef = useRef(statusMessage)
   const pendingSnackbarActionRef = useRef<'test-connection' | 'save-endpoint' | null>(null)
+  const pendingManualRunRef = useRef(false)
+  const lastManualRunSnackbarIdRef = useRef(0)
 
   // Load rules when connected
   const loadRules = useCallback(async () => {
@@ -317,8 +320,35 @@ function HomeContent() {
       return
     }
 
+    pendingManualRunRef.current = true
+    showSnackbar('Re-check started.', 'success')
     forceAnalysis(endpoint, code, enabledRules, rules, { useServerDefaults: rulesUnavailableForEndpoint })
-  }, [code, endpoint, connectionStatus, rulesLoading, rulesLoadedEndpoint, rulesUnavailableEndpoint, enabledRules, rules, forceAnalysis])
+  }, [code, endpoint, connectionStatus, rulesLoading, rulesLoadedEndpoint, rulesUnavailableEndpoint, enabledRules, rules, forceAnalysis, showSnackbar])
+
+
+  useEffect(() => {
+    if (!lastCompletedRun || lastCompletedRun.source !== 'manual') {
+      return
+    }
+
+    if (!pendingManualRunRef.current) {
+      return
+    }
+
+    if (lastCompletedRun.id <= lastManualRunSnackbarIdRef.current) {
+      return
+    }
+
+    lastManualRunSnackbarIdRef.current = lastCompletedRun.id
+    pendingManualRunRef.current = false
+
+    if (lastCompletedRun.status === 'success') {
+      showSnackbar(`Check complete: ${lastCompletedRun.violationsCount} violations`, 'success')
+      return
+    }
+
+    showSnackbar(lastCompletedRun.error ? `Check failed: ${lastCompletedRun.error}` : 'Check failed.', 'error')
+  }, [lastCompletedRun, showSnackbar])
 
   const openApiConfigAndFocus = useCallback(() => {
     setShowApiConfigModal(true)
