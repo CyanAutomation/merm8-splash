@@ -19,6 +19,9 @@ type CopyStatus = 'idle' | 'success' | 'error'
 const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
   ({ value, onChange }, ref) => {
     const snackbar = useSnackbar()
+    if (!snackbar) {
+      throw new Error('DiagramEditor must be used within a SnackbarProvider')
+    }
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const editorContainerRef = useRef<HTMLDivElement>(null)
     const [currentExampleIndex, setCurrentExampleIndex] = useState(0)
