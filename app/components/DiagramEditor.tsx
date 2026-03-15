@@ -32,6 +32,46 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       setHighlightedLine(null)
     }
 
+    const fallbackCopyWithTextarea = (text: string): boolean => {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.setAttribute('readonly', '')
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.select()
+
+      let success = false
+      try {
+        success = document.execCommand('copy')
+      } catch {
+        success = false
+      } finally {
+        if (textarea.parentNode) {
+          textarea.parentNode.removeChild(textarea)
+        }
+      }
+
+      return success
+    }
+
+    const handleCopyClick = async () => {
+      const hasClipboardApi = typeof navigator !== 'undefined' && !!navigator.clipboard?.writeText
+
+      if (hasClipboardApi) {
+        try {
+          await navigator.clipboard.writeText(value)
+          return
+        } catch {
+          fallbackCopyWithTextarea(value)
+          return
+        }
+      }
+
+      fallbackCopyWithTextarea(value)
+    }
+
     const handleLineNumberClick = (lineNum: number) => {
       setHighlightedLine(lineNum === highlightedLine ? null : lineNum)
     }
@@ -58,6 +98,15 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
               onClick={handleExampleClick}
             >
               Example
+            </button>
+            <button
+              className="btn"
+              style={{ fontSize: '12px', padding: '4px 8px' }}
+              onClick={handleCopyClick}
+              title="Copy diagram code"
+              aria-label="Copy diagram code"
+            >
+              ⎘
             </button>
             <button
               className="btn"
