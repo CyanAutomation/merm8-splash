@@ -14,6 +14,7 @@ export interface UseDiagramAnalysisReturn {
   analysisHints: string[]
   diagramType: string | null
   metrics: AnalysisMetrics | null
+  lastCompletedRun: AnalysisRunResult | null
   triggerAnalysis: (
     endpoint: string,
     code: string,
@@ -30,6 +31,16 @@ export interface UseDiagramAnalysisReturn {
     options?: AnalyzeRequestOptions
   ) => void
   cancelAnalysis: () => void
+}
+
+export type AnalysisRunSource = 'input' | 'config' | 'manual'
+
+export interface AnalysisRunResult {
+  id: number
+  source: AnalysisRunSource
+  status: 'success' | 'error'
+  violationsCount: number
+  error: string | null
 }
 
 type AnalysisTriggerSource = 'input' | 'config'
@@ -377,6 +388,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const [analysisHints, setAnalysisHints] = useState<string[]>([])
   const [diagramType, setDiagramType] = useState<string | null>(null)
   const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null)
+  const [lastCompletedRun, setLastCompletedRun] = useState<AnalysisRunResult | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const requestSeqRef = useRef(0)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -385,6 +397,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const inFlightRequestsRef = useRef<Map<string, InFlightAnalysisRequest>>(new Map())
   const lastInputAtRef = useRef(0)
   const rapidInputStreakRef = useRef(0)
+  const runSeqRef = useRef(0)
 
   const abortTransportIfUnshared = useCallback((controller: AbortController | null) => {
     if (!controller) {
@@ -448,6 +461,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       const seq = ++requestSeqRef.current
       const cacheKey = buildAnalysisCacheKey(endpoint, enabledRules, rulesMetadata, options)
       const inFlightKey = buildInFlightAnalysisKey(endpoint, enabledRules, rulesMetadata, options, newCode)
+      const runId = ++runSeqRef.current
       const cachedEntry = analysisCacheRef.current.get(cacheKey)
       const now = Date.now()
 
@@ -461,6 +475,15 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         setMetrics(cachedEntry.result.metrics ?? null)
         setAnalyzeError(null)
         setAnalysisHints(normalizeHints(cachedEntry.result.hints))
+        setLastCompletedRun({
+          id: runId,
+          source,
+          status: 'success',
+          violationsCount: Array.isArray(cachedEntry.result.results)
+            ? cachedEntry.result.results.length
+            : 0,
+          error: null,
+        })
         setIsAnalyzing(false)
         abortControllerRef.current = null
         return
@@ -500,6 +523,13 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             setMetrics(result.metrics ?? null)
             setAnalyzeError(null)
             setAnalysisHints(normalizeHints(result.hints))
+            setLastCompletedRun({
+              id: runId,
+              source,
+              status: 'success',
+              violationsCount: Array.isArray(result.results) ? result.results.length : 0,
+              error: null,
+            })
           }
         } catch (err) {
           if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
@@ -513,6 +543,13 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             setViolations([])
             setDiagramType(null)
             setMetrics(null)
+            setLastCompletedRun({
+              id: runId,
+              source,
+              status: 'error',
+              violationsCount: 0,
+              error: parsedError.summary,
+            })
           }
         } finally {
           existingInFlight.waiters -= 1
@@ -594,6 +631,13 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           setMetrics(result.metrics ?? null)
           setAnalyzeError(null)
           setAnalysisHints(normalizeHints(result.hints))
+          setLastCompletedRun({
+            id: runId,
+            source,
+            status: 'success',
+            violationsCount: Array.isArray(result.results) ? result.results.length : 0,
+            error: null,
+          })
         }
       } catch (err) {
         if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
@@ -607,6 +651,13 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           setViolations([])
           setDiagramType(null)
           setMetrics(null)
+          setLastCompletedRun({
+            id: runId,
+            source,
+            status: 'error',
+            violationsCount: 0,
+            error: parsedError.summary,
+          })
         }
       } finally {
         const currentInFlight = inFlightRequestsRef.current.get(inFlightKey)
@@ -667,7 +718,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       }
 
       debounceRef.current = setTimeout(() => {
-        runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options)
+        runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options, source)
       }, delayMs)
     },
     [runAnalysis]
@@ -686,7 +737,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         debounceRef.current = null
       }
 
-      runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options)
+      runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options, 'manual')
     },
     [runAnalysis]
   )
@@ -717,6 +768,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     analysisHints,
     diagramType,
     metrics,
+    lastCompletedRun,
     triggerAnalysis,
     forceAnalysis,
     cancelAnalysis,
