@@ -274,7 +274,7 @@ function HomeContent() {
         showSnackbar('Connection verified.', 'success')
         pendingSnackbarActionRef.current = null
       } else if (connectionStatus === 'error' && (previousConnectionStatus !== 'error' || messageChanged)) {
-        const normalizedMessage = statusMessage.toLowerCase()
+        const normalizedMessage = (statusMessage || '').toLowerCase()
         const isInvalidEndpoint = normalizedMessage.includes('invalid endpoint')
         showSnackbar(
           isInvalidEndpoint
