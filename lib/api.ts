@@ -466,8 +466,17 @@ function parseIpv4(host: string): number[] | null {
 
   const values = parts.map((part) => Number(part))
 
-  const maxValuesByLength = [0, 0xffff_ffff, 0xff_ff_ff, 0xff_ff, 0xff]
-  if (values.some((value, index) => value < 0 || value > maxValuesByLength[parts.length - index])) {
+  const maxValuesByLength: Record<number, number[]> = {
+    1: [0xffff_ffff],
+    2: [0xff, 0xff_ff_ff],
+    3: [0xff, 0xff, 0xff_ff],
+    4: [0xff, 0xff, 0xff, 0xff],
+  }
+
+  const maxValues = maxValuesByLength[parts.length]
+  if (!maxValues) return null
+
+  if (values.some((value, index) => value < 0 || value > maxValues[index])) {
     return null
   }
 
