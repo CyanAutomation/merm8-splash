@@ -35,7 +35,7 @@ test('shows unreachable feedback for a valid endpoint when health check fails', 
 })
 
 test('shows validation error for invalid endpoint format', async ({ page }) => {
-  await page.goto('http://localhost:3000')
+  await page.goto('/')
 
   const endpointInput = page.getByPlaceholder('https://api.merm8.app')
   await endpointInput.fill('not-a-valid-url')
