@@ -358,6 +358,19 @@ export default function DiagramPreview({
       return
     }
 
+    if (parseErrorMessage) {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = ''
+      }
+      removeMermaidFallbackNodes(lastRenderIdRef.current ?? undefined)
+      setRenderError(null)
+      setFullRenderError(null)
+      setIsErrorExpanded(false)
+      onParseStateChange?.({ hasParseError: true, message: parseErrorMessage })
+      setIsRendering(false)
+      return
+    }
+
     let cancelled = false
     setIsRendering(true)
 
@@ -521,7 +534,15 @@ export default function DiagramPreview({
       cancelled = true
       clearPendingFitRaf()
     }
-  }, [code, effectiveDiagramColorMode, onParseStateChange, useBeautifulRenderer, markOwnedRenderedNodes, removeMermaidFallbackNodes])
+  }, [
+    code,
+    effectiveDiagramColorMode,
+    onParseStateChange,
+    parseErrorMessage,
+    useBeautifulRenderer,
+    markOwnedRenderedNodes,
+    removeMermaidFallbackNodes,
+  ])
 
   useEffect(() => {
     return () => {
