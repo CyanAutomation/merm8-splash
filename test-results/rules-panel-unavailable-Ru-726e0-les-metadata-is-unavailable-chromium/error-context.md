@@ -1,0 +1,88 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "rem-avatar mascot" [ref=e5]
+        - generic [ref=e6]: merm8-splashMermaid Linter Interface
+      - generic [ref=e7]:
+        - button "⚙ API" [ref=e8] [cursor=pointer]
+        - button "↺ Reset" [ref=e9] [cursor=pointer]
+    - generic [ref=e11]:
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]: ✎ Diagram Editor
+          - generic [ref=e17]:
+            - button "Example" [ref=e18] [cursor=pointer]
+            - button "Copy diagram code" [ref=e19] [cursor=pointer]: ⎘
+            - button "Clear" [ref=e20] [cursor=pointer]
+        - generic [ref=e21]: Paste Mermaid diagram code below
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - generic [ref=e24] [cursor=pointer]: "1"
+            - generic [ref=e25] [cursor=pointer]: "2"
+            - generic [ref=e26] [cursor=pointer]: "3"
+            - generic [ref=e27] [cursor=pointer]: "4"
+            - generic [ref=e28] [cursor=pointer]: "5"
+            - generic [ref=e29] [cursor=pointer]: "6"
+          - textbox "graph TD A --> B" [ref=e30]: "graph TD A[Start] --> B{Decision} B -->|Yes| C[Do something] B -->|No| D[Do something else] C --> E[End] D --> E"
+        - generic [ref=e31]: 6 lines · 132 chars
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: ◈ Diagram Preview
+          - generic [ref=e39]:
+            - 'button "Toggle diagram mode. Current mode: dark" [ref=e40] [cursor=pointer]': ☾ Dark
+            - button "↔ Fit" [ref=e41] [cursor=pointer]
+            - button "⛶ Expand" [ref=e42] [cursor=pointer]
+            - switch "✨ Beautiful" [ref=e43] [cursor=pointer]:
+              - generic [ref=e44]: ✨ Beautiful
+        - document [ref=e48]:
+          - generic [ref=e50]:
+            - generic [ref=e57]:
+              - generic [ref=e61]: "Yes"
+              - generic [ref=e65]: "No"
+            - generic [ref=e66]:
+              - generic [ref=e71]: Start
+              - generic [ref=e76]: Decision
+              - generic [ref=e81]: Do something
+              - generic [ref=e86]: Do something else
+              - generic [ref=e91]: End
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]: ▦ Results
+          - generic [ref=e96]:
+            - button "↓ Export ▼" [ref=e98] [cursor=pointer]:
+              - text: ↓ Export
+              - generic [ref=e99]: ▼
+            - button "📊 Metrics" [disabled] [ref=e100] [cursor=pointer]
+            - button "⊞ Rules" [active] [ref=e101] [cursor=pointer]
+            - button "↺ Check" [disabled] [ref=e102] [cursor=pointer]
+        - generic [ref=e106]: ⠋ Analyzing...
+    - generic [ref=e107]:
+      - generic [ref=e108]:
+        - generic [ref=e109]: API Connected
+        - generic [ref=e111]: ✓ Valid
+        - generic [ref=e112]: 0 rules enabled
+      - generic [ref=e113]:
+        - generic [ref=e114]: Rule metadata unavailable; using server defaults
+        - button "Test" [ref=e115] [cursor=pointer]
+        - generic [ref=e116]: https://api.example.test
+    - generic [ref=e117]:
+      - generic [ref=e118]:
+        - heading "Rules Configuration" [level=2] [ref=e119]
+        - button "Close modal" [ref=e120] [cursor=pointer]: ×
+      - generic [ref=e122]:
+        - generic [ref=e123] [cursor=pointer]:
+          - generic [ref=e124]: ▾ Rules Server defaults
+          - generic [ref=e125]:
+            - button "All visible" [ref=e126]
+            - button "None visible" [ref=e127]
+        - generic [ref=e128]: Analysis uses server defaults for linting.
+        - generic [ref=e130]: Rules metadata unavailable for this API endpoint.
+  - generic [ref=e131]: Connection verified.
+  - button "Open Next.js Dev Tools" [ref=e137] [cursor=pointer]:
+    - img [ref=e138]
+  - alert [ref=e141]
+```

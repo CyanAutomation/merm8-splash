@@ -1,0 +1,94 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "rem-avatar mascot" [ref=e5]
+        - generic [ref=e6]: merm8-splashMermaid Linter Interface
+      - generic [ref=e7]:
+        - button "⚙ API" [ref=e8] [cursor=pointer]
+        - button "↺ Reset" [ref=e9] [cursor=pointer]
+    - generic [ref=e11]:
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]: ✎ Diagram Editor
+          - generic [ref=e17]:
+            - button "Example" [ref=e18] [cursor=pointer]
+            - button "Copy diagram code" [ref=e19] [cursor=pointer]: ⎘
+            - button "Clear" [ref=e20] [cursor=pointer]
+        - generic [ref=e21]: Paste Mermaid diagram code below
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - generic [ref=e24] [cursor=pointer]: "1"
+            - generic [ref=e25] [cursor=pointer]: "2"
+            - generic [ref=e26] [cursor=pointer]: "3"
+            - generic [ref=e27] [cursor=pointer]: "4"
+            - generic [ref=e28] [cursor=pointer]: "5"
+            - generic [ref=e29] [cursor=pointer]: "6"
+          - textbox "graph TD A --> B" [ref=e30]: "graph TD A[Start] --> B{Decision} B -->|Yes| C[Do something] B -->|No| D[Do something else] C --> E[End] D --> E"
+        - generic [ref=e31]: 6 lines · 132 chars
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: ◈ Diagram Preview
+          - generic [ref=e39]:
+            - 'button "Toggle diagram mode. Current mode: dark" [ref=e40] [cursor=pointer]': ☾ Dark
+            - button "↔ Fit" [ref=e41] [cursor=pointer]
+            - button "⛶ Expand" [ref=e42] [cursor=pointer]
+            - switch "✨ Beautiful" [ref=e43] [cursor=pointer]:
+              - generic [ref=e44]: ✨ Beautiful
+        - document [ref=e48]:
+          - generic [ref=e50]:
+            - generic [ref=e57]:
+              - generic [ref=e61]: "Yes"
+              - generic [ref=e65]: "No"
+            - generic [ref=e66]:
+              - generic [ref=e71]: Start
+              - generic [ref=e76]: Decision
+              - generic [ref=e81]: Do something
+              - generic [ref=e86]: Do something else
+              - generic [ref=e91]: End
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]: ▦ Results 1
+          - generic [ref=e96]:
+            - button "↓ Export ▼" [ref=e98] [cursor=pointer]:
+              - text: ↓ Export
+              - generic [ref=e99]: ▼
+            - button "📊 Metrics" [disabled] [ref=e100] [cursor=pointer]
+            - button "⊞ Rules" [ref=e101] [cursor=pointer]
+            - button "↺ Check" [ref=e102] [cursor=pointer]
+        - table [ref=e106]:
+          - rowgroup [ref=e107]:
+            - row "Rule Sev Message Line" [ref=e108]:
+              - columnheader "Rule" [ref=e109]
+              - columnheader "Sev" [ref=e110]
+              - columnheader "Message" [ref=e111]
+              - columnheader "Line" [ref=e112]
+              - columnheader [ref=e113]
+          - rowgroup [ref=e114]:
+            - row "ERR_12 error error with line 12 12 ⎘" [ref=e115] [cursor=pointer]:
+              - cell "ERR_12" [ref=e116]
+              - cell "error" [ref=e117]
+              - cell "error with line 12" [ref=e118]
+              - cell "12" [ref=e119]
+              - cell "⎘" [ref=e120]:
+                - button "⎘" [ref=e121]
+    - generic [ref=e122]:
+      - generic [ref=e123]:
+        - generic [ref=e124]: API Connected
+        - generic [ref=e126]: ✓ Valid
+        - generic [ref=e127]: "Type: flowchart"
+        - generic [ref=e128]:
+          - text: 0 rules enabled
+          - generic [ref=e129]: · 1 violation
+      - generic [ref=e130]:
+        - generic [ref=e131]: Connection successful.
+        - button "Test" [ref=e132] [cursor=pointer]
+        - generic [ref=e133]: https://api.example.test
+  - generic [ref=e134]: Connection verified.
+  - button "Open Next.js Dev Tools" [ref=e140] [cursor=pointer]:
+    - img [ref=e141]
+  - alert [ref=e144]
+```
