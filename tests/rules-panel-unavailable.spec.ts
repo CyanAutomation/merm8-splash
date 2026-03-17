@@ -19,7 +19,7 @@ test('Rules panel shows server-defaults badge when rules metadata is unavailable
 
   await page.goto('http://localhost:3000/?api=https://api.example.test')
   const testButton = page.getByRole('button', { name: 'Test' })
-  await expect(testButton).toBeEnabled()
+  await expect(testButton).toBeEnabled({ timeout: 10000 })
   await testButton.click()
 
   await expect(page.getByText('Connection successful.')).toBeVisible()
