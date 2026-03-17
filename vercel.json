@@ -1,6 +1,5 @@
 {
   "buildCommand": "next build",
-  "nodeVersion": "24",
   "env": {
     "NEXT_PUBLIC_MERM8_API_URL": "merm8_api_url"
   }
