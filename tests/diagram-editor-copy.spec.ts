@@ -32,9 +32,14 @@ test('Diagram Editor copy button is beside Example and shows success after clipb
 
   const editorTextarea = page.locator('textarea').first()
   const diagramText = 'flowchart TD\n  A[Start] --> B{Check}'
-  // Clear existing content and type new content to trigger React onChange event
-  await editorTextarea.clear()
-  await editorTextarea.type(diagramText, { delay: 5 })
+  
+  // Select all text and replace to trigger React onChange event
+  await editorTextarea.focus()
+  await editorTextarea.press('Control+A')
+  await editorTextarea.type(diagramText, { delay: 2 })
+  
+  // Wait for React to update the state by checking the textarea value
+  await expect(editorTextarea).toHaveValue(diagramText)
 
   await copyButton.click()
 
