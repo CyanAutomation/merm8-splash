@@ -5,6 +5,9 @@ const mockResults = [
 ] as const
 
 async function stubApi(page: Page) {
+  // Clear any existing routes first
+  await page.unroute('**/*')
+  
   await page.route('**/v1/healthz', async (route) => {
     await route.fulfill({
       status: 200,

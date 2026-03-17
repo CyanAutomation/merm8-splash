@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
 
 test('shows success feedback for a valid endpoint after connection test', async ({ page }) => {
+  // Clear any existing routes
+  await page.unroute('**/*')
+  
   await page.route('**/v1/healthz', async (route) => {
     await route.fulfill({
       status: 200,
@@ -20,6 +23,9 @@ test('shows success feedback for a valid endpoint after connection test', async 
 })
 
 test('shows unreachable feedback for a valid endpoint when health check fails', async ({ page }) => {
+  // Clear any existing routes
+  await page.unroute('**/*')
+  
   await page.route('**/v1/healthz', async (route) => {
     await route.fulfill({
       status: 503,
@@ -39,6 +45,9 @@ test('shows unreachable feedback for a valid endpoint when health check fails', 
 })
 
 test('shows validation error for invalid endpoint format', async ({ page }) => {
+  // Clear any existing routes
+  await page.unroute('**/*')
+  
   await page.goto('/')
 
   const endpointInput = page.getByPlaceholder('https://api.merm8.app')

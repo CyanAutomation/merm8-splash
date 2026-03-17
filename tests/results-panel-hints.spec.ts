@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test'
 
 test('ResultsPanel renders analysis hints from analyze error payload', async ({ page }) => {
+  // Clear any existing routes first
+  await page.unroute('**/*')
+  
   await page.route('**/v1/healthz', async (route) => {
     await route.fulfill({
       status: 200,
