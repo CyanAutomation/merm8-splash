@@ -17,17 +17,23 @@ async function getRenderedSvg(previewPanel: Locator): Promise<Locator> {
   return svg
 }
 
-async function getSvgMarkup(svg: Locator): Promise<string> {
-  return svg.evaluate((node) => node.outerHTML)
+async function getSvgMarkup(svg: Locator): Promise<string | undefined> {
+  try {
+    return svg.evaluate((node) => node.outerHTML)
+  } catch {
+    return undefined
+  }
 }
 
-function detectThemeFromSvg(svgMarkup: string): 'dark' | 'light' | 'unknown' {
+function detectThemeFromSvg(svgMarkup: string | undefined): 'dark' | 'light' | 'unknown' {
+  if (!svgMarkup) return 'unknown'
   const normalized = svgMarkup.toLowerCase()
-  const darkScore = DARK_THEME_TOKENS.filter((token) => normalized.includes(token)).length
-  const lightScore = LIGHT_THEME_TOKENS.filter((token) => normalized.includes(token)).length
+  const darkScore = DARK_THEME_TOKENS.filter((token) => normalized.includes(token.toLowerCase())).length
+  const lightScore = LIGHT_THEME_TOKENS.filter((token) => normalized.includes(token.toLowerCase())).length
 
-  if (darkScore > lightScore) return 'dark'
-  if (lightScore > darkScore) return 'light'
+  // With a higher threshold, require at least 2 matching tokens
+  if (darkScore >= 2 && darkScore > lightScore) return 'dark'
+  if (lightScore >= 2 && lightScore > darkScore) return 'light'
   return 'unknown'
 }
 

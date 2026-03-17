@@ -38,26 +38,35 @@
             - button "⛶ Expand" [ref=e42] [cursor=pointer]
             - switch "✨ Beautiful" [ref=e43] [cursor=pointer]:
               - generic [ref=e44]: ✨ Beautiful
-            - generic [ref=e47]: ⠋ Rendering...
-        - img [ref=e50]
-      - generic [ref=e52]:
-        - generic [ref=e53]:
-          - generic [ref=e54]: ▦ Results
-          - generic [ref=e55]:
-            - button "↓ Export ▼" [ref=e57] [cursor=pointer]:
+        - document [ref=e48]:
+          - generic [ref=e50]:
+            - generic [ref=e57]:
+              - generic [ref=e61]: "Yes"
+              - generic [ref=e65]: "No"
+            - generic [ref=e66]:
+              - generic [ref=e71]: Start
+              - generic [ref=e76]: Decision
+              - generic [ref=e81]: Do something
+              - generic [ref=e86]: Do something else
+              - generic [ref=e91]: End
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]: ▦ Results
+          - generic [ref=e96]:
+            - button "↓ Export ▼" [ref=e98] [cursor=pointer]:
               - text: ↓ Export
-              - generic [ref=e58]: ▼
-            - button "📊 Metrics" [disabled] [ref=e59] [cursor=pointer]
-            - button "⊞ Rules" [ref=e60] [cursor=pointer]
-            - button "↺ Check" [disabled] [ref=e61] [cursor=pointer]
-        - generic [ref=e65]: ✓ No violations found
-    - generic [ref=e66]:
-      - generic [ref=e67]:
-        - generic [ref=e68]: API Not Tested
-        - generic [ref=e70]: ✓ Valid
-        - generic [ref=e71]: 0 rules enabled
-      - button "Test" [disabled] [ref=e73] [cursor=pointer]
-  - button "Open Next.js Dev Tools" [ref=e79] [cursor=pointer]:
-    - img [ref=e80]
-  - alert [ref=e84]
+              - generic [ref=e99]: ▼
+            - button "📊 Metrics" [disabled] [ref=e100] [cursor=pointer]
+            - button "⊞ Rules" [ref=e101] [cursor=pointer]
+            - button "↺ Check" [disabled] [ref=e102] [cursor=pointer]
+        - generic [ref=e106]: ✓ No violations found
+    - generic [ref=e107]:
+      - generic [ref=e108]:
+        - generic [ref=e109]: API Not Tested
+        - generic [ref=e111]: ✓ Valid
+        - generic [ref=e112]: 0 rules enabled
+      - button "Test" [disabled] [ref=e114] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e120] [cursor=pointer]:
+    - img [ref=e121]
+  - alert [ref=e125]
 ```

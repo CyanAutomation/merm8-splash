@@ -9,8 +9,10 @@ test('shows success feedback for a valid endpoint after connection test', async 
     })
   })
 
-  await page.goto('/?api=')
-  await page.getByRole('button', { name: 'Test' }).click()
+  await page.goto('/?api=https://api.example.test')
+  const testButton = page.getByRole('button', { name: 'Test' })
+  await expect(testButton).toBeEnabled()
+  await testButton.click()
 
   const successMessage = page.getByText('Connection successful.')
   await expect(successMessage).toBeVisible()
@@ -26,8 +28,10 @@ test('shows unreachable feedback for a valid endpoint when health check fails', 
     })
   })
 
-  await page.goto('/?api=')
-  await page.getByRole('button', { name: 'Test' }).click()
+  await page.goto('/?api=https://api.example.test')
+  const testButton = page.getByRole('button', { name: 'Test' })
+  await expect(testButton).toBeEnabled()
+  await testButton.click()
 
   const unreachableMessage = page.getByText('Could not reach endpoint. Check URL and server status.')
   await expect(unreachableMessage).toBeVisible()
