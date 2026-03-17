@@ -72,7 +72,8 @@ test('copying then immediate unmount does not trigger unmounted state warnings',
   await expect(page.getByRole('row', { name: /ERR_12/ })).toBeVisible()
 
   const resultsPanel = page.locator('.panel').filter({ has: page.getByText('▦ Results') })
-  await resultsPanel.getByRole('button', { name: '⎘' }).click()
+  const resultsCopyButton = resultsPanel.getByRole('button', { name: 'Copy diagram code' }).or(resultsPanel.getByRole('button', { name: /Copy/ }).first())
+  await resultsCopyButton.click()
 
   await page.evaluate(() => {
     document.getElementById('__next')?.remove()
