@@ -1,7 +1,7 @@
 # Page snapshot
 
 ```yaml
-- generic [active] [ref=e1]:
+- generic [ref=e1]:
   - generic [ref=e2]:
     - generic [ref=e3]:
       - generic [ref=e4]:
@@ -33,7 +33,7 @@
         - generic [ref=e37]:
           - generic [ref=e38]: ◈ Diagram Preview
           - generic [ref=e39]:
-            - 'button "Toggle diagram mode. Current mode: dark" [ref=e40] [cursor=pointer]': ☾ Dark
+            - 'button "Toggle diagram mode. Current mode: light" [active] [ref=e40] [cursor=pointer]': ☀︎ Light
             - button "↔ Fit" [ref=e41] [cursor=pointer]
             - button "⛶ Expand" [ref=e42] [cursor=pointer]
             - switch "✨ Beautiful" [ref=e43] [cursor=pointer]:
@@ -66,7 +66,16 @@
         - generic [ref=e111]: ✓ Valid
         - generic [ref=e112]: 0 rules enabled
       - button "Test" [disabled] [ref=e114] [cursor=pointer]
-  - button "Open Next.js Dev Tools" [ref=e120] [cursor=pointer]:
-    - img [ref=e121]
-  - alert [ref=e125]
+  - generic [ref=e119] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e120]:
+      - img [ref=e121]
+    - generic [ref=e124]:
+      - button "Open issues overlay" [ref=e125]:
+        - generic [ref=e126]:
+          - generic [ref=e127]: "0"
+          - generic [ref=e128]: "1"
+        - generic [ref=e129]: Issue
+      - button "Collapse issues badge" [ref=e130]:
+        - img [ref=e131]
+  - alert [ref=e133]
 ```
