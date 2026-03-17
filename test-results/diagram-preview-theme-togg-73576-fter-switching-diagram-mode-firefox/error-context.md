@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - img "rem-avatar mascot" [ref=e5]
+      - generic [ref=e6]: merm8-splashMermaid Linter Interface
+    - generic [ref=e7]:
+      - button "⚙ API" [ref=e8] [cursor=pointer]
+      - button "↺ Reset" [ref=e9] [cursor=pointer]
+  - generic [ref=e11]:
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: ✎ Diagram Editor
+        - generic [ref=e17]:
+          - button "Example" [ref=e18] [cursor=pointer]
+          - button "Copy diagram code" [ref=e19] [cursor=pointer]: ⎘
+          - button "Clear" [ref=e20] [cursor=pointer]
+      - generic [ref=e21]: Paste Mermaid diagram code below
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24] [cursor=pointer]: "1"
+          - generic [ref=e25] [cursor=pointer]: "2"
+          - generic [ref=e26] [cursor=pointer]: "3"
+          - generic [ref=e27] [cursor=pointer]: "4"
+          - generic [ref=e28] [cursor=pointer]: "5"
+          - generic [ref=e29] [cursor=pointer]: "6"
+        - textbox "graph TD A --> B" [ref=e30]: "graph TD A[Start] --> B{Decision} B -->|Yes| C[Do something] B -->|No| D[Do something else] C --> E[End] D --> E"
+      - generic [ref=e31]: 6 lines · 132 chars
+    - generic [ref=e37]:
+      - generic [ref=e38]: ◈ Diagram Preview
+      - generic [ref=e39]:
+        - 'button "Toggle diagram mode. Current mode: dark" [ref=e40] [cursor=pointer]': ☾ Dark
+        - button "↔ Fit" [ref=e41] [cursor=pointer]
+        - button "⛶ Expand" [ref=e42] [cursor=pointer]
+        - switch "✨ Beautiful" [ref=e43] [cursor=pointer]:
+          - generic [ref=e44]: ✨ Beautiful
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - generic [ref=e51]: ▦ Results
+        - generic [ref=e52]:
+          - button "↓ Export ▼" [ref=e54] [cursor=pointer]:
+            - text: ↓ Export
+            - generic [ref=e55]: ▼
+          - button "📊 Metrics" [disabled] [ref=e56] [cursor=pointer]
+          - button "⊞ Rules" [ref=e57] [cursor=pointer]
+          - button "↺ Check" [disabled] [ref=e58] [cursor=pointer]
+      - generic [ref=e62]: ✓ No violations found
+  - generic [ref=e63]:
+    - generic [ref=e64]:
+      - generic [ref=e65]: API Not Tested
+      - generic [ref=e67]: ✓ Valid
+      - generic [ref=e68]: 0 rules enabled
+    - button "Test" [disabled] [ref=e70] [cursor=pointer]
+```

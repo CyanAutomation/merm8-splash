@@ -1,7 +1,7 @@
 # Page snapshot
 
 ```yaml
-- generic [ref=e1]:
+- generic [active] [ref=e1]:
   - generic [ref=e2]:
     - generic [ref=e3]:
       - generic [ref=e4]:
@@ -33,7 +33,7 @@
         - generic [ref=e37]:
           - generic [ref=e38]: ◈ Diagram Preview
           - generic [ref=e39]:
-            - 'button "Toggle diagram mode. Current mode: light" [active] [ref=e40] [cursor=pointer]': ☀︎ Light
+            - 'button "Toggle diagram mode. Current mode: dark" [ref=e40] [cursor=pointer]': ☾ Dark
             - button "↔ Fit" [ref=e41] [cursor=pointer]
             - button "⛶ Expand" [ref=e42] [cursor=pointer]
             - switch "✨ Beautiful" [ref=e43] [cursor=pointer]:
