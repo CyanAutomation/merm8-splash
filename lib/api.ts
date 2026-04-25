@@ -191,6 +191,34 @@ function normalizeAnalyzeHints(rawHints: unknown): AnalyzeHint[] | undefined {
   )
 }
 
+function normalizeNumericMap(rawMap: unknown): Record<string, number> {
+  if (!rawMap || typeof rawMap !== 'object' || Array.isArray(rawMap)) {
+    return {}
+  }
+
+  return Object.entries(rawMap as Record<string, unknown>).reduce<Record<string, number>>(
+    (acc, [key, value]) => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        acc[key] = value
+        return acc
+      }
+
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (!trimmed) return acc
+
+        const coerced = Number(trimmed)
+        if (Number.isFinite(coerced)) {
+          acc[key] = coerced
+        }
+      }
+
+      return acc
+    },
+    {}
+  )
+}
+
 function normalizeMetrics(rawMetrics: unknown): AnalysisMetrics | undefined {
   if (!rawMetrics || typeof rawMetrics !== 'object' || Array.isArray(rawMetrics)) {
     return undefined
@@ -205,14 +233,8 @@ function normalizeMetrics(rawMetrics: unknown): AnalysisMetrics | undefined {
     const bySeverity = ic['by-severity']
     const byRule = ic['by-rule']
     issueCounts = {
-      bySeverity:
-        bySeverity && typeof bySeverity === 'object' && !Array.isArray(bySeverity)
-          ? (bySeverity as Record<string, number>)
-          : {},
-      byRule:
-        byRule && typeof byRule === 'object' && !Array.isArray(byRule)
-          ? (byRule as Record<string, number>)
-          : {},
+      bySeverity: normalizeNumericMap(bySeverity),
+      byRule: normalizeNumericMap(byRule),
     }
   }
 
