@@ -268,6 +268,9 @@ export default function ExportDropdown({
 
     const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
     if (textareaFallbackSucceeded) {
+      if (!isMountedRef.current) {
+        return
+      }
       setCopyingSafely(format)
       showSnackbarSafely(`Clipboard API unavailable; copied ${format} using fallback.`, 'success')
       scheduleCopyingReset()
@@ -276,6 +279,9 @@ export default function ExportDropdown({
     }
 
     downloadFile(text, fallbackFilename, fallbackMime)
+    if (!isMountedRef.current) {
+      return
+    }
     showSnackbarSafely(`Clipboard unavailable. Downloaded ${fallbackFilename} instead.`, 'error')
     setOpenSafely(false)
   }
