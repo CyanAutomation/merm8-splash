@@ -76,49 +76,8 @@ const MERMAID_THEME_CONFIG: Record<
   },
 }
 
-let patchRefCount = 0
-let nativeInsertAdjacentHTML: typeof Element.prototype.insertAdjacentHTML | null = null
-const activeInsertAdjacentHtmlBlockers = new Set<() => boolean>()
-
 const isMermaidErrorHtml = (html: string): boolean =>
   html.includes('aria-roledescription="error"') && html.includes('dmermaid-')
-
-const releaseInsertAdjacentHtmlPatch = () => {
-  if (patchRefCount === 0) return
-
-  patchRefCount -= 1
-  if (patchRefCount === 0 && nativeInsertAdjacentHTML) {
-    Element.prototype.insertAdjacentHTML = nativeInsertAdjacentHTML
-    nativeInsertAdjacentHTML = null
-  }
-}
-
-const acquireInsertAdjacentHtmlPatch = (shouldBlock: () => boolean): (() => void) => {
-  activeInsertAdjacentHtmlBlockers.add(shouldBlock)
-
-  if (patchRefCount === 0) {
-    nativeInsertAdjacentHTML = Element.prototype.insertAdjacentHTML
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Element.prototype.insertAdjacentHTML = function(position: any, html: string) {
-      const shouldBlockAnyRender = Array.from(activeInsertAdjacentHtmlBlockers).some((blocker) => blocker())
-      if (shouldBlockAnyRender && isMermaidErrorHtml(html)) {
-        console.debug('Blocked mermaid error SVG from inserting to DOM')
-        return
-      }
-      return nativeInsertAdjacentHTML!.call(this, position, html)
-    }
-  }
-
-  patchRefCount += 1
-
-  let released = false
-  return () => {
-    if (released) return
-    released = true
-    activeInsertAdjacentHtmlBlockers.delete(shouldBlock)
-    releaseInsertAdjacentHtmlPatch()
-  }
-}
 
 export default function DiagramPreview({ 
   code, 
@@ -203,6 +162,21 @@ export default function DiagramPreview({
       ownedRenderIdsRef.current.delete(targetRenderId)
     }
   }, [previewId])
+
+  const sanitizeRenderedOutput = useCallback((renderContainer: HTMLDivElement, renderId: string, svg: string): string => {
+    // Mermaid may inject local fallback error nodes into the target render container.
+    // Clean only within this preview instance so concurrent previews remain isolated.
+    renderContainer
+      .querySelectorAll('[id^="dmermaid-"]')
+      .forEach((node) => node.remove())
+
+    const renderFallbackNode = renderContainer.querySelector(`#d${renderId}`)
+    if (renderFallbackNode) {
+      renderFallbackNode.remove()
+    }
+
+    return isMermaidErrorHtml(svg) ? '' : svg
+  }, [])
 
   const clearPendingFitRaf = () => {
     if (rafIdRef.current !== null) {
@@ -374,8 +348,6 @@ export default function DiagramPreview({
     let cancelled = false
     setIsRendering(true)
 
-    let isRenderingDiagram = false
-
     const renderDiagram = async () => {
       try {
         // Check if beautiful-mermaid should be used
@@ -455,17 +427,9 @@ export default function DiagramPreview({
           return
         }
 
-        let svg: string = ''
-        const releasePatch = acquireInsertAdjacentHtmlPatch(() => isRenderingDiagram)
-        try {
-          isRenderingDiagram = true
-          // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we intentionally clean/suppress them to avoid duplicate user-facing errors.
-          const result = await mermaid.render(id, code, renderContainer ?? undefined)
-          svg = result.svg
-        } finally {
-          isRenderingDiagram = false
-          releasePatch()
-        }
+        // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we clean/sanitize locally after render.
+        const result = await mermaid.render(id, code, renderContainer ?? undefined)
+        const svg = sanitizeRenderedOutput(renderContainer, id, result.svg)
 
         // Check if the returned SVG contains mermaid error content
         const mermaidError = detectMermaidErrorInSvg(svg)
@@ -542,6 +506,7 @@ export default function DiagramPreview({
     useBeautifulRenderer,
     markOwnedRenderedNodes,
     removeMermaidFallbackNodes,
+    sanitizeRenderedOutput,
   ])
 
   useEffect(() => {

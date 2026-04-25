@@ -45,6 +45,11 @@ export default function DiagramPreviewIsolationPage() {
     })
   }
 
+  const triggerLeftErrorWithRightUpdate = () => {
+    setLeftCode('graph TD\nA-->')
+    setRightCode('graph TD\nR-->W')
+  }
+
   return (
     <main style={{ padding: '16px', display: 'grid', gap: '12px' }}>
       <div style={{ display: 'flex', gap: '8px' }}>
@@ -56,6 +61,9 @@ export default function DiagramPreviewIsolationPage() {
         </button>
         <button id="overlap-renders-btn" className="btn" onClick={triggerOverlappingRenders}>
           Overlap left/right renders
+        </button>
+        <button id="left-error-right-update-btn" className="btn" onClick={triggerLeftErrorWithRightUpdate}>
+          Left error + right update
         </button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', minHeight: '320px' }}>
