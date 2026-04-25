@@ -467,6 +467,85 @@ test('analyzeCode normalizes missing data payload to UI-safe defaults', async ()
   }
 })
 
+test('analyzeCode normalizes issue-count maps to finite numeric values', async () => {
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        diagram_type: 'flowchart',
+        results: [],
+        metrics: {
+          'diagram-type': 'flowchart',
+          'issue-counts': {
+            'by-severity': {
+              error: 2,
+              warning: '3',
+              info: ' 4 ',
+              invalid: 'NaN',
+              overflow: 'Infinity',
+              nested: {},
+            },
+            'by-rule': {
+              'no-empty-label': '5',
+              'max-depth': 6,
+              'max-fanout': null,
+              'no-cycles': 'not-a-number',
+            },
+          },
+        },
+      },
+    }),
+  })
+
+  try {
+    const { analyzeCode } = loadApiModule()
+    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+
+    assert.equal(
+      JSON.stringify(response.metrics.issueCounts.bySeverity),
+      JSON.stringify({ error: 2, warning: 3, info: 4 })
+    )
+    assert.equal(
+      JSON.stringify(response.metrics.issueCounts.byRule),
+      JSON.stringify({ 'no-empty-label': 5, 'max-depth': 6 })
+    )
+  } finally {
+    axios.create = originalCreate
+  }
+})
+
+test('analyzeCode defaults malformed issue-count maps to empty objects', async () => {
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        diagram_type: 'flowchart',
+        results: [],
+        metrics: {
+          'issue-counts': {
+            'by-severity': ['error', 2],
+            'by-rule': 'bad-shape',
+          },
+        },
+      },
+    }),
+  })
+
+  try {
+    const { analyzeCode } = loadApiModule()
+    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+
+    assert.equal(JSON.stringify(response.metrics.issueCounts.bySeverity), JSON.stringify({}))
+    assert.equal(JSON.stringify(response.metrics.issueCounts.byRule), JSON.stringify({}))
+  } finally {
+    axios.create = originalCreate
+  }
+})
+
 test('fetchRules normalizes malformed payloads to an empty rules list with malformed status', async () => {
   const api = loadApiModule()
   const axios = require('axios')
