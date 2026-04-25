@@ -40,6 +40,27 @@ export default function ExportDropdown({
   const timeoutCancelsRef = useRef<Set<() => void>>(new Set())
   const copyingCancelRef = useRef<(() => void) | null>(null)
 
+  const setOpenSafely = (nextOpen: boolean) => {
+    if (!isMountedRef.current) {
+      return
+    }
+    setOpen(nextOpen)
+  }
+
+  const setCopyingSafely = (nextCopying: string | null) => {
+    if (!isMountedRef.current) {
+      return
+    }
+    setCopying(nextCopying)
+  }
+
+  const showSnackbarSafely = (message: string, type: 'success' | 'error') => {
+    if (!isMountedRef.current) {
+      return
+    }
+    snackbar.show(message, type)
+  }
+
   const scheduleTimeout = (callback: () => void, delay: number) => {
     let timeoutId: number | null = null
 
@@ -66,7 +87,7 @@ export default function ExportDropdown({
 
     const cancelTimeout = scheduleTimeout(() => {
       copyingCancelRef.current = null
-      setCopying(null)
+      setCopyingSafely(null)
     }, 1500)
 
     copyingCancelRef.current = cancelTimeout
@@ -78,7 +99,7 @@ export default function ExportDropdown({
         return
       }
       if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
+        setOpenSafely(false)
       }
     }
     document.addEventListener('mousedown', handler)
@@ -140,7 +161,7 @@ export default function ExportDropdown({
   const exportJson = () => {
     const data = JSON.stringify({ results, code }, null, 2)
     downloadFile(data, 'merm8-analysis.json', 'application/json')
-    setOpen(false)
+    setOpenSafely(false)
   }
 
   const exportMarkdown = async () => {
@@ -214,40 +235,49 @@ export default function ExportDropdown({
     if (hasClipboardApi) {
       try {
         await navigator.clipboard.writeText(text)
-        setCopying(format)
-        snackbar.show(`Copied ${format} to clipboard.`, 'success')
+        if (!isMountedRef.current) {
+          return
+        }
+        setCopyingSafely(format)
+        showSnackbarSafely(`Copied ${format} to clipboard.`, 'success')
         scheduleCopyingReset()
-        setOpen(false)
+        setOpenSafely(false)
         return
       } catch {
         const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
         if (textareaFallbackSucceeded) {
-          setCopying(format)
-          snackbar.show(`Clipboard access failed, but copied ${format} using fallback.`, 'success')
+          if (!isMountedRef.current) {
+            return
+          }
+          setCopyingSafely(format)
+          showSnackbarSafely(`Clipboard access failed, but copied ${format} using fallback.`, 'success')
           scheduleCopyingReset()
-          setOpen(false)
+          setOpenSafely(false)
           return
         }
 
         downloadFile(text, fallbackFilename, fallbackMime)
-        snackbar.show(`Clipboard access failed. Downloaded ${fallbackFilename} instead.`, 'error')
-        setOpen(false)
+        if (!isMountedRef.current) {
+          return
+        }
+        showSnackbarSafely(`Clipboard access failed. Downloaded ${fallbackFilename} instead.`, 'error')
+        setOpenSafely(false)
         return
       }
     }
 
     const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
     if (textareaFallbackSucceeded) {
-      setCopying(format)
-      snackbar.show(`Clipboard API unavailable; copied ${format} using fallback.`, 'success')
+      setCopyingSafely(format)
+      showSnackbarSafely(`Clipboard API unavailable; copied ${format} using fallback.`, 'success')
       scheduleCopyingReset()
-      setOpen(false)
+      setOpenSafely(false)
       return
     }
 
     downloadFile(text, fallbackFilename, fallbackMime)
-    snackbar.show(`Clipboard unavailable. Downloaded ${fallbackFilename} instead.`, 'error')
-    setOpen(false)
+    showSnackbarSafely(`Clipboard unavailable. Downloaded ${fallbackFilename} instead.`, 'error')
+    setOpenSafely(false)
   }
 
   const exportSarif = async () => {
@@ -275,7 +305,7 @@ export default function ExportDropdown({
     try {
       if (!endpointValidation.valid) {
         downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
-        snackbar.show('Endpoint invalid; exported local fallback SARIF.', 'success')
+        showSnackbarSafely('Endpoint invalid; exported local fallback SARIF.', 'success')
         return
       }
 
@@ -283,9 +313,11 @@ export default function ExportDropdown({
       downloadFile(JSON.stringify(sarif, null, 2), 'merm8-analysis.sarif.json', 'application/json')
     } catch {
       downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
-      snackbar.show('Remote SARIF generation failed; exported local fallback.', 'error')
+      showSnackbarSafely('Remote SARIF generation failed; exported local fallback.', 'error')
     } finally {
-      setOpen(false)
+      if (isMountedRef.current) {
+        setOpenSafely(false)
+      }
     }
   }
 
@@ -297,7 +329,7 @@ export default function ExportDropdown({
           if (isExportingRef.current) {
             return
           }
-          setOpen(!open)
+          setOpenSafely(!open)
         }}
         style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
       >
