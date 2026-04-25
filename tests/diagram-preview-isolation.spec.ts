@@ -55,3 +55,19 @@ test('left preview render failure preserves right preview owned svg node', async
   await expect(page.locator('#left-preview').getByText('⚠ Syntax Error')).toBeVisible({ timeout: 5000 })
   await expect(page.locator(`#right-preview svg[data-preview-id="${rightPreviewId}"]`)).toHaveCount(1)
 })
+
+test('left render error does not block concurrent right render update', async ({ page }) => {
+  await page.goto('/diagram-preview-isolation')
+
+  await expect(page.locator('#right-preview svg')).toHaveCount(1, { timeout: 10000 })
+  const initialRightRenderId = await page.locator('#right-preview svg').first().getAttribute('data-render-id')
+
+  await page.click('#left-error-right-update-btn')
+
+  await expect(page.locator('#left-preview').getByText('⚠ Syntax Error')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('#right-preview svg')).toHaveCount(1)
+
+  const updatedRightRenderId = await page.locator('#right-preview svg').first().getAttribute('data-render-id')
+  expect(updatedRightRenderId).not.toBeNull()
+  expect(updatedRightRenderId).not.toBe(initialRightRenderId)
+})
