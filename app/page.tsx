@@ -116,8 +116,10 @@ function HomeContent() {
   const previousConnectionStatusRef = useRef(connectionStatus)
   const previousStatusMessageRef = useRef(statusMessage)
   const pendingSnackbarActionRef = useRef<'test-connection' | 'save-endpoint' | null>(null)
+  const pendingSnackbarOperationRef = useRef(0)
   const pendingManualRunRef = useRef(false)
   const lastManualRunSnackbarIdRef = useRef(0)
+  const [snackbarOperationTick, setSnackbarOperationTick] = useState(0)
 
   // Load rules when connected
   const loadRules = useCallback(async () => {
@@ -257,12 +259,18 @@ function HomeContent() {
   ])
 
   const handleTestConnection = useCallback(async () => {
+    const operationId = pendingSnackbarOperationRef.current + 1
+    pendingSnackbarOperationRef.current = operationId
     pendingSnackbarActionRef.current = 'test-connection'
+    setSnackbarOperationTick(operationId)
     await testConnection()
   }, [testConnection])
 
   const handleSaveEndpoint = useCallback(() => {
+    const operationId = pendingSnackbarOperationRef.current + 1
+    pendingSnackbarOperationRef.current = operationId
     pendingSnackbarActionRef.current = 'save-endpoint'
+    setSnackbarOperationTick(operationId)
     saveEndpoint()
   }, [saveEndpoint])
 
@@ -271,11 +279,13 @@ function HomeContent() {
     const previousStatusMessage = previousStatusMessageRef.current
     const statusChanged = previousConnectionStatus !== connectionStatus
     const messageChanged = previousStatusMessage !== statusMessage
+    let handledPendingSnackbarAction = false
 
     if (pendingSnackbarActionRef.current === 'test-connection' && (statusChanged || messageChanged)) {
       if (connectionStatus === 'connected' && previousConnectionStatus !== 'connected') {
         showSnackbar('Connection verified.', 'success')
         pendingSnackbarActionRef.current = null
+        handledPendingSnackbarAction = true
       } else if (connectionStatus === 'error' && (previousConnectionStatus !== 'error' || messageChanged)) {
         const normalizedMessage = (statusMessage || '').toLowerCase()
         const isInvalidEndpoint = normalizedMessage.includes('invalid endpoint')
@@ -286,6 +296,7 @@ function HomeContent() {
           'error'
         )
         pendingSnackbarActionRef.current = null
+        handledPendingSnackbarAction = true
       }
     }
 
@@ -295,18 +306,25 @@ function HomeContent() {
       if (normalizedMessage.includes('saved to localstorage')) {
         showSnackbar('Endpoint saved.', 'success')
         pendingSnackbarActionRef.current = null
+        handledPendingSnackbarAction = true
       } else if (normalizedMessage.includes('invalid endpoint')) {
         showSnackbar('Save blocked: invalid endpoint.', 'error')
         pendingSnackbarActionRef.current = null
+        handledPendingSnackbarAction = true
       } else if (normalizedMessage.includes('could not save endpoint')) {
         showSnackbar('Save blocked in this browser context.', 'error')
         pendingSnackbarActionRef.current = null
+        handledPendingSnackbarAction = true
       }
+    }
+
+    if (pendingSnackbarActionRef.current && !handledPendingSnackbarAction) {
+      pendingSnackbarActionRef.current = null
     }
 
     previousConnectionStatusRef.current = connectionStatus
     previousStatusMessageRef.current = statusMessage
-  }, [connectionStatus, statusMessage, showSnackbar])
+  }, [connectionStatus, statusMessage, snackbarOperationTick, showSnackbar])
 
   const handleRecheck = useCallback(() => {
     const isConnected = connectionStatus === 'connected'
