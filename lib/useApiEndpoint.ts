@@ -64,6 +64,8 @@ export function useApiEndpoint(): UseApiEndpointReturn {
 
   const setEndpoint = useCallback((url: string) => {
     endpointRef.current = url
+    healthCheckAbortControllerRef.current?.abort()
+    healthCheckAbortControllerRef.current = null
     latestRequestIdRef.current += 1
     setEndpointState(url)
     setConfigSource('manual')
@@ -103,18 +105,17 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       setConnectionStatus('connected')
       setStatusMessage('Connection successful.')
     } catch {
-    if (controller.signal.aborted) {
-      return
-    }
-    if (!isCurrentRequest()) {
-      return
-    }
+      if (controller.signal.aborted) {
+        return
+      }
+      if (!isCurrentRequest()) {
+        return
+      }
 
       setConnectionStatus('error')
       setStatusMessage('Could not reach endpoint. Check URL and server status.')
     }
   }, [])
-
 
   useEffect(() => {
     return () => {
