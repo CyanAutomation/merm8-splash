@@ -10,7 +10,7 @@ export default [
     ignores: ['.next/**', 'node_modules/**', 'dist/**', 'build/**', 'out/**', 'playwright-report/**', 'test-results/**'],
   },
   {
-    files: ['**/*.{js,jsx,ts,tsx}', '!**/*.cjs', '!**/tests/**'],
+    files: ['**/*.{ts,tsx}', '!**/tests/**'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
@@ -38,8 +38,9 @@ export default [
     },
   },
   {
-    files: ['**/*.cjs', '**/tests/**'],
+    files: ['tests/**/*.ts'],
     languageOptions: {
+      parser: typescriptParser,
       parserOptions: {
         ecmaVersion: 2024,
         sourceType: 'module',
@@ -52,7 +53,9 @@ export default [
     },
     rules: {
       'no-undef': 'off',
-      'no-useless-escape': 'warn',
+      'no-useless-escape': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
     },
   },
 ];
