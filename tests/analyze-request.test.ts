@@ -1,9 +1,11 @@
-const test = require('node:test')
-const assert = require('node:assert/strict')
-const fs = require('node:fs')
-const path = require('node:path')
-const vm = require('node:vm')
-const ts = require('typescript')
+import { describe, it, expect } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
+import vm from 'node:vm'
+import ts from 'typescript'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function loadApiModule() {
   const tsModuleCache = new Map()
@@ -91,7 +93,7 @@ function loadRulesStateModule() {
   return module.exports
 }
 
-test('buildAnalyzeRequest includes empty rules object and keeps schema-version in server-default fallback mode', () => {
+it('buildAnalyzeRequest includes empty rules object and keeps schema-version in server-default fallback mode', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -107,17 +109,17 @@ test('buildAnalyzeRequest includes empty rules object and keeps schema-version i
     { useServerDefaults: true }
   )
 
-  assert.equal(request.code, 'graph TD; A-->B')
-  assert.equal(request.config['schema-version'], 'v1')
-  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}), 'rules must be an empty object in fallback mode')
+  expect(request.code).toBe('graph TD; A-->B')
+  expect(request.config['schema-version']).toBe('v1')
+  expect(JSON.stringify(request.config.rules)).toBe(JSON.stringify({})) // 'rules must be an empty object in fallback mode'
 })
 
 
-test('rules availability keeps endpoint available when rules response is empty but successful', () => {
+it('rules availability keeps endpoint available when rules response is empty but successful', () => {
   const { resolveRulesAvailabilityState, shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
 
   const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable('success')
-  assert.equal(rulesAreUnavailable, false)
+  expect(rulesAreUnavailable).toBe(false)
 
   const availability = resolveRulesAvailabilityState(
     'https://example.test',
@@ -125,18 +127,18 @@ test('rules availability keeps endpoint available when rules response is empty b
     rulesAreUnavailable ? 'https://example.test' : null
   )
 
-  assert.equal(availability.isAvailable, true)
-  assert.equal(availability.isUnavailable, false)
+  expect(availability.isAvailable).toBe(true)
+  expect(availability.isUnavailable).toBe(false)
 })
 
-test('rules availability marks endpoint unavailable when rules request fails or payload is malformed', () => {
+it('rules availability marks endpoint unavailable when rules request fails or payload is malformed', () => {
   const { shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
 
-  assert.equal(shouldTreatRulesPayloadAsUnavailable('malformed_payload'), true)
-  assert.equal(shouldTreatRulesPayloadAsUnavailable('transport_failure'), true)
+  expect(shouldTreatRulesPayloadAsUnavailable('malformed_payload')).toBe(true)
+  expect(shouldTreatRulesPayloadAsUnavailable('transport_failure')).toBe(true)
 })
 
-test('buildAnalyzeRequest includes empty rules when endpoint is marked unavailable due to malformed metadata', () => {
+it('buildAnalyzeRequest includes empty rules when endpoint is marked unavailable due to malformed metadata', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -146,12 +148,12 @@ test('buildAnalyzeRequest includes empty rules when endpoint is marked unavailab
     { useServerDefaults: true }
   )
 
-  assert.equal(request.code, 'graph TD; A-->B')
-  assert.equal(request.config['schema-version'], 'v1')
-  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}), 'rules must be an empty object when fallback enables server defaults')
+  expect(request.code).toBe('graph TD; A-->B')
+  expect(request.config['schema-version']).toBe('v1')
+  expect(JSON.stringify(request.config.rules)).toBe(JSON.stringify({})) // 'rules must be an empty object when fallback enables server defaults'
 })
 
-test('buildAnalyzeRequest sends empty rules object when no rules are selected', () => {
+it('buildAnalyzeRequest sends empty rules object when no rules are selected', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -171,12 +173,12 @@ test('buildAnalyzeRequest sends empty rules object when no rules are selected', 
     ]
   )
 
-  assert.equal(request.config['schema-version'], 'v1')
-  assert.equal(JSON.stringify(request.config.rules), JSON.stringify({}))
+  expect(request.config['schema-version']).toBe('v1')
+  expect(JSON.stringify(request.config.rules)).toBe(JSON.stringify({}))
 })
 
 
-test('buildAnalyzeRequest includes explicit rule config when metadata is available', () => {
+it('buildAnalyzeRequest includes explicit rule config when metadata is available', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -196,17 +198,14 @@ test('buildAnalyzeRequest includes explicit rule config when metadata is availab
     ]
   )
 
-  assert.equal(
-    JSON.stringify(request.config.rules),
-    JSON.stringify({
+  expect(JSON.stringify(request.config.rules)).toBe(JSON.stringify({
       'no-empty-label': { enabled: true },
       'max-edges': { enabled: false },
-    })
-  )
+    }))
 })
 
 
-test('buildAnalyzeRequest keeps universal rules enabled for known diagram types', () => {
+it('buildAnalyzeRequest keeps universal rules enabled for known diagram types', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -231,13 +230,13 @@ test('buildAnalyzeRequest keeps universal rules enabled for known diagram types'
     ]
   )
 
-  assert.equal(request.config.rules['max-depth'].enabled, true)
-  assert.equal(request.config.rules['no-empty-label'].enabled, true)
-  assert.equal(request.config.rules['sequence-max-participants'].enabled, false)
+  expect(request.config.rules['max-depth'].enabled).toBe(true)
+  expect(request.config.rules['no-empty-label'].enabled).toBe(true)
+  expect(request.config.rules['sequence-max-participants'].enabled).toBe(false)
 })
 
 
-test('buildAnalyzeRequest detects diagram type after leading Mermaid comments and init block', () => {
+it('buildAnalyzeRequest detects diagram type after leading Mermaid comments and init block', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -262,12 +261,12 @@ test('buildAnalyzeRequest detects diagram type after leading Mermaid comments an
     ]
   )
 
-  assert.equal(request.config.rules['max-depth'].enabled, true)
-  assert.equal(request.config.rules['sequence-max-participants'].enabled, false)
-  assert.equal(request.config.rules['no-empty-label'].enabled, true)
+  expect(request.config.rules['max-depth'].enabled).toBe(true)
+  expect(request.config.rules['sequence-max-participants'].enabled).toBe(false)
+  expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
 
-test('buildAnalyzeRequest detects diagram type after multi-line Mermaid init block', () => {
+it('buildAnalyzeRequest detects diagram type after multi-line Mermaid init block', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -292,14 +291,14 @@ test('buildAnalyzeRequest detects diagram type after multi-line Mermaid init blo
     ]
   )
 
-  assert.equal(request.config.rules['sequence-max-participants'].enabled, true)
-  assert.equal(request.config.rules['max-depth'].enabled, false)
-  assert.equal(request.config.rules['no-empty-label'].enabled, true)
+  expect(request.config.rules['sequence-max-participants'].enabled).toBe(true)
+  expect(request.config.rules['max-depth'].enabled).toBe(false)
+  expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
 
 
 
-test('buildAnalyzeRequest detects flowchart declarations with tab whitespace', () => {
+it('buildAnalyzeRequest detects flowchart declarations with tab whitespace', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -324,11 +323,11 @@ test('buildAnalyzeRequest detects flowchart declarations with tab whitespace', (
     ]
   )
 
-  assert.equal(request.config.rules['max-depth'].enabled, true)
-  assert.equal(request.config.rules['sequence-max-participants'].enabled, false)
-  assert.equal(request.config.rules['no-empty-label'].enabled, true)
+  expect(request.config.rules['max-depth'].enabled).toBe(true)
+  expect(request.config.rules['sequence-max-participants'].enabled).toBe(false)
+  expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
-test('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filtering', () => {
+it('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filtering', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -353,15 +352,15 @@ test('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule fil
     ]
   )
 
-  assert.equal(request.config.rules['state-no-unreachable-states'].enabled, true)
-  assert.equal(request.config.rules['max-depth'].enabled, false)
-  assert.equal(request.config.rules['no-empty-label'].enabled, true)
+  expect(request.config.rules['state-no-unreachable-states'].enabled).toBe(true)
+  expect(request.config.rules['max-depth'].enabled).toBe(false)
+  expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
 
 
 
 
-test('analyzeCode sends compatibility payload with empty rules when using server defaults', async () => {
+it('analyzeCode sends compatibility payload with empty rules when using server defaults', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -388,15 +387,15 @@ test('analyzeCode sends compatibility payload with empty rules when using server
       { useServerDefaults: true }
     )
 
-    assert.equal(response.diagram_type, 'flowchart')
-    assert.equal(requests.length, 1)
-    assert.equal(requests[0].config['schema-version'], 'v1')
-    assert.equal(JSON.stringify(requests[0].config.rules), JSON.stringify({}))
+    expect(response.diagram_type).toBe('flowchart')
+    expect(requests.length).toBe(1)
+    expect(requests[0].config['schema-version']).toBe('v1')
+    expect(JSON.stringify(requests[0].config.rules)).toBe(JSON.stringify({}))
   } finally {
     axios.create = originalCreate
   }
 })
-test('analyzeCode normalizes missing results to empty array', async () => {
+it('analyzeCode normalizes missing results to empty array', async () => {
   const axios = require('axios')
   const originalCreate = axios.create
 
@@ -410,15 +409,15 @@ test('analyzeCode normalizes missing results to empty array', async () => {
     const { analyzeCode } = loadApiModule()
     const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-    assert.ok(Array.isArray(response.results))
-    assert.equal(response.results.length, 0)
-    assert.equal(response.diagram_type, 'flowchart')
+    expect(Array.isArray(response.results)).toBeTruthy()
+    expect(response.results.length).toBe(0)
+    expect(response.diagram_type).toBe('flowchart')
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode normalizes null and non-array results without throwing', async () => {
+it('analyzeCode normalizes null and non-array results without throwing', async () => {
   const axios = require('axios')
   const originalCreate = axios.create
   const payloads = [
@@ -437,16 +436,16 @@ test('analyzeCode normalizes null and non-array results without throwing', async
     const first = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
     const second = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-    assert.equal(first.results.length, 0)
-    assert.equal(second.results.length, 0)
-    assert.ok(Array.isArray(first.results))
-    assert.ok(Array.isArray(second.results))
+    expect(first.results.length).toBe(0)
+    expect(second.results.length).toBe(0)
+    expect(Array.isArray(first.results)).toBeTruthy()
+    expect(Array.isArray(second.results)).toBeTruthy()
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode normalizes missing data payload to UI-safe defaults', async () => {
+it('analyzeCode normalizes missing data payload to UI-safe defaults', async () => {
   const axios = require('axios')
   const originalCreate = axios.create
 
@@ -458,16 +457,16 @@ test('analyzeCode normalizes missing data payload to UI-safe defaults', async ()
     const { analyzeCode } = loadApiModule()
     const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-    assert.ok(Array.isArray(response.results))
-    assert.equal(response.results.length, 0)
-    assert.equal(response.diagram_type, '')
-    assert.equal(response.results.length, (Array.isArray(response.results) ? response.results.length : 0))
+    expect(Array.isArray(response.results)).toBeTruthy()
+    expect(response.results.length).toBe(0)
+    expect(response.diagram_type).toBe('')
+    expect(response.results.length).toBe((Array.isArray(response.results) ? response.results.length : 0))
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode normalizes issue-count maps to finite numeric values', async () => {
+it('analyzeCode normalizes issue-count maps to finite numeric values', async () => {
   const axios = require('axios')
   const originalCreate = axios.create
 
@@ -503,20 +502,14 @@ test('analyzeCode normalizes issue-count maps to finite numeric values', async (
     const { analyzeCode } = loadApiModule()
     const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-    assert.equal(
-      JSON.stringify(response.metrics.issueCounts.bySeverity),
-      JSON.stringify({ error: 2, warning: 3, info: 4 })
-    )
-    assert.equal(
-      JSON.stringify(response.metrics.issueCounts.byRule),
-      JSON.stringify({ 'no-empty-label': 5, 'max-depth': 6 })
-    )
+    expect(JSON.stringify(response.metrics.issueCounts.bySeverity)).toBe(JSON.stringify({ error: 2, warning: 3, info: 4 }))
+    expect(JSON.stringify(response.metrics.issueCounts.byRule)).toBe(JSON.stringify({ 'no-empty-label': 5, 'max-depth': 6 }))
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode defaults malformed issue-count maps to empty objects', async () => {
+it('analyzeCode defaults malformed issue-count maps to empty objects', async () => {
   const axios = require('axios')
   const originalCreate = axios.create
 
@@ -539,14 +532,14 @@ test('analyzeCode defaults malformed issue-count maps to empty objects', async (
     const { analyzeCode } = loadApiModule()
     const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-    assert.equal(JSON.stringify(response.metrics.issueCounts.bySeverity), JSON.stringify({}))
-    assert.equal(JSON.stringify(response.metrics.issueCounts.byRule), JSON.stringify({}))
+    expect(JSON.stringify(response.metrics.issueCounts.bySeverity)).toBe(JSON.stringify({}))
+    expect(JSON.stringify(response.metrics.issueCounts.byRule)).toBe(JSON.stringify({}))
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('fetchRules normalizes malformed payloads to an empty rules list with malformed status', async () => {
+it('fetchRules normalizes malformed payloads to an empty rules list with malformed status', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -567,24 +560,20 @@ test('fetchRules normalizes malformed payloads to an empty rules list with malfo
     const first = await api.fetchRules('https://api.example.com')
     const second = await api.fetchRules('https://api.example.com')
 
-    assert.ok(Array.isArray(first.rules))
-    assert.ok(Array.isArray(second.rules))
-    assert.equal(first.rules.length, 0)
-    assert.equal(second.rules.length, 0)
-    assert.equal(first.status, 'malformed_payload')
-    assert.equal(second.status, 'malformed_payload')
-    assert.equal(
-      warnings.some((message) => message.includes('[api.fetchRules] Normalized malformed rules response')),
-      true,
-      'expected a warning for malformed rules payloads'
-    )
+    expect(Array.isArray(first.rules)).toBeTruthy()
+    expect(Array.isArray(second.rules)).toBeTruthy()
+    expect(first.rules.length).toBe(0)
+    expect(second.rules.length).toBe(0)
+    expect(first.status).toBe('malformed_payload')
+    expect(second.status).toBe('malformed_payload')
+    expect(warnings.some((message) => message.includes('[api.fetchRules] Normalized malformed rules response'))).toBe(true) // 'expected a warning for malformed rules payloads'
   } finally {
     console.warn = originalWarn
     axios.create = originalCreate
   }
 })
 
-test('fetchRules filters malformed rule entries and warns with drop summary', async () => {
+it('fetchRules filters malformed rule entries and warns with drop summary', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -628,50 +617,43 @@ test('fetchRules filters malformed rule entries and warns with drop summary', as
   try {
     const result = await api.fetchRules('https://api.example.com')
 
-    assert.equal(result.status, 'success')
-    assert.equal(result.rules.length, 1)
-    assert.equal(
-      JSON.stringify(result.rules[0]),
-      JSON.stringify({
+    expect(result.status).toBe('success')
+    expect(result.rules.length).toBe(1)
+    expect(JSON.stringify(result.rules[0])).toBe(JSON.stringify({
         id: 'valid-rule',
         description: 'A valid rule description',
         severity: 'warning',
-      })
-    )
-    assert.equal(
-      warnings.some((message) => message.includes('Dropped 4 invalid rule entries during normalization')),
-      true,
-      'expected warning that malformed rule entries were dropped'
-    )
+      }))
+    expect(warnings.some((message) => message.includes('Dropped 4 invalid rule entries during normalization'))).toBe(true) // 'expected warning that malformed rule entries were dropped'
   } finally {
     console.warn = originalWarn
     axios.create = originalCreate
   }
 })
 
-test('validateApiEndpoint accepts endpoint without credentials', () => {
+it('validateApiEndpoint accepts endpoint without credentials', () => {
   const { validateApiEndpoint } = loadApiModule()
 
   const result = validateApiEndpoint('https://api.merm8.app/v1')
 
-  assert.equal(result.valid, true)
-  assert.equal(result.message, undefined)
+  expect(result.valid).toBe(true)
+  expect(result.message).toBe(undefined)
 })
 
-test('validateApiEndpoint rejects endpoint with username/password credentials', () => {
+it('validateApiEndpoint rejects endpoint with username/password credentials', () => {
   const { validateApiEndpoint } = loadApiModule()
 
   const usernamePasswordResult = validateApiEndpoint('https://user:secret@api.merm8.app')
   const usernameOnlyResult = validateApiEndpoint('https://user@api.merm8.app')
 
-  assert.equal(usernamePasswordResult.valid, false)
-  assert.equal(usernamePasswordResult.message, 'Endpoint must not include credentials.')
-  assert.equal(usernameOnlyResult.valid, false)
-  assert.equal(usernameOnlyResult.message, 'Endpoint must not include credentials.')
+  expect(usernamePasswordResult.valid).toBe(false)
+  expect(usernamePasswordResult.message).toBe('Endpoint must not include credentials.')
+  expect(usernameOnlyResult.valid).toBe(false)
+  expect(usernameOnlyResult.message).toBe('Endpoint must not include credentials.')
 })
 
 
-test('analyzeCode returns normalized string hints when provided by API', async () => {
+it('analyzeCode returns normalized string hints when provided by API', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -689,14 +671,14 @@ test('analyzeCode returns normalized string hints when provided by API', async (
   try {
     const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-    assert.equal(response.diagram_type, 'flowchart')
-    assert.equal(JSON.stringify(response.hints), JSON.stringify(['Use concise labels', 'Group related nodes']))
+    expect(response.diagram_type).toBe('flowchart')
+    expect(JSON.stringify(response.hints)).toBe(JSON.stringify(['Use concise labels', 'Group related nodes']))
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode filters malformed hints and warns in development', async () => {
+it('analyzeCode filters malformed hints and warns in development', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -720,22 +702,15 @@ test('analyzeCode filters malformed hints and warns in development', async () =>
   try {
     const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-    assert.equal(
-      JSON.stringify(response.hints),
-      JSON.stringify(['Keep naming consistent', { code: 'prefer-short-labels' }])
-    )
-    assert.equal(
-      warnings.some((message) => message.includes('invalid entries in `hints`')),
-      true,
-      'expected a warning for malformed hints'
-    )
+    expect(JSON.stringify(response.hints)).toBe(JSON.stringify(['Keep naming consistent', { code: 'prefer-short-labels' }]))
+    expect(warnings.some((message) => message.includes('invalid entries in `hints`'))).toBe(true) // 'expected a warning for malformed hints'
   } finally {
     console.warn = originalWarn
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode normalizes non-array hints to empty array', async () => {
+it('analyzeCode normalizes non-array hints to empty array', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -753,14 +728,14 @@ test('analyzeCode normalizes non-array hints to empty array', async () => {
   try {
     const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-    assert.equal(response.diagram_type, 'flowchart')
-    assert.equal(JSON.stringify(response.hints), JSON.stringify([]))
+    expect(response.diagram_type).toBe('flowchart')
+    expect(JSON.stringify(response.hints)).toBe(JSON.stringify([]))
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode drops unsupported nested hint values', async () => {
+it('analyzeCode drops unsupported nested hint values', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -783,16 +758,13 @@ test('analyzeCode drops unsupported nested hint values', async () => {
   try {
     const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-    assert.equal(
-      JSON.stringify(response.hints),
-      JSON.stringify(['Keep swimlanes balanced', { message: 'Check line ordering' }])
-    )
+    expect(JSON.stringify(response.hints)).toBe(JSON.stringify(['Keep swimlanes balanced', { message: 'Check line ordering' }]))
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode filters malformed violations and keeps only safe entries', async () => {
+it('analyzeCode filters malformed violations and keeps only safe entries', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -832,28 +804,21 @@ test('analyzeCode filters malformed violations and keeps only safe entries', asy
   try {
     const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-    assert.equal(response.results.length, 1)
-    assert.equal(
-      JSON.stringify(response.results[0]),
-      JSON.stringify({
+    expect(response.results.length).toBe(1)
+    expect(JSON.stringify(response.results[0])).toBe(JSON.stringify({
         rule_id: 'valid-rule',
         severity: 'warning',
         message: 'Keep labels short',
         line: 12,
-      })
-    )
-    assert.equal(
-      warnings.some((message) => message.includes('invalid entries in `results`')),
-      true,
-      'expected a warning for malformed results'
-    )
+      }))
+    expect(warnings.some((message) => message.includes('invalid entries in `results`'))).toBe(true) // 'expected a warning for malformed results'
   } finally {
     console.warn = originalWarn
     axios.create = originalCreate
   }
 })
 
-test('analyzeCode ignores non-numeric line values on violations', async () => {
+it('analyzeCode ignores non-numeric line values on violations', async () => {
   const api = loadApiModule()
   const axios = require('axios')
   const originalCreate = axios.create
@@ -877,15 +842,15 @@ test('analyzeCode ignores non-numeric line values on violations', async () => {
   try {
     const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-    assert.equal(response.results.length, 1)
-    assert.equal('line' in response.results[0], false)
-    assert.equal(response.results[0].message, 'String line should be ignored')
+    expect(response.results.length).toBe(1)
+    expect('line' in response.results[0]).toBe(false)
+    expect(response.results[0].message).toBe('String line should be ignored')
   } finally {
     axios.create = originalCreate
   }
 })
 
-test('validateApiEndpoint blocks normalized local/private bypass forms in production', () => {
+it('validateApiEndpoint blocks normalized local/private bypass forms in production', () => {
   const { validateApiEndpoint } = loadApiModule()
   const originalNodeEnv = process.env.NODE_ENV
   process.env.NODE_ENV = 'production'
@@ -910,23 +875,23 @@ test('validateApiEndpoint blocks normalized local/private bypass forms in produc
 
     for (const blockedUrl of blockedUrls) {
       const result = validateApiEndpoint(blockedUrl)
-      assert.equal(result.valid, false, `expected ${blockedUrl} to be rejected`)
-      assert.equal(result.message, 'Local/private network endpoints are not allowed in production.')
+      expect(result.valid).toBe(false) // `expected ${blockedUrl} to be rejected`
+      expect(result.message).toBe('Local/private network endpoints are not allowed in production.')
     }
 
     const invalidUrls = ['http://1.999.1.1', 'http://10.1.70000']
 
     for (const invalidUrl of invalidUrls) {
       const result = validateApiEndpoint(invalidUrl)
-      assert.equal(result.valid, false, `expected ${invalidUrl} to be rejected as invalid`)
-      assert.equal(result.message, 'Enter a valid URL (example: https://api.merm8.app).')
+      expect(result.valid).toBe(false) // `expected ${invalidUrl} to be rejected as invalid`
+      expect(result.message).toBe('Enter a valid URL (example: https://api.merm8.app).')
     }
   } finally {
     process.env.NODE_ENV = originalNodeEnv
   }
 })
 
-test('validateApiEndpoint blocks private/loopback IPv4-mapped IPv6 hosts in production', () => {
+it('validateApiEndpoint blocks private/loopback IPv4-mapped IPv6 hosts in production', () => {
   const { validateApiEndpoint } = loadApiModule()
   const originalNodeEnv = process.env.NODE_ENV
   process.env.NODE_ENV = 'production'
@@ -946,15 +911,15 @@ test('validateApiEndpoint blocks private/loopback IPv4-mapped IPv6 hosts in prod
 
     for (const blockedUrl of blockedUrls) {
       const result = validateApiEndpoint(blockedUrl)
-      assert.equal(result.valid, false, `expected ${blockedUrl} to be rejected`)
-      assert.equal(result.message, 'Local/private network endpoints are not allowed in production.')
+      expect(result.valid).toBe(false) // `expected ${blockedUrl} to be rejected`
+      expect(result.message).toBe('Local/private network endpoints are not allowed in production.')
     }
   } finally {
     process.env.NODE_ENV = originalNodeEnv
   }
 })
 
-test('validateApiEndpoint allows public IPv6 hosts in production', () => {
+it('validateApiEndpoint allows public IPv6 hosts in production', () => {
   const { validateApiEndpoint } = loadApiModule()
   const originalNodeEnv = process.env.NODE_ENV
   process.env.NODE_ENV = 'production'
@@ -970,15 +935,15 @@ test('validateApiEndpoint allows public IPv6 hosts in production', () => {
 
     for (const allowedUrl of allowedUrls) {
       const result = validateApiEndpoint(allowedUrl)
-      assert.equal(result.valid, true, `expected ${allowedUrl} to be allowed`)
-      assert.equal(result.message, undefined)
+      expect(result.valid).toBe(true) // `expected ${allowedUrl} to be allowed`
+      expect(result.message).toBe(undefined)
     }
   } finally {
     process.env.NODE_ENV = originalNodeEnv
   }
 })
 
-test('validateApiEndpoint allows public hosts in production', () => {
+it('validateApiEndpoint allows public hosts in production', () => {
   const { validateApiEndpoint } = loadApiModule()
   const originalNodeEnv = process.env.NODE_ENV
   process.env.NODE_ENV = 'production'
@@ -995,8 +960,8 @@ test('validateApiEndpoint allows public hosts in production', () => {
 
     for (const allowedUrl of allowedUrls) {
       const result = validateApiEndpoint(allowedUrl)
-      assert.equal(result.valid, true, `expected ${allowedUrl} to be allowed`)
-      assert.equal(result.message, undefined)
+      expect(result.valid).toBe(true) // `expected ${allowedUrl} to be allowed`
+      expect(result.message).toBe(undefined)
     }
   } finally {
     process.env.NODE_ENV = originalNodeEnv

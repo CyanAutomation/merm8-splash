@@ -1,9 +1,11 @@
-const test = require('node:test')
-const assert = require('node:assert/strict')
-const fs = require('node:fs')
-const path = require('node:path')
-const vm = require('node:vm')
-const ts = require('typescript')
+import { describe, it, expect } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
+import vm from 'node:vm'
+import ts from 'typescript'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function createDeferred() {
   let resolve
@@ -210,7 +212,7 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl, isCan
   }
 }
 
-test('triggerAnalysis uses short debounce for tiny edits', async () => {
+it('triggerAnalysis uses short debounce for tiny edits', async () => {
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async () => ({ diagram_type: 'flowchart', results: [] }),
   })
@@ -219,11 +221,11 @@ test('triggerAnalysis uses short debounce for tiny edits', async () => {
   const hook = useDiagramAnalysis()
   hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
 
-  assert.equal(timerControls.getLastScheduledDelay(), 250)
+  expect(timerControls.getLastScheduledDelay()).toBe(250)
   await timerControls.runAllTimers()
 })
 
-test('triggerAnalysis enforces longer idle window for large diagrams', async () => {
+it('triggerAnalysis enforces longer idle window for large diagrams', async () => {
   const largeCode = Array.from({ length: 120 }, (_, idx) => `N${idx}-->N${idx + 1}`).join('\n')
 
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
@@ -234,11 +236,11 @@ test('triggerAnalysis enforces longer idle window for large diagrams', async () 
   const hook = useDiagramAnalysis()
   hook.triggerAnalysis('https://example.test', largeCode, [], [])
 
-  assert.equal(timerControls.getLastScheduledDelay(), 1000)
+  expect(timerControls.getLastScheduledDelay()).toBe(1000)
   await timerControls.runAllTimers()
 })
 
-test('rapid consecutive input increases debounce delay', async () => {
+it('rapid consecutive input increases debounce delay', async () => {
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async () => ({ diagram_type: 'flowchart', results: [] }),
   })
@@ -247,14 +249,14 @@ test('rapid consecutive input increases debounce delay', async () => {
   const hook = useDiagramAnalysis()
 
   hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
-  assert.equal(timerControls.getLastScheduledDelay(), 250)
+  expect(timerControls.getLastScheduledDelay()).toBe(250)
 
   await timerControls.advanceBy(100)
   hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B\nB-->C', [], [])
-  assert.equal(timerControls.getLastScheduledDelay(), 400)
+  expect(timerControls.getLastScheduledDelay()).toBe(400)
 })
 
-test('forceAnalysis runs immediately and bypasses pending debounce', async () => {
+it('forceAnalysis runs immediately and bypasses pending debounce', async () => {
   const calls = []
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
@@ -270,10 +272,10 @@ test('forceAnalysis runs immediately and bypasses pending debounce', async () =>
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', [], [])
 
   await Promise.resolve()
-  assert.deepEqual(calls, ['graph TD\nA-->C'])
+  expect(calls).toEqual(['graph TD\nA-->C'])
 })
 
-test('stale responses are ignored and latest analysis wins', async () => {
+it('stale responses are ignored and latest analysis wins', async () => {
   const first = createDeferred()
   const second = createDeferred()
   let callCount = 0
@@ -308,11 +310,11 @@ test('stale responses are ignored and latest analysis wins', async () => {
   const rerenderedHook = useDiagramAnalysis()
 
   const violations = JSON.parse(JSON.stringify(rerenderedHook.violations))
-  assert.equal(violations.length, 1)
-  assert.equal(violations[0].rule_id, 'latest')
+  expect(violations.length).toBe(1)
+  expect(violations[0].rule_id).toBe('latest')
 })
 
-test('cancelAnalysis aborts in-flight analysis and resets state', async () => {
+it('cancelAnalysis aborts in-flight analysis and resets state', async () => {
   let aborted = false
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
@@ -332,16 +334,16 @@ test('cancelAnalysis aborts in-flight analysis and resets state', async () => {
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
 
-  assert.equal(aborted, true)
-  assert.equal(rerenderedHook.isAnalyzing, false)
-  assert.equal(JSON.stringify(rerenderedHook.violations), JSON.stringify([]))
-  assert.equal(rerenderedHook.analyzeError, null)
+  expect(aborted).toBe(true)
+  expect(rerenderedHook.isAnalyzing).toBe(false)
+  expect(JSON.stringify(rerenderedHook.violations)).toBe(JSON.stringify([]))
+  expect(rerenderedHook.analyzeError).toBe(null)
 })
 
 
 
 
-test('different concurrent forceAnalysis calls do not coalesce when code differs', async () => {
+it('different concurrent forceAnalysis calls do not coalesce when code differs', async () => {
   const first = createDeferred()
   const second = createDeferred()
   const calls = []
@@ -360,7 +362,7 @@ test('different concurrent forceAnalysis calls do not coalesce when code differs
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', ['r1'], [])
 
-  assert.deepEqual(calls, ['graph TD\nA-->B', 'graph TD\nA-->C'])
+  expect(calls).toEqual(['graph TD\nA-->B', 'graph TD\nA-->C'])
 
   second.resolve({
     diagram_type: 'sequence',
@@ -379,13 +381,13 @@ test('different concurrent forceAnalysis calls do not coalesce when code differs
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
 
-  assert.equal(rerenderedHook.violations[0].rule_id, 'latest')
-  assert.equal(rerenderedHook.diagramType, 'sequence')
-  assert.deepEqual(JSON.parse(JSON.stringify(rerenderedHook.analysisHints)), ['use async flow'])
+  expect(rerenderedHook.violations[0].rule_id).toBe('latest')
+  expect(rerenderedHook.diagramType).toBe('sequence')
+  expect(JSON.parse(JSON.stringify(rerenderedHook.analysisHints))).toEqual(['use async flow'])
 })
 
 
-test('hash-colliding legacy code strings never share in-flight entries', async () => {
+it('hash-colliding legacy code strings never share in-flight entries', async () => {
   const first = createDeferred()
   const second = createDeferred()
   const calls = []
@@ -409,7 +411,7 @@ test('hash-colliding legacy code strings never share in-flight entries', async (
   hook.forceAnalysis('https://example.test', legacyCollisionA, ['r1'], [])
   hook.forceAnalysis('https://example.test', legacyCollisionB, ['r1'], [])
 
-  assert.deepEqual(calls, [legacyCollisionA, legacyCollisionB])
+  expect(calls).toEqual([legacyCollisionA, legacyCollisionB])
 
   second.resolve({
     diagram_type: 'flowchart',
@@ -425,9 +427,9 @@ test('hash-colliding legacy code strings never share in-flight entries', async (
 
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
-  assert.equal(rerenderedHook.violations[0].rule_id, 'second')
+  expect(rerenderedHook.violations[0].rule_id).toBe('second')
 })
-test('coalesced joiner waits for retry lifecycle and receives eventual success', async () => {
+it('coalesced joiner waits for retry lifecycle and receives eventual success', async () => {
   const firstAttempt = createDeferred()
   let callCount = 0
 
@@ -458,7 +460,7 @@ test('coalesced joiner waits for retry lifecycle and receives eventual success',
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
 
-  assert.equal(callCount, 1)
+  expect(callCount).toBe(1)
 
   firstAttempt.reject(retryableAxiosError)
   await new Promise((resolve) => setImmediate(resolve))
@@ -467,16 +469,16 @@ test('coalesced joiner waits for retry lifecycle and receives eventual success',
   await new Promise((resolve) => setImmediate(resolve))
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(callCount, 2)
+  expect(callCount).toBe(2)
 
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
 
-  assert.equal(rerenderedHook.violations[0].rule_id, 'retried')
-  assert.equal(rerenderedHook.analyzeError, null)
+  expect(rerenderedHook.violations[0].rule_id).toBe('retried')
+  expect(rerenderedHook.analyzeError).toBe(null)
 })
 
-test('identical concurrent forceAnalysis calls coalesce into one API request', async () => {
+it('identical concurrent forceAnalysis calls coalesce into one API request', async () => {
   const deferred = createDeferred()
   let callCount = 0
 
@@ -493,7 +495,7 @@ test('identical concurrent forceAnalysis calls coalesce into one API request', a
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
 
-  assert.equal(callCount, 1)
+  expect(callCount).toBe(1)
 
   deferred.resolve({
     diagram_type: 'flowchart',
@@ -503,15 +505,15 @@ test('identical concurrent forceAnalysis calls coalesce into one API request', a
 
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
-  assert.equal(rerenderedHook.violations[0].rule_id, 'coalesced')
+  expect(rerenderedHook.violations[0].rule_id).toBe('coalesced')
 
   rerenderedHook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(callCount, 1)
+  expect(callCount).toBe(1)
 })
 
-test('coalesced request cancellation exits analyzing state without waiting for shared promise', async () => {
+it('coalesced request cancellation exits analyzing state without waiting for shared promise', async () => {
   const deferred = createDeferred()
   let callCount = 0
 
@@ -535,11 +537,11 @@ test('coalesced request cancellation exits analyzing state without waiting for s
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
 
-  assert.equal(callCount, 1)
-  assert.equal(rerenderedHook.isAnalyzing, false)
+  expect(callCount).toBe(1)
+  expect(rerenderedHook.isAnalyzing).toBe(false)
 })
 
-test('identical forceAnalysis request reuses fresh cache entry', async () => {
+it('identical forceAnalysis request reuses fresh cache entry', async () => {
   const calls = []
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
@@ -565,16 +567,16 @@ test('identical forceAnalysis request reuses fresh cache entry', async () => {
   })
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(calls.length, 1)
+  expect(calls.length).toBe(1)
 
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
-  assert.equal(rerenderedHook.violations[0].rule_id, 'cached')
+  expect(rerenderedHook.violations[0].rule_id).toBe('cached')
 })
 
 
 
-test('cache key changes when rules metadata changes with same code and enabled rules', async () => {
+it('cache key changes when rules metadata changes with same code and enabled rules', async () => {
   let callCount = 0
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
@@ -597,9 +599,9 @@ test('cache key changes when rules metadata changes with same code and enabled r
   ])
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(callCount, 2)
+  expect(callCount).toBe(2)
 })
-test('cache key changes when code/rules/endpoint change', async () => {
+it('cache key changes when code/rules/endpoint change', async () => {
   const calls = []
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
@@ -624,10 +626,10 @@ test('cache key changes when code/rules/endpoint change', async () => {
   hook.forceAnalysis('https://example-2.test', 'graph TD\nA-->C', ['r2'], [])
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(calls.length, 4)
+  expect(calls.length).toBe(4)
 })
 
-test('expired cache entry triggers fresh network analysis', async () => {
+it('expired cache entry triggers fresh network analysis', async () => {
   let callCount = 0
 
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
@@ -648,10 +650,10 @@ test('expired cache entry triggers fresh network analysis', async () => {
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(callCount, 2)
+  expect(callCount).toBe(2)
 })
 
-test('parseAnalysisError builds fallback summary for object payloads without standard keys', async () => {
+it('parseAnalysisError builds fallback summary for object payloads without standard keys', async () => {
   const axiosError = {
     __isAxiosError: true,
     message: 'Request failed with status code 400',
@@ -683,12 +685,12 @@ test('parseAnalysisError builds fallback summary for object payloads without sta
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
 
-  assert.match(rerenderedHook.analyzeError || '', /status: invalid_request/)
-  assert.match(rerenderedHook.analyzeError || '', /reason: Node references an undeclared target/)
-  assert.deepEqual(JSON.parse(JSON.stringify(rerenderedHook.analysisHints)), ['Request ID: req-400-fallback'])
+  expect(rerenderedHook.analyzeError || '').toMatch(/status: invalid_request/)
+  expect(rerenderedHook.analyzeError || '').toMatch(/reason: Node references an undeclared target/)
+  expect(JSON.parse(JSON.stringify(rerenderedHook.analysisHints))).toEqual(['Request ID: req-400-fallback'])
 })
 
-test('parseAnalysisError adds request id hint alongside API-provided hints', async () => {
+it('parseAnalysisError adds request id hint alongside API-provided hints', async () => {
   const axiosError = {
     __isAxiosError: true,
     message: 'Request failed with status code 400',
@@ -719,8 +721,8 @@ test('parseAnalysisError adds request id hint alongside API-provided hints', asy
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
 
-  assert.equal(rerenderedHook.analyzeError, 'Validation failed')
-  assert.deepEqual(JSON.parse(JSON.stringify(rerenderedHook.analysisHints)), [
+  expect(rerenderedHook.analyzeError).toBe('Validation failed')
+  expect(JSON.parse(JSON.stringify(rerenderedHook.analysisHints))).toEqual([
     'Fix syntax around line 2',
     'Request ID: req-400-with-hints',
   ])
