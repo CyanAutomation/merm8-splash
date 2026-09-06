@@ -70,6 +70,24 @@ npm start
 npm run lint
 ```
 
+### Testing
+
+```bash
+# Run unit tests once
+npm test
+
+# Run tests in watch mode (re-runs on file changes)
+npm run test:watch
+```
+
+The project uses [Vitest](https://vitest.dev/) as the test runner. Test files are located in the `tests/` directory and follow the pattern `*.test.ts`.
+
+**Test Coverage:**
+- API request building and validation
+- Rules state management
+- Hook behavior (e.g., `useDiagramAnalysis` with debouncing and error handling)
+- Component lifecycle patterns (e.g., timeout management in `SnackbarProvider`)
+
 ## Configuration
 
 ### API Endpoint
