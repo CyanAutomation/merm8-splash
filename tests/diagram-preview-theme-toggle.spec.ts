@@ -74,16 +74,13 @@ test('diagram mode toggle updates state and preview SVG theme output', async ({ 
   await expect(toggle).not.toHaveAttribute('aria-label', initialAriaLabel ?? '')
 
   // Wait for SVG to update with new theme
-  const updatedMarkup = await page.waitForFunction(
-    async () => {
-      const nextSvg = await getRenderedSvg(previewPanel)
-      const markup = await getSvgMarkup(nextSvg)
-      return markup !== initialMarkup ? markup : null
-    },
+  await expect.poll(
+    () => getSvgMarkup(svg),
     { timeout: 10000 }
-  )
+  ).not.toBe(initialMarkup)
 
-  const updatedTheme = detectThemeFromSvg(updatedMarkup as string)
+  const updatedMarkup = await getSvgMarkup(svg)
+  const updatedTheme = detectThemeFromSvg(updatedMarkup)
   
   // Only assert theme change if both themes were detectable
   if (initialTheme !== 'unknown' && updatedTheme !== 'unknown') {
@@ -107,14 +104,10 @@ test('diagram mode toggle only updates preview SVG and does not mutate global pa
   await toggle.click()
 
   // Wait for SVG to update
-  await page.waitForFunction(
-    async () => {
-      const nextSvg = await getRenderedSvg(previewPanel)
-      const markup = await getSvgMarkup(nextSvg)
-      return markup !== svgBefore
-    },
+  await expect.poll(
+    () => getSvgMarkup(svg),
     { timeout: 10000 }
-  )
+  ).not.toBe(svgBefore)
 
   const rootBgAfter = await page.evaluate(() =>
     getComputedStyle(document.documentElement).getPropertyValue('--color-bg-primary').trim()
