@@ -83,6 +83,7 @@ npm run test:watch
 The project uses [Vitest](https://vitest.dev/) as the test runner. Test files are located in the `tests/` directory and follow the pattern `*.test.ts`.
 
 **Test Coverage:**
+
 - API request building and validation
 - Rules state management
 - Hook behavior (e.g., `useDiagramAnalysis` with debouncing and error handling)
@@ -95,6 +96,7 @@ The project uses [Vitest](https://vitest.dev/) as the test runner. Test files ar
 The application needs to connect to a merm8 API instance. Configure it via:
 
 1. **Environment Variable** (at build time):
+
    ```bash
    NEXT_PUBLIC_MERM8_API_URL=https://api.merm8.app npm run build
    ```
@@ -143,9 +145,11 @@ Netlify provides free hosting with automatic deployments from git:
 2. Build command: `npm run build`
 3. Publish directory: `out`
 4. Add environment variable:
+
    ```
    NEXT_PUBLIC_MERM8_API_URL=https://api.merm8.app
    ```
+
 5. Deploy!
 
 See [netlify.toml](netlify.toml) for configuration details.
@@ -157,9 +161,11 @@ Deploy directly to Vercel with minimal setup:
 1. Push code to GitHub
 2. Import project in Vercel dashboard
 3. Add environment variable:
+
    ```
    NEXT_PUBLIC_MERM8_API_URL=https://api.merm8.app
    ```
+
 4. Deploy!
 
 See [vercel.json](vercel.json) for configuration details.
@@ -219,6 +225,7 @@ We welcome contributions! Here's how to get involved:
 ### Reporting Issues
 
 Found a bug or have a feature request? [Open an issue](https://github.com/CyanAutomation/merm8-splash/issues) with:
+
 - Clear description of the problem
 - Steps to reproduce (for bugs)
 - Expected vs. actual behavior
