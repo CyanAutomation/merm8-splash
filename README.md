@@ -98,7 +98,7 @@ The application needs to connect to a merm8 API instance. Configure it via:
 1. **Environment Variable** (at build time):
 
    ```bash
-   NEXT_PUBLIC_MERM8_API_URL=https://api.merm8.app npm run build
+   NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev npm run build
    ```
 
 2. **UI Configuration** (at runtime):
@@ -147,7 +147,7 @@ Netlify provides free hosting with automatic deployments from git:
 4. Add environment variable:
 
    ```
-   NEXT_PUBLIC_MERM8_API_URL=https://api.merm8.app
+NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev
    ```
 
 5. Deploy!
@@ -163,7 +163,7 @@ Deploy directly to Vercel with minimal setup:
 3. Add environment variable:
 
    ```
-   NEXT_PUBLIC_MERM8_API_URL=https://api.merm8.app
+NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev
    ```
 
 4. Deploy!
