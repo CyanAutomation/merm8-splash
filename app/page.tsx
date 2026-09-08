@@ -627,7 +627,6 @@ function HomeContent() {
                   <DiagramPreview
                     code={code}
                     onParseStateChange={handleParseStateChange}
-                    parseErrorMessage={parseErrorDetail}
                     useBeautifulRenderer={prefs.useBeautifulRenderer}
                     onToggleBeautifulRenderer={(value) => savePrefs({ useBeautifulRenderer: value })}
                     diagramColorMode={prefs.diagramPreviewMode}
