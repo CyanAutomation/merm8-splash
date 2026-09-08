@@ -36,7 +36,7 @@ const SOURCE_LABELS: Record<string, string> = {
 }
 
 const PRESETS = [
-  { label: 'Official API', value: 'https://api.merm8.app' },
+  { label: 'Official API', value: 'https://merm8.scheimann.workers.dev' },
   { label: 'Localhost 8080', value: 'http://localhost:8080' },
   { label: 'Localhost 3000', value: 'http://localhost:3000' },
 ]
@@ -114,7 +114,7 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
               type="url"
               value={endpoint}
               onChange={(e) => onEndpointChange(e.target.value)}
-              placeholder="https://api.merm8.app"
+              placeholder="https://merm8.scheimann.workers.dev"
               style={{
                 flex: 1,
                 background: 'var(--color-bg-primary)',

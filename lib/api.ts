@@ -77,6 +77,8 @@ export interface AnalyzeResponse {
   timestamp?: number
 }
 
+export const DEFAULT_API_ENDPOINT = 'https://merm8.scheimann.workers.dev'
+
 export type AnalyzeHint = string | Record<string, unknown>
 
 /**
@@ -96,7 +98,8 @@ function normalizeViolation(rawViolation: unknown): Violation | null {
   }
 
   const violation = rawViolation as Record<string, unknown>
-  const { rule_id, severity, message, node_id, line } = violation
+  const rule_id = typeof violation.rule_id === 'string' ? violation.rule_id : violation['rule-id']
+  const { severity, message, node_id, line } = violation
 
   if (typeof rule_id !== 'string') return null
   if (severity !== 'error' && severity !== 'warning' && severity !== 'info') return null
@@ -285,7 +288,9 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
   const rawDiagramType =
     data && 'diagram_type' in data
       ? (data as { diagram_type?: unknown }).diagram_type
-      : undefined
+      : data && 'diagram-type' in data
+        ? (data as { 'diagram-type'?: unknown })['diagram-type']
+        : undefined
   const rawMetrics = data && 'metrics' in data ? (data as { metrics?: unknown }).metrics : undefined
   const normalizedMetrics = normalizeMetrics(rawMetrics)
   const diagramTypeFromMetrics = normalizedMetrics?.diagramType
@@ -706,7 +711,7 @@ export function resolveApiEndpoint(): string {
     }
   }
 
-  return ''
+  return DEFAULT_API_ENDPOINT
 }
 
 export function validateApiEndpoint(url: string): EndpointValidationResult {
@@ -742,7 +747,7 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
     }
     return { valid: true }
   } catch {
-    return { valid: false, message: 'Enter a valid URL (example: https://api.merm8.app).' }
+    return { valid: false, message: `Enter a valid URL (example: ${DEFAULT_API_ENDPOINT}).` }
   }
 }
 
