@@ -89,7 +89,7 @@ export default function StatusBar({
               · {violationCount} violation{violationCount !== 1 ? 's' : ''}
             </span>
           )}
-          {violationCount === 0 && ruleCount > 0 && (
+          {parseStatus !== 'error' && violationCount === 0 && ruleCount > 0 && (
             <span style={{ color: 'var(--color-success)', marginLeft: '4px' }}>
               · clean
             </span>
