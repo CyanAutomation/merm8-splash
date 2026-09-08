@@ -93,6 +93,12 @@ function loadRulesStateModule() {
   return module.exports
 }
 
+it('uses the hosted Worker as the fallback API endpoint', () => {
+  const { resolveApiEndpoint } = loadApiModule()
+
+  expect(resolveApiEndpoint()).toBe('https://merm8.scheimann.workers.dev')
+})
+
 it('buildAnalyzeRequest includes empty rules object and keeps schema-version in server-default fallback mode', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
@@ -440,6 +446,41 @@ it('analyzeCode normalizes null and non-array results without throwing', async (
     expect(second.results.length).toBe(0)
     expect(Array.isArray(first.results)).toBeTruthy()
     expect(Array.isArray(second.results)).toBeTruthy()
+  } finally {
+    axios.create = originalCreate
+  }
+})
+
+it('analyzeCode accepts the Worker kebab-case analysis response', async () => {
+  const axios = require('axios')
+  const originalCreate = axios.create
+
+  axios.create = () => ({
+    post: async () => ({
+      data: {
+        valid: true,
+        'diagram-type': 'flowchart',
+        issues: [{
+          'rule-id': 'no-cycles',
+          severity: 'error',
+          message: 'cycle detected involving node: A',
+          line: 2,
+        }],
+      },
+    }),
+  })
+
+  try {
+    const { analyzeCode } = loadApiModule()
+    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+
+    expect(response.diagram_type).toBe('flowchart')
+    expect(response.results).toEqual([{
+      rule_id: 'no-cycles',
+      severity: 'error',
+      message: 'cycle detected involving node: A',
+      line: 2,
+    }])
   } finally {
     axios.create = originalCreate
   }
@@ -884,7 +925,7 @@ it('validateApiEndpoint blocks normalized local/private bypass forms in producti
     for (const invalidUrl of invalidUrls) {
       const result = validateApiEndpoint(invalidUrl)
       expect(result.valid).toBe(false) // `expected ${invalidUrl} to be rejected as invalid`
-      expect(result.message).toBe('Enter a valid URL (example: https://api.merm8.app).')
+  expect(result.message).toBe('Enter a valid URL (example: https://merm8.scheimann.workers.dev).')
     }
   } finally {
     process.env.NODE_ENV = originalNodeEnv

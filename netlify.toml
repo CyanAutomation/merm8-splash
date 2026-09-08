@@ -5,7 +5,7 @@
 [build.environment]
   NODE_VERSION = "24"
   # Override NEXT_PUBLIC_MERM8_API_URL in Netlify's dashboard for staging/preview environments
-  NEXT_PUBLIC_MERM8_API_URL = "https://api.merm8.app"
+  NEXT_PUBLIC_MERM8_API_URL = "https://merm8.scheimann.workers.dev"
 
 [[headers]]
   for = "/*"
