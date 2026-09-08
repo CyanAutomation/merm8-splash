@@ -8,7 +8,7 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 - **Real-time Linting** — Instant feedback on diagram violations with configurable rule severity levels (error, warning, info)
 - **Fast Analysis** — Debounced, optimized API calls for responsive user experience
 - **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
-- **Multiple Diagram Types** — Full support for all Mermaid diagram formats
+- **Multiple Diagram Types** — Renders Mermaid diagrams and adapts lint controls to the connected API's advertised capabilities
 - **Keyboard Shortcuts** — Navigate efficiently with intuitive shortcuts
 - **Export Support** — Export analyzed diagrams in multiple formats
 - **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
@@ -30,7 +30,7 @@ The easiest way to try merm8-splash is to use the cloud-hosted version:
 
 ### Prerequisites
 
-- **Node.js** 18 or higher
+- **Node.js** 24 or higher
 - **npm** 9+ or **yarn** 4+
 
 ### Installation
