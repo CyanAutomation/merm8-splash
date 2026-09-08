@@ -225,7 +225,7 @@ function HomeContent() {
       isUnavailable: rulesUnavailableForEndpoint,
     } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
     const useServerDefaultRules = rulesUnavailableForEndpoint
-    const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
+    const canAnalyze = !hasParseError && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
 
     if (!canAnalyze) {
       // Cancel immediately so delayed debounce callbacks cannot abort a newer valid analysis.
@@ -249,6 +249,7 @@ function HomeContent() {
     code,
     endpoint,
     connectionStatus,
+    hasParseError,
     rulesLoading,
     rulesLoadedEndpoint,
     rulesUnavailableEndpoint,
@@ -332,7 +333,7 @@ function HomeContent() {
       isAvailable: rulesReadyForEndpoint,
       isUnavailable: rulesUnavailableForEndpoint,
     } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
-    const canAnalyze = isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
+    const canAnalyze = !hasParseError && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
 
     if (!code.trim() || !endpoint || !canAnalyze) {
       return
@@ -341,7 +342,7 @@ function HomeContent() {
     pendingManualRunRef.current = true
     showSnackbar('Re-check started.', 'success')
     forceAnalysis(endpoint, code, enabledRules, rules, { useServerDefaults: rulesUnavailableForEndpoint })
-  }, [code, endpoint, connectionStatus, rulesLoading, rulesLoadedEndpoint, rulesUnavailableEndpoint, enabledRules, rules, forceAnalysis, showSnackbar])
+  }, [code, endpoint, connectionStatus, hasParseError, rulesLoading, rulesLoadedEndpoint, rulesUnavailableEndpoint, enabledRules, rules, forceAnalysis, showSnackbar])
 
 
   useEffect(() => {
@@ -431,7 +432,7 @@ function HomeContent() {
     isAvailable: rulesReadyForEndpoint,
     isUnavailable: rulesUnavailableForEndpoint,
   } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
-  const canRecheck = !!code.trim() && !!endpoint && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint) && !isAnalyzing
+  const canRecheck = !hasParseError && !!code.trim() && !!endpoint && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint) && !isAnalyzing
 
   const resultsHasErrors = violations.some((violation) => violation.severity === 'error')
 
