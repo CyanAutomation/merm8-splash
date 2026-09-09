@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   system_status:
-    name: SYSTEM STATUS
+    name: Kaseki System Status
     runs-on: ubuntu-latest
     timeout-minutes: 2
     env:
@@ -59,7 +59,7 @@ jobs:
           jq . "$response_file"
 
   readiness:
-    name: READINESS
+    name: Kaseki System Readiness
     needs: system_status
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -81,7 +81,7 @@ jobs:
           jq . "$response_file"
 
   api_connection:
-    name: API CONNECTION
+    name: Kaseki API Status
     needs: readiness
     runs-on: ubuntu-latest
     timeout-minutes: 2
