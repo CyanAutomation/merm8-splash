@@ -9,10 +9,9 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 - **Fast Analysis** — Debounced, optimized API calls for responsive user experience
 - **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
 - **Multiple Diagram Types** — Renders Mermaid diagrams and adapts lint controls to the connected API's advertised capabilities
-- **Keyboard Shortcuts** — Navigate efficiently with intuitive shortcuts
 - **Export Support** — Export analyzed diagrams in multiple formats
 - **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
-- **Responsive Design** — Clean, modern UI built with Tailwind CSS
+- **Desktop-Optimized Design** — Clean, modern UI built with Tailwind CSS (desktop-only layout)
 
 ## Quick Start
 
@@ -146,9 +145,9 @@ Netlify provides free hosting with automatic deployments from git:
 3. Publish directory: `out`
 4. Add environment variable:
 
-   ```
+```
 NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev
-   ```
+```
 
 5. Deploy!
 
@@ -162,9 +161,9 @@ Deploy directly to Vercel with minimal setup:
 2. Import project in Vercel dashboard
 3. Add environment variable:
 
-   ```
+```
 NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev
-   ```
+```
 
 4. Deploy!
 
@@ -183,7 +182,7 @@ For custom deployments:
 
 **merm8-splash** is built with modern web technologies:
 
-- **[Next.js](https://nextjs.org/)** 15 — React framework for production
+- **[Next.js](https://nextjs.org/)** 16 — React framework for production
 - **[React](https://react.dev/)** 19 — UI library
 - **[TypeScript](https://www.typescriptlang.org/)** — Type-safe development
 - **[Tailwind CSS](https://tailwindcss.com/)** — Utility-first styling
@@ -197,25 +196,37 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 ```
 .
 ├── app/
-│   ├── components/          # React components
-│   │   ├── ApiConfigPanel   # API endpoint configuration
-│   │   ├── DiagramEditor    # Code editor
-│   │   ├── DiagramPreview   # Mermaid rendering
-│   │   ├── RulesPanel       # Rule configuration
-│   │   ├── ResultsPanel     # Analysis results
-│   │   └── ...
-│   ├── layout.tsx           # Root layout
-│   ├── page.tsx             # Main page
-│   └── globals.css          # Global styles
-├── lib/
-│   ├── api.ts               # merm8 API client
-│   ├── keyboard.ts          # Keyboard shortcut handling
-│   ├── useDiagramAnalysis   # Analysis state hook
-│   └── ...
-├── Dockerfile               # Docker configuration
-├── netlify.toml             # Netlify configuration
-├── vercel.json              # Vercel configuration
-└── tailwind.config.ts       # Tailwind CSS config
+│   ├── components/           # React components (flat files)
+│   │   ├── ApiConfigPanel.tsx    # API endpoint configuration
+│   │   ├── DiagramEditor.tsx     # Code editor
+│   │   ├── DiagramPreview.tsx    # Mermaid rendering
+│   │   ├── ErrorBoundary.tsx     # Error boundary wrapper
+│   │   ├── ExportDropdown.tsx    # Export analyzed diagrams
+│   │   ├── LoadingSpinner.tsx    # Loading indicator
+│   │   ├── Modal.tsx             # Modal dialog wrapper
+│   │   ├── ResultsPanel.tsx      # Analysis results display
+│   │   ├── RulesPanel.tsx        # Rule configuration
+│   │   ├── Snackbar.tsx          # Toast notification system
+│   │   ├── StatusBar.tsx         # App status bar
+│   │   └── ToggleSlider.tsx      # Toggle slider component
+│   ├── layout.tsx                # Root layout
+│   ├── page.tsx                  # Main page
+│   └── globals.css               # Global styles
+├── lib/                          # Shared utilities and hooks
+│   ├── api.ts                    # merm8 API client
+│   ├── constants.ts              # App constants
+│   ├── diagramTypes.ts           # Diagram type detection
+│   ├── errorUtils.ts             # Error handling utilities
+│   ├── rulesState.ts             # Rules state management
+│   ├── theme.ts                  # Theme tokens
+│   ├── useApiEndpoint.ts         # API endpoint hook
+│   ├── useDiagramAnalysis.ts     # Analysis state hook
+│   └── useLayoutPreferences.ts   # Layout preferences hook
+├── tests/                        # Unit tests
+├── Dockerfile                    # Docker configuration
+├── netlify.toml                  # Netlify configuration
+├── vercel.json                   # Vercel configuration
+└── tailwind.config.ts            # Tailwind CSS config
 ```
 
 ## Contributing
