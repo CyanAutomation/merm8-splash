@@ -145,9 +145,9 @@ Netlify provides free hosting with automatic deployments from git:
 3. Publish directory: `out`
 4. Add environment variable:
 
-```
-NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev
-```
+   ```
+   NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev
+   ```
 
 5. Deploy!
 
@@ -161,9 +161,9 @@ Deploy directly to Vercel with minimal setup:
 2. Import project in Vercel dashboard
 3. Add environment variable:
 
-```
-NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev
-```
+   ```
+   NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev
+   ```
 
 4. Deploy!
 
