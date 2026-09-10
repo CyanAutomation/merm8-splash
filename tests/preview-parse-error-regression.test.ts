@@ -142,8 +142,9 @@ function visit(node: ReactNode): void {
   if (element.type === DiagramEditor || element.type === DiagramPreview || element.type === ResultsPanel) {
     ;(element.type as (props: Record<string, unknown>) => ReactNode)(element.props)
   }
-  if (element.props.children) {
-    visit(element.props.children as ReactNode)
+  const children = element.props.children as ReactNode | undefined
+  if (children !== undefined && children !== null) {
+    visit(children)
   }
 }
 
@@ -168,8 +169,10 @@ it('preview-parse-error-feedback-loop regression: corrected Mermaid reaches the 
 
   const firstPreview = testState.previewProps.find((props) => 'onParseStateChange' in props)
   expect(firstPreview).toBeDefined()
-  expect(firstPreview?.code).toBe('flowchart TD\n  A -->')
-  ;(firstPreview?.onParseStateChange as (state: { hasParseError: boolean; message: string }) => void)({
+  if (!firstPreview) throw new Error('Expected DiagramPreview props after the initial render')
+
+  expect(firstPreview.code).toBe('flowchart TD\n  A -->')
+  ;(firstPreview.onParseStateChange as (state: { hasParseError: boolean; message: string }) => void)({
     hasParseError: true,
     message: 'Parse error on line 2',
   })
@@ -184,6 +187,8 @@ it('preview-parse-error-feedback-loop regression: corrected Mermaid reaches the 
 
   const correctedPreview = testState.previewProps.findLast((props) => 'onParseStateChange' in props)
   expect(correctedPreview).toBeDefined()
+  if (!correctedPreview) throw new Error('Expected DiagramPreview props after correcting the source')
+
   expect(correctedPreview).toMatchObject({ code: correctedCode })
   expect(correctedPreview).not.toHaveProperty('parseErrorMessage')
   expect(testState.resultsProps?.parseError).toBe('Parse error on line 2')
