@@ -99,8 +99,11 @@ it('uses the hosted Worker as the fallback API endpoint', () => {
   expect(resolveApiEndpoint()).toBe('https://merm8.scheimann.workers.dev')
 })
 
-it('buildAnalyzeRequest includes empty rules object and keeps schema-version in server-default fallback mode', () => {
+it('builds a server-default request when rules metadata is malformed', () => {
   const { buildAnalyzeRequest } = loadApiModule()
+  const { shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
+
+  const useServerDefaults = shouldTreatRulesPayloadAsUnavailable('malformed_payload')
 
   const request = buildAnalyzeRequest(
     'graph TD; A-->B',
@@ -112,12 +115,16 @@ it('buildAnalyzeRequest includes empty rules object and keeps schema-version in 
         severity: 'warning',
       },
     ],
-    { useServerDefaults: true }
+    { useServerDefaults }
   )
 
-  expect(request.code).toBe('graph TD; A-->B')
-  expect(request.config['schema-version']).toBe('v1')
-  expect(JSON.stringify(request.config.rules)).toBe(JSON.stringify({})) // 'rules must be an empty object in fallback mode'
+  expect(JSON.parse(JSON.stringify(request))).toEqual({
+    code: 'graph TD; A-->B',
+    config: {
+      'schema-version': 'v1',
+      rules: {},
+    },
+  })
 })
 
 
@@ -142,21 +149,6 @@ it('rules availability marks endpoint unavailable when rules request fails or pa
 
   expect(shouldTreatRulesPayloadAsUnavailable('malformed_payload')).toBe(true)
   expect(shouldTreatRulesPayloadAsUnavailable('transport_failure')).toBe(true)
-})
-
-it('buildAnalyzeRequest includes empty rules when endpoint is marked unavailable due to malformed metadata', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
-  const request = buildAnalyzeRequest(
-    'graph TD; A-->B',
-    ['no-empty-label'],
-    [],
-    { useServerDefaults: true }
-  )
-
-  expect(request.code).toBe('graph TD; A-->B')
-  expect(request.config['schema-version']).toBe('v1')
-  expect(JSON.stringify(request.config.rules)).toBe(JSON.stringify({})) // 'rules must be an empty object when fallback enables server defaults'
 })
 
 it('buildAnalyzeRequest sends empty rules object when no rules are selected', () => {
