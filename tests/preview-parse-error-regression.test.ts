@@ -142,7 +142,9 @@ function visit(node: ReactNode): void {
   if (element.type === DiagramEditor || element.type === DiagramPreview || element.type === ResultsPanel) {
     ;(element.type as (props: Record<string, unknown>) => ReactNode)(element.props)
   }
-  visit(element.props.children as ReactNode)
+  if (element.props.children) {
+    visit(element.props.children as ReactNode)
+  }
 }
 
 function renderPage(): void {
