@@ -240,20 +240,33 @@ it.each([
   expect(calls).toEqual([{ endpoint, code }])
 })
 
-it('rapid consecutive input increases debounce delay', async () => {
+it('restarts the idle period after a second edit without submitting stale code', async () => {
+  const calls = []
+  const endpoint = 'https://example.test'
+  const firstCode = 'graph TD\nA-->B'
+  const secondCode = 'graph TD\nA-->B\nB-->C'
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
-    analyzeCodeImpl: async () => ({ diagram_type: 'flowchart', results: [] }),
+    analyzeCodeImpl: async (calledEndpoint, calledCode) => {
+      calls.push({ endpoint: calledEndpoint, code: calledCode })
+      return { diagram_type: 'flowchart', results: [] }
+    },
   })
 
   reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
 
-  hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
-  expect(timerControls.getLastScheduledDelay()).toBe(250)
+  hook.triggerAnalysis(endpoint, firstCode, [], [])
+  const firstIdlePeriod = timerControls.getLastScheduledDelay()
 
-  await timerControls.advanceBy(100)
-  hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B\nB-->C', [], [])
-  expect(timerControls.getLastScheduledDelay()).toBe(400)
+  await timerControls.advanceBy(Math.floor(firstIdlePeriod / 2))
+  hook.triggerAnalysis(endpoint, secondCode, [], [])
+  const adjustedIdlePeriod = timerControls.getLastScheduledDelay()
+
+  await timerControls.advanceBy(firstIdlePeriod)
+  expect(calls).toEqual([])
+
+  await timerControls.advanceBy(adjustedIdlePeriod - firstIdlePeriod)
+  expect(calls).toEqual([{ endpoint, code: secondCode }])
 })
 
 it('forceAnalysis runs immediately and bypasses pending debounce', async () => {
