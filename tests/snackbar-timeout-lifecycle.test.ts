@@ -108,8 +108,8 @@ describe('SnackbarProvider timeout lifecycle', () => {
     const document = new TestDocument()
     const window = {
       document,
-      setTimeout: globalThis.setTimeout,
-      clearTimeout: globalThis.clearTimeout,
+      setTimeout: vi.fn(globalThis.setTimeout),
+      clearTimeout: vi.fn(globalThis.clearTimeout),
       HTMLIFrameElement: class {},
     }
     document.defaultView = window
