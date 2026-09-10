@@ -102,11 +102,13 @@ class TestDocument extends TestNode {
 
 describe('SnackbarProvider timeout lifecycle', () => {
   let root: Root
+  let rootUnmounted: boolean
   let container: TestElement
   let enqueue: ReturnType<typeof useSnackbar>['show']
 
   beforeEach(() => {
     vi.useFakeTimers()
+    rootUnmounted = false
     const document = new TestDocument()
     const window = {
       document,
@@ -124,7 +126,7 @@ describe('SnackbarProvider timeout lifecycle', () => {
   })
 
   afterEach(() => {
-    act(() => root.unmount())
+    if (!rootUnmounted) act(() => root.unmount())
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })
@@ -172,6 +174,7 @@ describe('SnackbarProvider timeout lifecycle', () => {
     expect(window.clearTimeout).not.toHaveBeenCalled()
 
     act(() => root.unmount())
+    rootUnmounted = true
 
     expect(window.clearTimeout).not.toHaveBeenCalled()
   })
