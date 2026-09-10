@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import vm from 'node:vm'
@@ -212,10 +212,16 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl, isCan
   }
 }
 
-it('waits until the tiny-edit debounce boundary before analyzing', async () => {
+it.each([
+  { size: 'tiny', codeLength: 14, idleBoundaryMs: 250 },
+  { size: 'immediately below the large threshold', codeLength: 1399, idleBoundaryMs: 550 },
+  { size: 'at the large threshold', codeLength: 1400, idleBoundaryMs: 1000 },
+  { size: 'immediately above the large threshold', codeLength: 1401, idleBoundaryMs: 1000 },
+])('waits for the $size diagram idle boundary before analyzing', async ({ codeLength, idleBoundaryMs }) => {
   const calls = []
   const endpoint = 'https://example.test'
-  const code = 'graph TD\nA-->B'
+  const prefix = 'graph TD\n'
+  const code = `${prefix}${'A'.repeat(codeLength - prefix.length)}`
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async (calledEndpoint, calledCode) => {
       calls.push({ endpoint: calledEndpoint, code: calledCode })
@@ -227,27 +233,11 @@ it('waits until the tiny-edit debounce boundary before analyzing', async () => {
   const hook = useDiagramAnalysis()
   hook.triggerAnalysis(endpoint, code, [], [])
 
-  const debounceMs = timerControls.getLastScheduledDelay()
-  await timerControls.advanceBy(debounceMs - 1)
+  await timerControls.advanceBy(idleBoundaryMs - 1)
   expect(calls).toEqual([])
 
   await timerControls.advanceBy(1)
   expect(calls).toEqual([{ endpoint, code }])
-})
-
-it('triggerAnalysis enforces longer idle window for large diagrams', async () => {
-  const largeCode = Array.from({ length: 120 }, (_, idx) => `N${idx}-->N${idx + 1}`).join('\n')
-
-  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
-    analyzeCodeImpl: async () => ({ diagram_type: 'flowchart', results: [] }),
-  })
-
-  reactMock.__prepareRender()
-  const hook = useDiagramAnalysis()
-  hook.triggerAnalysis('https://example.test', largeCode, [], [])
-
-  expect(timerControls.getLastScheduledDelay()).toBe(1000)
-  await timerControls.runAllTimers()
 })
 
 it('rapid consecutive input increases debounce delay', async () => {
