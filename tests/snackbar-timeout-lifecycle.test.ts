@@ -37,7 +37,6 @@ class TestNode {
     child.parentNode = null
     return child
   }
-  }
 
   addEventListener() {}
   removeEventListener() {}
