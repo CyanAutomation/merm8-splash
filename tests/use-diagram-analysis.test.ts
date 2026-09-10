@@ -212,17 +212,27 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl, isCan
   }
 }
 
-it('triggerAnalysis uses short debounce for tiny edits', async () => {
+it('waits until the tiny-edit debounce boundary before analyzing', async () => {
+  const calls = []
+  const endpoint = 'https://example.test'
+  const code = 'graph TD\nA-->B'
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
-    analyzeCodeImpl: async () => ({ diagram_type: 'flowchart', results: [] }),
+    analyzeCodeImpl: async (calledEndpoint, calledCode) => {
+      calls.push({ endpoint: calledEndpoint, code: calledCode })
+      return { diagram_type: 'flowchart', results: [] }
+    },
   })
 
   reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
-  hook.triggerAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  hook.triggerAnalysis(endpoint, code, [], [])
 
-  expect(timerControls.getLastScheduledDelay()).toBe(250)
-  await timerControls.runAllTimers()
+  const debounceMs = timerControls.getLastScheduledDelay()
+  await timerControls.advanceBy(debounceMs - 1)
+  expect(calls).toEqual([])
+
+  await timerControls.advanceBy(1)
+  expect(calls).toEqual([{ endpoint, code }])
 })
 
 it('triggerAnalysis enforces longer idle window for large diagrams', async () => {
