@@ -165,6 +165,7 @@ it('preview-parse-error-feedback-loop regression: corrected Mermaid reaches the 
   renderPage()
 
   const firstPreview = testState.previewProps.find((props) => 'onParseStateChange' in props)
+  expect(firstPreview).toBeDefined()
   expect(firstPreview?.code).toBe('flowchart TD\n  A -->')
   ;(firstPreview?.onParseStateChange as (state: { hasParseError: boolean; message: string }) => void)({
     hasParseError: true,
