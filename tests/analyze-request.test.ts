@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 import vm from 'node:vm'
@@ -686,115 +686,73 @@ it('validateApiEndpoint rejects endpoint with username/password credentials', ()
 })
 
 
-it('analyzeCode returns normalized string hints when provided by API', async () => {
-  const api = loadApiModule()
+describe('analyzeCode hint normalization', () => {
   const axios = require('axios')
-  const originalCreate = axios.create
+  const validHints = ['Use concise labels', { code: 'prefer-short-labels' }]
+  const normalizationCases = [
+    {
+      name: 'a non-array payload',
+      hints: { message: 'Prefer explicit labels' },
+      expected: [],
+    },
+    {
+      name: 'mixed valid and invalid top-level entries',
+      hints: ['Keep naming consistent', null, 7, { code: 'prefer-short-labels' }],
+      expected: ['Keep naming consistent', { code: 'prefer-short-labels' }],
+    },
+    {
+      name: 'a nested array',
+      hints: ['Keep swimlanes balanced', ['nested array should be removed'], { message: 'Check line ordering' }],
+      expected: ['Keep swimlanes balanced', { message: 'Check line ordering' }],
+    },
+    {
+      name: 'unsupported primitives',
+      hints: [null, 42, true],
+      expected: [],
+    },
+    {
+      name: 'valid string and object hints',
+      hints: validHints,
+      expected: validHints,
+    },
+  ]
 
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        diagram_type: 'flowchart',
-        results: [],
-        hints: ['Use concise labels', 'Group related nodes'],
-      },
-    }),
+  function mockAnalyzeResponse(hints: unknown) {
+    vi.spyOn(axios, 'create').mockReturnValue({
+      post: vi.fn().mockResolvedValue({
+        data: { diagram_type: 'flowchart', results: [], hints },
+      }),
+    })
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
-  try {
-    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+  it.each(normalizationCases)('normalizes $name', async ({ hints, expected }) => {
+    mockAnalyzeResponse(hints)
+    const { analyzeCode } = loadApiModule()
+
+    const response = await analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
     expect(response.diagram_type).toBe('flowchart')
-    expect(JSON.stringify(response.hints)).toBe(JSON.stringify(['Use concise labels', 'Group related nodes']))
-  } finally {
-    axios.create = originalCreate
-  }
-})
-
-it('analyzeCode filters malformed hints and warns in development', async () => {
-  const api = loadApiModule()
-  const axios = require('axios')
-  const originalCreate = axios.create
-  const originalWarn = console.warn
-  const warnings = []
-
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        diagram_type: 'flowchart',
-        results: [],
-        hints: ['Keep naming consistent', null, 7, { code: 'prefer-short-labels' }],
-      },
-    }),
+    expect(response.hints).toEqual(expected)
   })
 
-  console.warn = (message) => {
-    warnings.push(String(message))
-  }
+  it.each([
+    { name: 'a non-array payload', hints: normalizationCases[0].hints, warning: 'non-array `hints`' },
+    { name: 'mixed entries', hints: normalizationCases[1].hints, warning: 'invalid entries in `hints`' },
+    { name: 'a nested array', hints: normalizationCases[2].hints, warning: 'invalid entries in `hints`' },
+    { name: 'unsupported primitives', hints: normalizationCases[3].hints, warning: 'invalid entries in `hints`' },
+  ])('warns in development for $name', async ({ hints, warning }) => {
+    mockAnalyzeResponse(hints)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const { analyzeCode } = loadApiModule()
 
-  try {
-    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+    await analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-    expect(JSON.stringify(response.hints)).toBe(JSON.stringify(['Keep naming consistent', { code: 'prefer-short-labels' }]))
-    expect(warnings.some((message) => message.includes('invalid entries in `hints`'))).toBe(true) // 'expected a warning for malformed hints'
-  } finally {
-    console.warn = originalWarn
-    axios.create = originalCreate
-  }
-})
-
-it('analyzeCode normalizes non-array hints to empty array', async () => {
-  const api = loadApiModule()
-  const axios = require('axios')
-  const originalCreate = axios.create
-
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        diagram_type: 'flowchart',
-        results: [],
-        hints: { message: 'Prefer explicit labels' },
-      },
-    }),
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining(warning))
   })
-
-  try {
-    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
-
-    expect(response.diagram_type).toBe('flowchart')
-    expect(JSON.stringify(response.hints)).toBe(JSON.stringify([]))
-  } finally {
-    axios.create = originalCreate
-  }
-})
-
-it('analyzeCode drops unsupported nested hint values', async () => {
-  const api = loadApiModule()
-  const axios = require('axios')
-  const originalCreate = axios.create
-
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        diagram_type: 'flowchart',
-        results: [],
-        hints: [
-          'Keep swimlanes balanced',
-          ['nested array should be removed'],
-          42,
-          { message: 'Check line ordering' },
-        ],
-      },
-    }),
-  })
-
-  try {
-    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
-
-    expect(JSON.stringify(response.hints)).toBe(JSON.stringify(['Keep swimlanes balanced', { message: 'Check line ordering' }]))
-  } finally {
-    axios.create = originalCreate
-  }
 })
 
 it('analyzeCode filters malformed violations and keeps only safe entries', async () => {
