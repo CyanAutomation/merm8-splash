@@ -180,6 +180,7 @@ it('preview-parse-error-feedback-loop regression: corrected Mermaid reaches the 
   renderPage()
 
   const correctedPreview = testState.previewProps.findLast((props) => 'onParseStateChange' in props)
+  expect(correctedPreview).toBeDefined()
   expect(correctedPreview).toMatchObject({ code: correctedCode })
   expect(correctedPreview).not.toHaveProperty('parseErrorMessage')
   expect(testState.resultsProps?.parseError).toBe('Parse error on line 2')
