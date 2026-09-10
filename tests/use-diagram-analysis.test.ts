@@ -614,8 +614,38 @@ it('cache key changes when rules metadata changes with same code and enabled rul
 
   expect(callCount).toBe(2)
 })
-it('cache key changes when code/rules/endpoint change', async () => {
+it.each([
+  {
+    dimension: 'code',
+    changedRequest: {
+      endpoint: 'https://example.test',
+      code: 'graph TD\nA-->C',
+      enabledRules: ['r1'],
+    },
+  },
+  {
+    dimension: 'enabled rules',
+    changedRequest: {
+      endpoint: 'https://example.test',
+      code: 'graph TD\nA-->B',
+      enabledRules: ['r2'],
+    },
+  },
+  {
+    dimension: 'endpoint',
+    changedRequest: {
+      endpoint: 'https://example-2.test',
+      code: 'graph TD\nA-->B',
+      enabledRules: ['r1'],
+    },
+  },
+])('cache key changes when $dimension changes', async ({ changedRequest }) => {
   const calls = []
+  const baselineRequest = {
+    endpoint: 'https://example.test',
+    code: 'graph TD\nA-->B',
+    enabledRules: ['r1'],
+  }
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async (endpoint, code, enabledRules) => {
@@ -627,19 +657,28 @@ it('cache key changes when code/rules/endpoint change', async () => {
   reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
 
-  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  hook.forceAnalysis(
+    baselineRequest.endpoint,
+    baselineRequest.code,
+    baselineRequest.enabledRules,
+    [],
+  )
   await new Promise((resolve) => setImmediate(resolve))
 
-  hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', ['r1'], [])
+  hook.forceAnalysis(
+    baselineRequest.endpoint,
+    baselineRequest.code,
+    baselineRequest.enabledRules,
+    [],
+  )
   await new Promise((resolve) => setImmediate(resolve))
 
-  hook.forceAnalysis('https://example.test', 'graph TD\nA-->C', ['r2'], [])
+  expect(calls).toEqual([baselineRequest])
+
+  hook.forceAnalysis(changedRequest.endpoint, changedRequest.code, changedRequest.enabledRules, [])
   await new Promise((resolve) => setImmediate(resolve))
 
-  hook.forceAnalysis('https://example-2.test', 'graph TD\nA-->C', ['r2'], [])
-  await new Promise((resolve) => setImmediate(resolve))
-
-  expect(calls.length).toBe(4)
+  expect(calls).toEqual([baselineRequest, changedRequest])
 })
 
 it('expired cache entry triggers fresh network analysis', async () => {
