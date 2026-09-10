@@ -138,7 +138,7 @@ describe('SnackbarProvider timeout lifecycle', () => {
     return container.textContent
   }
 
-  it('dismisses each snackbar three seconds after it is enqueued', () => {
+  it('dismisses each snackbar and does not clear completed timers on unmount', () => {
     act(() => {
       root.render(createElement(SnackbarProvider, null, createElement(Harness)))
     })
@@ -168,5 +168,11 @@ describe('SnackbarProvider timeout lifecycle', () => {
 
     act(() => vi.advanceTimersByTime(1_000))
     expect(visibleText()).not.toContain('third')
+
+    expect(window.clearTimeout).not.toHaveBeenCalled()
+
+    act(() => root.unmount())
+
+    expect(window.clearTimeout).not.toHaveBeenCalled()
   })
 })
