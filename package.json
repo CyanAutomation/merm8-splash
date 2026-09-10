@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "serve out",
     "lint": "eslint --flag unstable_native_nodejs_ts_config app/ lib/ tests/ --max-warnings=0",
     "test": "vitest --run",
     "test:watch": "vitest"
@@ -33,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.12",
     "postcss": "^8",
+    "serve": "^14.2.6",
     "tailwindcss": "^3.3.0",
     "typescript": "^5",
     "vitest": "^5.0.0"

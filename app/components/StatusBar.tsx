@@ -1,11 +1,12 @@
 'use client'
 
 import { ConnectionStatus } from '@/lib/useApiEndpoint'
+import { getParseStatusLabel, ParseStatus } from '@/lib/status'
 import clsx from 'clsx'
 
 interface StatusBarProps {
   connectionStatus: ConnectionStatus
-  parseStatus: 'idle' | 'valid' | 'error'
+  parseStatus: ParseStatus
   ruleCount: number
   violationCount: number
   apiEndpoint: string
@@ -71,9 +72,7 @@ export default function StatusBar({
                 : 'var(--color-text-secondary)',
           }}
         >
-          {parseStatus === 'idle' && '○ Idle'}
-          {parseStatus === 'valid' && '✓ Valid'}
-          {parseStatus === 'error' && '⚠ Parse error'}
+          {getParseStatusLabel(parseStatus)}
         </span>
 
         {diagramType && (
