@@ -458,6 +458,7 @@ function HomeContent() {
 
   return (
       <div
+        className="app-shell"
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -520,8 +521,9 @@ function HomeContent() {
       </div>
 
       {/* Main Content - Desktop Grid Layout */}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div className="app-main" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <div
+          className="workspace-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: `${prefs.leftPanelSize}% 4px 1fr`,
@@ -532,8 +534,8 @@ function HomeContent() {
           }}
         >
             {/* Editor Panel - Top Left */}
-            <div style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
-              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+            <div className="workspace-pane" style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
+              <div className="workspace-pane-content" style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
                 <ErrorBoundary>
                   <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
                 </ErrorBoundary>
@@ -542,6 +544,7 @@ function HomeContent() {
 
             {/* Horizontal Divider - Spans All Columns */}
             <div
+              className="workspace-divider"
               style={{
                 gridColumn: '1 / 4',
                 gridRow: 2,
@@ -582,6 +585,7 @@ function HomeContent() {
 
             {/* Vertical Divider - Top Section Only */}
             <div
+              className="workspace-divider"
               style={{
                 gridColumn: 2,
                 gridRow: '1 / 2',
@@ -621,8 +625,8 @@ function HomeContent() {
             />
 
             {/* Preview Panel - Top Right */}
-            <div style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
-              <div style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
+            <div className="workspace-pane" style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
+              <div className="workspace-pane-content" style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
                 <ErrorBoundary resetKey={diagramPreviewResetKey}>
                   <DiagramPreview
                     code={code}
@@ -639,8 +643,8 @@ function HomeContent() {
             </div>
 
             {/* Results Panel - Full Width Bottom */}
-            <div style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
-              <div style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="workspace-results" style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
+              <div className="workspace-results-content" style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
                   {renderResultsHeading()}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
