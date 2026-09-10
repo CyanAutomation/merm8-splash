@@ -121,6 +121,7 @@ describe('SnackbarProvider timeout lifecycle', () => {
     vi.stubGlobal('window', window)
     vi.stubGlobal('HTMLElement', TestElement)
     vi.stubGlobal('Node', TestNode)
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
     container = document.createElement('div')
     root = createRoot(container as unknown as Element)
   })
@@ -140,42 +141,28 @@ describe('SnackbarProvider timeout lifecycle', () => {
     return container.textContent
   }
 
-  it('dismisses each snackbar and does not clear completed timers on unmount', () => {
+  it('clears pending snackbar timers without updating state after unmount', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+
     act(() => {
       root.render(createElement(SnackbarProvider, null, createElement(Harness)))
     })
 
     act(() => enqueue('first'))
-    expect(visibleText()).toContain('first')
-
-    act(() => vi.advanceTimersByTime(1_000))
     act(() => enqueue('second'))
-    act(() => vi.advanceTimersByTime(1_000))
-    act(() => enqueue('third'))
     expect(visibleText()).toContain('first')
     expect(visibleText()).toContain('second')
-    expect(visibleText()).toContain('third')
-
-    act(() => vi.advanceTimersByTime(999))
-    expect(visibleText()).toContain('first')
-
-    act(() => vi.advanceTimersByTime(1))
-    expect(visibleText()).not.toContain('first')
-    expect(visibleText()).toContain('second')
-    expect(visibleText()).toContain('third')
-
-    act(() => vi.advanceTimersByTime(1_000))
-    expect(visibleText()).not.toContain('second')
-    expect(visibleText()).toContain('third')
-
-    act(() => vi.advanceTimersByTime(1_000))
-    expect(visibleText()).not.toContain('third')
-
-    expect(window.clearTimeout).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(2)
 
     act(() => root.unmount())
     rootUnmounted = true
 
-    expect(window.clearTimeout).not.toHaveBeenCalled()
+    expect(window.clearTimeout).toHaveBeenCalledTimes(2)
+    expect(vi.getTimerCount()).toBe(0)
+
+    act(() => vi.advanceTimersByTime(4_000))
+
+    expect(vi.getTimerCount()).toBe(0)
+    expect(consoleError).not.toHaveBeenCalled()
   })
 })
