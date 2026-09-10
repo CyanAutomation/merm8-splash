@@ -31,9 +31,12 @@ class TestNode {
   }
 
   removeChild(child: TestNode) {
-    this.childNodes.splice(this.childNodes.indexOf(child), 1)
+    const index = this.childNodes.indexOf(child)
+    if (index === -1) throw new Error('Child not found')
+    this.childNodes.splice(index, 1)
     child.parentNode = null
     return child
+  }
   }
 
   addEventListener() {}
