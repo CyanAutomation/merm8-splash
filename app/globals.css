@@ -182,4 +182,46 @@ a {
   .snackbar-enter {
     animation: snackbar-in 150ms ease;
   }
+
+  @media (max-width: 700px) {
+    .app-shell {
+      height: 100dvh !important;
+    }
+
+    .app-main {
+      overflow-y: auto !important;
+    }
+
+    .workspace-grid {
+      display: block !important;
+      height: auto !important;
+      min-height: 0;
+    }
+
+    .workspace-pane,
+    .workspace-results {
+      min-width: 0;
+      overflow: visible !important;
+    }
+
+    .workspace-pane-content {
+      height: auto !important;
+      min-height: 360px;
+      overflow: visible !important;
+    }
+
+    .workspace-results {
+      min-height: 300px;
+    }
+
+    .workspace-results-content {
+      height: auto !important;
+      min-height: 300px;
+      overflow: visible !important;
+    }
+
+    .workspace-divider {
+      display: none;
+    }
+  }
 }
