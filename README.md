@@ -86,7 +86,7 @@ The project uses [Vitest](https://vitest.dev/) as the test runner. Test files ar
 - API request building and validation
 - Rules state management
 - Hook behavior (e.g., `useDiagramAnalysis` with debouncing and error handling)
-- Component lifecycle patterns (e.g., timeout management in `SnackbarProvider`)
+- Component lifecycle patterns (e.g., timeout management in `Snackbar`)
 
 ## Configuration
 
