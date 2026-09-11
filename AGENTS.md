@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Project summary
-- This repository is a **Next.js 15 + React 19 + TypeScript** frontend for the **merm8 API**.
+- This repository is a **Next.js 16 + React 19 + TypeScript** frontend for the **merm8 API**.
 
 ## Key directories and ownership hints
 - `app/`: UI, layout, and component work.
@@ -40,7 +40,7 @@ From `package.json`:
 - For UI changes, include before/after validation notes and add screenshots when tooling is available.
 
 ## Validation
-- For `lib/api.ts` request-shaping logic changes, update or add tests in `tests/analyze-request.test.cjs` (or an adjacent request-analysis test file).
+- For `lib/api.ts` request-shaping logic changes, update or add tests in `tests/analyze-request.test.ts` (or an adjacent request-analysis test file).
 - For UI-only changes, run `npm run lint` and perform manual interaction checks in dev mode.
 - Keep change summaries concise and explicitly list what was validated and what was not run.
 - In constrained or read-only environments, perform static analysis and clearly mark unexecuted checks.
