@@ -104,7 +104,7 @@ export default function DiagramPreview({
   const renderSequenceRef = useRef(0)
   const lastRenderIdRef = useRef<string | null>(null)
   const ownedRenderIdsRef = useRef<Set<string>>(new Set())
-  const stableId = useId().replace(/[^a-zA-Z0-9_-]/g, '-')
+  const stableId = useMemo(() => useId().replace(/[^a-zA-Z0-9_-]/g, '-'), [])
   const previewId = `diagram-preview-${stableId}`
 
   const markOwnedRenderedNodes = useCallback((renderId?: string) => {
