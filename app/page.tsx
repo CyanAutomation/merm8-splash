@@ -18,7 +18,11 @@ import { useDiagramAnalysis } from '@/lib/useDiagramAnalysis'
 import { useLayoutPreferences } from '@/lib/useLayoutPreferences'
 import { fetchRules, Rule } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
-import { resolveRulesAvailabilityState, shouldTreatRulesPayloadAsUnavailable } from '@/lib/rulesState'
+import {
+  reconcileRuleSelection,
+  resolveRulesAvailabilityState,
+  shouldTreatRulesPayloadAsUnavailable,
+} from '@/lib/rulesState'
 
 function MetricItem({ label, value }: { label: string; value: string | number }) {
   return (
@@ -110,6 +114,10 @@ function HomeContent() {
   const [showMetrics, setShowMetrics] = useState(false)
   const rulesRequestRef = useRef(0)
   const latestEndpointRef = useRef(endpoint)
+  const rulesSelectionRef = useRef({
+    endpoint,
+    hasInitializedOrModifiedSelection: false,
+  })
   const rulesAbortControllerRef = useRef<AbortController | null>(null)
   const dragCleanupFnsRef = useRef<Set<() => void>>(new Set())
   const previousAnalysisCodeRef = useRef(code)
@@ -142,15 +150,22 @@ function HomeContent() {
         const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable(fetched.status)
 
         setRules(normalizedFetched)
-        setEnabledRules((prev) => {
-          const fetchedRuleIds = new Set(normalizedFetched.map((r) => r.id))
-          const preservedSelection = prev.filter((id) => fetchedRuleIds.has(id))
+        if (!rulesAreUnavailable) {
+          const selectionState = rulesSelectionRef.current
+          const isSameEndpoint = selectionState.endpoint === requestEndpoint
+          const hasInitializedOrModifiedSelection = isSameEndpoint
+            && selectionState.hasInitializedOrModifiedSelection
 
-          // Preserve existing choices across reconnect/reload so user preferences are not lost.
-          return preservedSelection.length > 0
-            ? preservedSelection
-            : normalizedFetched.map((r) => r.id)
-        })
+          setEnabledRules((prev) => reconcileRuleSelection(
+            prev,
+            normalizedFetched.map((rule) => rule.id),
+            hasInitializedOrModifiedSelection
+          ))
+          rulesSelectionRef.current = {
+            endpoint: requestEndpoint,
+            hasInitializedOrModifiedSelection: true,
+          }
+        }
         setRulesLoadedEndpoint(rulesAreUnavailable ? null : requestEndpoint)
         setRulesUnavailableEndpoint(rulesAreUnavailable ? requestEndpoint : null)
       }
@@ -176,6 +191,12 @@ function HomeContent() {
     rulesAbortControllerRef.current = null
     latestEndpointRef.current = endpoint
     rulesRequestRef.current += 1
+    // Rule choices belong to an endpoint. A different endpoint starts uninitialized so its
+    // first successful load selects its own defaults instead of inheriting another API's choices.
+    rulesSelectionRef.current = {
+      endpoint,
+      hasInitializedOrModifiedSelection: false,
+    }
     setRules([])
     setEnabledRules([])
     setRulesLoading(false)
@@ -378,14 +399,16 @@ function HomeContent() {
   }, [])
 
   const toggleRule = useCallback((ruleId: string) => {
+    rulesSelectionRef.current = { endpoint, hasInitializedOrModifiedSelection: true }
     setEnabledRules((prev) =>
       prev.includes(ruleId)
         ? prev.filter((r) => r !== ruleId)
         : [...prev, ruleId]
     )
-  }, [])
+  }, [endpoint])
 
   const enableAllRules = useCallback(() => {
+    rulesSelectionRef.current = { endpoint, hasInitializedOrModifiedSelection: true }
     const allRuleIds = rules.map((rule) => rule.id)
     const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
 
@@ -398,14 +421,15 @@ function HomeContent() {
       })
       return Array.from(merged)
     })
-  }, [diagramType, rules])
+  }, [diagramType, endpoint, rules])
 
   const disableAllRules = useCallback(() => {
+    rulesSelectionRef.current = { endpoint, hasInitializedOrModifiedSelection: true }
     const allRuleIds = rules.map((rule) => rule.id)
     const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
 
     setEnabledRules((prev) => prev.filter((ruleId) => !applicableRuleIds.has(ruleId)))
-  }, [diagramType, rules])
+  }, [diagramType, endpoint, rules])
 
   const handleJumpToLine = useCallback((lineNum: number) => {
     editorRef.current?.highlightLine(lineNum)
