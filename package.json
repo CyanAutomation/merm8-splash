@@ -22,7 +22,7 @@
     "next": "16.3.4",
     "react": "^19",
     "react-dom": "^19",
-    "react-resizable-panels": "^2.0.8"
+    "react-resizable-panels": "^4.12.4"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
