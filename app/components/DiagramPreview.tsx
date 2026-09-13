@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { parseDiagramType } from '@/lib/diagramTypes'
 import { extractLineNumber } from '@/lib/errorUtils'
 import ToggleSlider from './ToggleSlider'
@@ -104,7 +104,8 @@ export default function DiagramPreview({
   const renderSequenceRef = useRef(0)
   const lastRenderIdRef = useRef<string | null>(null)
   const ownedRenderIdsRef = useRef<Set<string>>(new Set())
-  const stableId = useMemo(() => useId().replace(/[^a-zA-Z0-9_-]/g, '-'), [])
+  const reactId = useId()
+  const stableId = useMemo(() => reactId.replace(/[^a-zA-Z0-9_-]/g, '-'), [reactId])
   const previewId = `diagram-preview-${stableId}`
 
   const markOwnedRenderedNodes = useCallback((renderId?: string) => {
