@@ -19,3 +19,16 @@ export function resolveRulesAvailabilityState(
 export function shouldTreatRulesPayloadAsUnavailable(signal: RulesAvailabilitySignal): boolean {
   return signal === 'transport_failure' || signal === 'malformed_payload'
 }
+
+export function reconcileRuleSelection(
+  previousSelection: string[],
+  fetchedRuleIds: string[],
+  hasInitializedOrModifiedSelection: boolean
+): string[] {
+  if (!hasInitializedOrModifiedSelection) {
+    return fetchedRuleIds
+  }
+
+  const availableRuleIds = new Set(fetchedRuleIds)
+  return previousSelection.filter((ruleId) => availableRuleIds.has(ruleId))
+}

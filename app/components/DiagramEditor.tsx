@@ -28,9 +28,13 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
     const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
     const copyStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const mountedRef = useRef(false)
 
     useEffect(() => {
+      mountedRef.current = true
+
       return () => {
+        mountedRef.current = false
         if (copyStatusTimeoutRef.current) {
           clearTimeout(copyStatusTimeoutRef.current)
         }
@@ -52,6 +56,8 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     }
 
     const fallbackCopyWithTextarea = (text: string): boolean => {
+      if (!mountedRef.current) return false
+
       const textarea = document.createElement('textarea')
       textarea.value = text
       textarea.setAttribute('readonly', '')
@@ -82,11 +88,14 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       if (hasClipboardApi) {
         try {
           await navigator.clipboard.writeText(value)
+          if (!mountedRef.current) return
           copied = true
         } catch {
+          if (!mountedRef.current) return
           copied = fallbackCopyWithTextarea(value)
         }
       } else {
+        if (!mountedRef.current) return
         copied = fallbackCopyWithTextarea(value)
       }
 
@@ -98,6 +107,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
         setCopyStatus('success')
         snackbar.show('Diagram code copied.')
         copyStatusTimeoutRef.current = setTimeout(() => {
+          if (!mountedRef.current) return
           setCopyStatus('idle')
           copyStatusTimeoutRef.current = null
         }, 1300)
@@ -107,6 +117,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       setCopyStatus('error')
       snackbar.show('Copy failed.', 'error')
       copyStatusTimeoutRef.current = setTimeout(() => {
+        if (!mountedRef.current) return
         setCopyStatus('idle')
         copyStatusTimeoutRef.current = null
       }, 1700)
