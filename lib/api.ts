@@ -808,7 +808,7 @@ export function buildAnalyzeRequest(
   rulesMetadata: Rule[],
   options: AnalyzeRequestOptions = {}
 ): AnalyzeRequest {
-  const { useServerDefaults = false } = options
+  const useServerDefaults = options.useServerDefaults === true
 
   // Parse diagram type from code to filter applicable rules
   const detectedDiagramType = parseDiagramType(code)
@@ -827,8 +827,7 @@ export function buildAnalyzeRequest(
     'schema-version': 'v1',
   }
 
-  const hasConfiguredLintRules = filteredRules.length > 0
-  config.rules = useServerDefaults || !hasConfiguredLintRules ? {} : rulesConfig
+  config.rules = useServerDefaults ? {} : rulesConfig
 
   return {
     code,
