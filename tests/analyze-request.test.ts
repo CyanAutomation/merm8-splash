@@ -151,6 +151,30 @@ it('rules availability marks endpoint unavailable when rules request fails or pa
   expect(shouldTreatRulesPayloadAsUnavailable('transport_failure')).toBe(true)
 })
 
+it('rule selection defaults once and preserves an explicitly empty selection on same-endpoint reloads', () => {
+  const { reconcileRuleSelection } = loadRulesStateModule()
+  const fetchedRuleIds = ['no-empty-label', 'max-edges']
+
+  const initialSelection = reconcileRuleSelection([], fetchedRuleIds, false)
+  expect(Array.from(initialSelection)).toEqual(fetchedRuleIds)
+
+  const disabledSelection = []
+  const reloadedSelection = reconcileRuleSelection(disabledSelection, fetchedRuleIds, true)
+  expect(Array.from(reloadedSelection)).toEqual([])
+})
+
+it('rule selection removes unavailable rules without restoring defaults after initialization', () => {
+  const { reconcileRuleSelection } = loadRulesStateModule()
+
+  const reloadedSelection = reconcileRuleSelection(
+    ['no-empty-label', 'removed-rule'],
+    ['no-empty-label', 'max-edges'],
+    true
+  )
+
+  expect(Array.from(reloadedSelection)).toEqual(['no-empty-label'])
+})
+
 it('buildAnalyzeRequest sends empty rules object when no rules are selected', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
