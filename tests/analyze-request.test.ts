@@ -175,7 +175,7 @@ it('rule selection removes unavailable rules without restoring defaults after in
   expect(Array.from(reloadedSelection)).toEqual(['no-empty-label'])
 })
 
-it('buildAnalyzeRequest sends empty rules object when no rules are selected', () => {
+it('buildAnalyzeRequest explicitly disables all known rules when no rules are selected', () => {
   const { buildAnalyzeRequest } = loadApiModule()
 
   const request = buildAnalyzeRequest(
@@ -196,7 +196,10 @@ it('buildAnalyzeRequest sends empty rules object when no rules are selected', ()
   )
 
   expect(request.config['schema-version']).toBe('v1')
-  expect(JSON.stringify(request.config.rules)).toBe(JSON.stringify({}))
+  expect(JSON.stringify(request.config.rules)).toBe(JSON.stringify({
+    'no-empty-label': { enabled: false },
+    'max-edges': { enabled: false },
+  }))
 })
 
 
