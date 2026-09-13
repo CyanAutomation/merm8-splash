@@ -104,7 +104,8 @@ export default function DiagramPreview({
   const renderSequenceRef = useRef(0)
   const lastRenderIdRef = useRef<string | null>(null)
   const ownedRenderIdsRef = useRef<Set<string>>(new Set())
-  const previewId = `diagram-preview-${useId()}`
+  const stableId = useId().replace(/[^a-zA-Z0-9_-]/g, '-')
+  const previewId = `diagram-preview-${stableId}`
 
   const markOwnedRenderedNodes = useCallback((renderId?: string) => {
     if (!containerRef.current) return
@@ -417,7 +418,7 @@ export default function DiagramPreview({
           logLevel: 'error',
         })
 
-        const id = `mermaid-${++idCounterRef.current}`
+        const id = `mermaid-${stableId}-${++idCounterRef.current}`
         removeMermaidFallbackNodes()
         ownedRenderIdsRef.current.add(id)
         lastRenderIdRef.current = id
@@ -507,6 +508,7 @@ export default function DiagramPreview({
     markOwnedRenderedNodes,
     removeMermaidFallbackNodes,
     sanitizeRenderedOutput,
+    stableId,
   ])
 
   useEffect(() => {
