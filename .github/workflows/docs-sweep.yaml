@@ -4,30 +4,9 @@ on:
   schedule:
     - cron: "0 5 * * 4"
   workflow_dispatch:
-    inputs:
-      ref:
-        description: Git ref to inspect
-        required: true
-        default: main
-        type: string
-      task_description:
-        description: What Kaseki should do
-        required: true
-        default: Keep README.md and docs/ accurate against the current implementation.
-        type: string
-      allowlist:
-        description: Permitted changed-file patterns, comma-separated
-        required: true
-        default: README.md,docs/**/*.md
-        type: string
-      validation_command:
-        description: Validation command to run (leave blank for none)
-        required: false
-        default: npm run check
-        type: string
 
 run-name: >-
-  Docs sweep · ${{ github.repository }}@${{ inputs.ref }}
+  Docs sweep · ${{ github.repository }}@${{ github.event.repository.default_branch }}
 
 permissions:
   contents: read
@@ -36,18 +15,28 @@ concurrency:
   group: kaseki-docs-sweep-${{ github.repository }}
   cancel-in-progress: false
 
+env:
+  REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+  REF: ${{ github.event.repository.default_branch }}
+  TASK_DESCRIPTION: Keep README.md and docs/ accurate against the current implementation.
+  ALLOWLIST: README.md,docs/**/*.md
+  VALIDATION_COMMAND: npm run lint && npm test && npm run build
+
 jobs:
   system_status:
     name: Kaseki System Status
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    environment: kaseki-docs-sweep
     env:
-      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL || 'https://kaseki-tunnel.scheimann.xyz' }}
+      # Do not add a public fallback URL.
+      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
     steps:
       - name: Verify controller health
         shell: bash
         run: |
           set -euo pipefail
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
@@ -63,13 +52,15 @@ jobs:
     needs: system_status
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    environment: kaseki-docs-sweep
     env:
-      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL || 'https://kaseki-tunnel.scheimann.xyz' }}
+      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
     steps:
       - name: Verify controller readiness
         shell: bash
         run: |
           set -euo pipefail
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
@@ -85,15 +76,22 @@ jobs:
     needs: readiness
     runs-on: ubuntu-latest
     timeout-minutes: 2
+    environment: kaseki-docs-sweep
     env:
-      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL || 'https://kaseki-tunnel.scheimann.xyz' }}
+      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
+      # Store this as an environment secret, rather than a repository secret.
       KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
     steps:
       - name: Verify gateway connectivity and authentication
         shell: bash
         run: |
           set -euo pipefail
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
           : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
+          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
+            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
+            exit 1
+          }
 
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
@@ -111,20 +109,19 @@ jobs:
     needs: api_connection
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: kaseki-docs-sweep
     env:
-      # Create this as a repository or organization Actions variable.
-      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL || 'https://kaseki-tunnel.scheimann.xyz' }}
-
-      # Automatically targets the repository containing this workflow.
-      REPO_URL: ${{ github.server_url }}/${{ github.repository }}
-      REF: ${{ inputs.ref }}
-      TASK_DESCRIPTION: ${{ inputs.task_description }}
-      ALLOWLIST: ${{ inputs.allowlist }}
-      VALIDATION_COMMAND: ${{ inputs.validation_command }}
+      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
 
     steps:
       - name: Check Kaseki availability
         run: |
+          set -euo pipefail
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
+            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
+            exit 1
+          }
           curl --fail --silent --show-error --max-time 20 \
             "$KASEKI_BASE_URL/ready"
 
@@ -134,7 +131,15 @@ jobs:
           KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
         run: |
           set -euo pipefail
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
           : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
+          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
+            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
+            exit 1
+          }
+
+          # Kaseki deduplicates retries using this request-body UUID.
+          IDEMPOTENCY_KEY="$(uuidgen | tr '[:upper:]' '[:lower:]')"
 
           payload="$(
             jq -n \
@@ -143,9 +148,11 @@ jobs:
               --arg taskDescription "$TASK_DESCRIPTION" \
               --arg validationCommand "$VALIDATION_COMMAND" \
               --arg allowlist "$ALLOWLIST" \
+              --arg idempotencyKey "$IDEMPOTENCY_KEY" \
               '{
                 repoUrl: $repoUrl,
                 ref: $ref,
+                idempotencyKey: $idempotencyKey,
                 taskMode: "patch",
                 timeoutSeconds: 10800,
                 changedFilesAllowlist: (
