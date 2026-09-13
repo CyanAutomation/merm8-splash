@@ -1,3 +1,5 @@
+[![Frontend CI](https://github.com/CyanAutomation/merm8-splash/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CyanAutomation/merm8-splash/actions/workflows/ci.yml)
+
 # merm8-splash
 
 An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagram linting to your terminal-inspired workflow. Write, analyze, and validate your diagrams with a beautiful Bubble Tea-aesthetic UI, whether you're using the cloud-hosted API or self-hosting your own instance.
