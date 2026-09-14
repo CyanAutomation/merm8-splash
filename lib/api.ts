@@ -387,7 +387,20 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
 }
 
 export interface HealthzResponse {
-  status: string
+  status: 'ok'
+}
+
+function validateHealthzResponse(rawData: unknown): HealthzResponse {
+  if (
+    !rawData ||
+    typeof rawData !== 'object' ||
+    Array.isArray(rawData) ||
+    (rawData as Record<string, unknown>).status !== 'ok'
+  ) {
+    throw new Error('API health check failed: expected status "ok".')
+  }
+
+  return { status: 'ok' }
 }
 
 export interface EndpointValidationResult {
@@ -770,8 +783,8 @@ export async function fetchHealthz(
   signal?: AbortSignal
 ): Promise<HealthzResponse> {
   const client = createApiClient(endpoint)
-  const response = await client.get<HealthzResponse>('/v1/healthz', { signal })
-  return response.data
+  const response = await client.get<unknown>('/v1/healthz', { signal })
+  return validateHealthzResponse(response.data)
 }
 
 export interface FetchRulesResult {

@@ -691,6 +691,40 @@ it('fetchRules filters malformed rule entries and warns with drop summary', asyn
   }
 })
 
+describe('fetchHealthz response validation', () => {
+  const axios = require('axios')
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  function mockHealthzResponse(data: unknown) {
+    vi.spyOn(axios, 'create').mockReturnValue({
+      get: vi.fn().mockResolvedValue({ data }),
+    })
+  }
+
+  it('accepts the healthy API status', async () => {
+    mockHealthzResponse({ status: 'ok' })
+    const { fetchHealthz } = loadApiModule()
+
+    await expect(fetchHealthz('https://api.example.com')).resolves.toEqual({ status: 'ok' })
+  })
+
+  it.each([
+    ['an unhealthy status', { status: 'down' }],
+    ['an object without status', {}],
+    ['a non-object payload', 'ok'],
+  ])('rejects %s', async (_description, payload) => {
+    mockHealthzResponse(payload)
+    const { fetchHealthz } = loadApiModule()
+
+    await expect(fetchHealthz('https://api.example.com')).rejects.toThrow(
+      'API health check failed: expected status "ok".'
+    )
+  })
+})
+
 it('validateApiEndpoint accepts endpoint without credentials', () => {
   const { validateApiEndpoint } = loadApiModule()
 
