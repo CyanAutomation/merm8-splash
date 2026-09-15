@@ -25,6 +25,7 @@ env:
 jobs:
   system_status:
     name: Kaseki System Status
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 2
     environment: kaseki-docs-sweep
@@ -37,6 +38,10 @@ jobs:
         run: |
           set -euo pipefail
           : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
+            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
+            exit 1
+          }
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
@@ -45,11 +50,11 @@ jobs:
             --output "$response_file" \
             "$KASEKI_BASE_URL/health"
           jq -e '.status == "healthy"' "$response_file" >/dev/null
-          jq . "$response_file"
 
   readiness:
     name: Kaseki System Readiness
     needs: system_status
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 2
     environment: kaseki-docs-sweep
@@ -61,6 +66,10 @@ jobs:
         run: |
           set -euo pipefail
           : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
+            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
+            exit 1
+          }
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
@@ -69,11 +78,11 @@ jobs:
             --output "$response_file" \
             "$KASEKI_BASE_URL/ready"
           jq -e '.status == "ready"' "$response_file" >/dev/null
-          jq . "$response_file"
 
   api_connection:
     name: Kaseki API Status
     needs: readiness
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 2
     environment: kaseki-docs-sweep
@@ -102,11 +111,11 @@ jobs:
             --header "Authorization: Bearer $KASEKI_API_TOKEN" \
             "$KASEKI_BASE_URL/api/gateway-test?stage=1"
           jq -e '.status == "ok"' "$response_file" >/dev/null
-          jq . "$response_file"
 
   dispatch:
     name: Submit Kaseki documentation sweep
     needs: api_connection
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: kaseki-docs-sweep
@@ -122,7 +131,8 @@ jobs:
             echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
             exit 1
           }
-          curl --fail --silent --show-error --max-time 20 \
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
+            --output /dev/null \
             "$KASEKI_BASE_URL/ready"
 
       - name: Submit documentation sweep
@@ -154,7 +164,20 @@ jobs:
                 ref: $ref,
                 idempotencyKey: $idempotencyKey,
                 taskMode: "patch",
+                publishMode: "draft_pr",
                 timeoutSeconds: 10800,
+                maxDiffBytes: 102400,
+                # These agent features can derive or admit extra file paths. Keep the
+                # caller's docs-only allowlist as the complete write authority.
+                scouting: {
+                  enabled: false
+                },
+                goalSetting: {
+                  enabled: false
+                },
+                goalCheck: {
+                  enabled: false
+                },
                 changedFilesAllowlist: (
                   $allowlist
                   | split(",")
@@ -166,10 +189,6 @@ jobs:
                   else [$validationCommand]
                   end
                 ),
-                goalCheck: {
-                  enabled: true,
-                  maxRetries: 1
-                },
                 taskPrompt: (
                   $taskDescription
                   + "\n\nPerform the documentation sweep for this repository. "
@@ -190,7 +209,7 @@ jobs:
 
           http_status="$(
             curl --silent --show-error \
-              --retry 3 --retry-all-errors --max-time 60 \
+              --retry 3 --retry-all-errors --connect-timeout 10 --max-time 60 \
               --output "$response_file" \
               --write-out '%{http_code}' \
               --request POST "$KASEKI_BASE_URL/api/runs" \
@@ -201,27 +220,20 @@ jobs:
 
           if [[ ! "$http_status" =~ ^2 ]]; then
             echo "::error title=Kaseki submission failed::Kaseki returned HTTP $http_status"
-            echo "Kaseki response (HTTP $http_status):"
-            cat "$response_file"
 
             {
               echo "## Kaseki submission failed"
               echo
               echo "Kaseki returned HTTP \`$http_status\`."
               echo
-              echo "### Response"
-              echo '```json'
-              jq . "$response_file" 2>/dev/null || cat "$response_file"
-              echo '```'
+              echo "The controller response body is intentionally omitted from logs and summaries."
             } >> "$GITHUB_STEP_SUMMARY"
 
             exit 1
           fi
 
-          response="$(<"$response_file")"
-          echo "$response" | jq .
-          run_id="$(echo "$response" | jq -er '.id')"
-          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          run_id="$(jq -er '.id | strings | select(test("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"))' "$response_file")"
+          printf 'run_id=%s\n' "$run_id" >> "$GITHUB_OUTPUT"
 
       - name: Publish submission details
         run: |
@@ -232,8 +244,9 @@ jobs:
             echo "|---|---|"
             echo "| Repository | \`$REPO_URL\` |"
             echo "| Ref | \`$REF\` |"
-            echo "| Mode | \`patch\` |"
+            echo "| Mode | \`patch\` → \`draft_pr\` |"
             echo "| Timeout | 3 hours |"
+            echo "| Maximum diff | 100 KiB |"
             echo "| Kaseki run | \`${{ steps.submit.outputs.run_id }}\` |"
             echo
             echo "### Allowed paths"
