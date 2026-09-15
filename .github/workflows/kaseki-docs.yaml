@@ -1,4 +1,4 @@
-name: Kaseki Docs
+name: Kaseki Docs Sweep
 
 on:
   schedule:
