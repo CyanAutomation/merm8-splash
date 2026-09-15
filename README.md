@@ -2,18 +2,18 @@
 
 # merm8-splash
 
-An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagram linting to your terminal-inspired workflow. Write, analyze, and validate your diagrams with a beautiful Bubble Tea-aesthetic UI, whether you're using the cloud-hosted API or self-hosting your own instance.
+An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagram linting to your browser-based workflow. Write, analyze, and validate your diagrams with a dark desktop-oriented UI, whether you're using the cloud-hosted API or self-hosting your own instance.
 
 ## Features
 
-- **Interactive Diagram Editor** — Real-time syntax highlighting and code editing for Mermaid diagrams
+- **Interactive Diagram Editor** — plain-text editor with clickable line-number gutter and jump-to-line support
 - **Real-time Linting** — Instant feedback on diagram violations with configurable rule severity levels (error, warning, info)
 - **Fast Analysis** — Debounced, optimized API calls for responsive user experience
 - **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
 - **Multiple Diagram Types** — Renders Mermaid diagrams and adapts lint controls to the connected API's advertised capabilities
 - **Export Support** — Export analyzed diagrams in multiple formats
 - **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
-- **Desktop-Optimized Design** — Clean, modern UI built with Tailwind CSS (desktop-only layout)
+- **Desktop-Optimized Design** — Clean, modern UI built with Tailwind CSS (optimized for desktop with responsive mobile stacking)
 
 ## Quick Start
 
@@ -190,6 +190,10 @@ For custom deployments:
 - **[Tailwind CSS](https://tailwindcss.com/)** — Utility-first styling
 - **[Mermaid](https://mermaid.js.org/)** — Diagram rendering
 - **[Axios](https://axios-http.com/)** — HTTP client for API calls
+- **[beautiful-mermaid](https://www.npmjs.com/package/beautiful-mermaid)** ^1.1.3 — Beautiful Mermaid rendering enhancements
+- **[clsx](https://www.npmjs.com/package/clsx)** ^2.0.0 — Conditional className joining
+- **[fallow](https://www.npmjs.com/package/fallow)** ^3.22.0 — Utility functions
+- **[react-resizable-panels](https://www.npmjs.com/package/react-resizable-panels)** 2.1.9 — Resizable panel containers
 
 The application is a **pure frontend** that communicates with a remote merm8 API instance via REST API. No backend server required.
 
@@ -220,6 +224,7 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 │   ├── diagramTypes.ts           # Diagram type detection
 │   ├── errorUtils.ts             # Error handling utilities
 │   ├── rulesState.ts             # Rules state management
+│   ├── status.ts                 # Parse status utilities
 │   ├── theme.ts                  # Theme tokens
 │   ├── useApiEndpoint.ts         # API endpoint hook
 │   ├── useDiagramAnalysis.ts     # Analysis state hook
@@ -227,6 +232,7 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 ├── tests/                        # Unit tests
 ├── Dockerfile                    # Docker configuration
 ├── netlify.toml                  # Netlify configuration
+├── next.config.ts                     # Next.js static-export config
 ├── vercel.json                   # Vercel configuration
 └── tailwind.config.ts            # Tailwind CSS config
 ```
