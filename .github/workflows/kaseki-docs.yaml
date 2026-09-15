@@ -1,4 +1,3 @@
-````yaml
 name: Kaseki Docs
 
 on:
@@ -265,4 +264,3 @@ jobs:
             echo
             echo "Monitor the run: $KASEKI_BASE_URL/ui"
           } >> "$GITHUB_STEP_SUMMARY"
-````
