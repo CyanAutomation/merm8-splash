@@ -32,23 +32,33 @@ jobs:
     env:
       # Do not add a public fallback URL.
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
+
     steps:
       - name: Verify controller health
         shell: bash
         run: |
           set -euo pipefail
+
           : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+
           [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
             echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
             exit 1
           }
+
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
-          curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
-            --connect-timeout 10 --max-time 20 \
+          curl --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 20 \
             --output "$response_file" \
             "$KASEKI_BASE_URL/health"
+
           jq -e '.status == "healthy"' "$response_file" >/dev/null
 
   readiness:
@@ -60,23 +70,33 @@ jobs:
     environment: kaseki-docs
     env:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
+
     steps:
       - name: Verify controller readiness
         shell: bash
         run: |
           set -euo pipefail
+
           : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+
           [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
             echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
             exit 1
           }
+
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
-          curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
-            --connect-timeout 10 --max-time 20 \
+          curl --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 20 \
             --output "$response_file" \
             "$KASEKI_BASE_URL/ready"
+
           jq -e '.status == "ready"' "$response_file" >/dev/null
 
   api_connection:
@@ -90,13 +110,16 @@ jobs:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
       # Store this as an environment secret, rather than a repository secret.
       KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
+
     steps:
       - name: Verify gateway connectivity and authentication
         shell: bash
         run: |
           set -euo pipefail
+
           : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
           : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
+
           [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
             echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
             exit 1
@@ -105,11 +128,17 @@ jobs:
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
-          curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
-            --connect-timeout 10 --max-time 60 \
+          curl --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --connect-timeout 10 \
+            --max-time 60 \
             --output "$response_file" \
             --header "Authorization: Bearer $KASEKI_API_TOKEN" \
             "$KASEKI_BASE_URL/api/gateway-test?stage=1"
+
           jq -e '.status == "ok"' "$response_file" >/dev/null
 
   dispatch:
@@ -123,26 +152,46 @@ jobs:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
 
     steps:
-      - name: Check Kaseki availability
+      - name: Check required tools
+        shell: bash
         run: |
           set -euo pipefail
+
+          command -v jq >/dev/null
+          command -v uuidgen >/dev/null
+          command -v curl >/dev/null
+
+      - name: Check Kaseki availability
+        shell: bash
+        run: |
+          set -euo pipefail
+
           : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+
           [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
             echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
             exit 1
           }
-          curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
+
+          curl --fail \
+            --silent \
+            --show-error \
+            --connect-timeout 10 \
+            --max-time 20 \
             --output /dev/null \
             "$KASEKI_BASE_URL/ready"
 
       - name: Submit documentation sweep
         id: submit
+        shell: bash
         env:
           KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
         run: |
           set -euo pipefail
+
           : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
           : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
+
           [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
             echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
             exit 1
@@ -167,28 +216,34 @@ jobs:
                 publishMode: "draft_pr",
                 timeoutSeconds: 10800,
                 maxDiffBytes: 102400,
-                # These agent features can derive or admit extra file paths. Keep the
-                # caller's docs-only allowlist as the complete write authority.
+
                 scouting: {
                   enabled: false
                 },
+
                 goalSetting: {
                   enabled: false
                 },
+
                 goalCheck: {
                   enabled: false
                 },
+
                 changedFilesAllowlist: (
                   $allowlist
                   | split(",")
                   | map(gsub("^\\s+|\\s+$"; ""))
                   | map(select(length > 0))
                 ),
+
                 validationCommands: (
-                  if $validationCommand == "" then []
-                  else [$validationCommand]
+                  if $validationCommand == "" then
+                    []
+                  else
+                    [$validationCommand]
                   end
                 ),
+
                 taskPrompt: (
                   $taskDescription
                   + "\n\nPerform the documentation sweep for this repository. "
@@ -206,10 +261,16 @@ jobs:
           )"
 
           response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
 
           http_status="$(
-            curl --silent --show-error \
-              --retry 3 --retry-all-errors --connect-timeout 10 --max-time 60 \
+            curl \
+              --silent \
+              --show-error \
+              --retry 3 \
+              --retry-all-errors \
+              --connect-timeout 10 \
+              --max-time 60 \
               --output "$response_file" \
               --write-out '%{http_code}' \
               --request POST "$KASEKI_BASE_URL/api/runs" \
@@ -232,10 +293,16 @@ jobs:
             exit 1
           fi
 
-          run_id="$(jq -er '.id | strings | select(test("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"))' "$response_file")"
+          run_id="$(
+            jq -er \
+              '.id | strings | select(test("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"))' \
+              "$response_file"
+          )"
+
           printf 'run_id=%s\n' "$run_id" >> "$GITHUB_OUTPUT"
 
       - name: Publish submission details
+        shell: bash
         run: |
           {
             echo "## Kaseki submission"
