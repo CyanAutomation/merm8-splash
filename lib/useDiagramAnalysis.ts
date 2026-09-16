@@ -13,6 +13,7 @@ export interface UseDiagramAnalysisReturn {
   analyzeError: string | null
   analysisHints: string[]
   diagramType: string | null
+  lintSupported: boolean | null
   metrics: AnalysisMetrics | null
   lastCompletedRun: AnalysisRunResult | null
   triggerAnalysis: (
@@ -387,6 +388,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null)
   const [analysisHints, setAnalysisHints] = useState<string[]>([])
   const [diagramType, setDiagramType] = useState<string | null>(null)
+  const [lintSupported, setLintSupported] = useState<boolean | null>(null)
   const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null)
   const [lastCompletedRun, setLastCompletedRun] = useState<AnalysisRunResult | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -442,6 +444,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     setAnalyzeError(null)
     setAnalysisHints([])
     setDiagramType(null)
+    setLintSupported(null)
     setMetrics(null)
     setIsAnalyzing(false)
   }, [abortTransportIfUnshared])
@@ -473,6 +476,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       ) {
         setViolations(Array.isArray(cachedEntry.result.results) ? cachedEntry.result.results : [])
         setDiagramType(cachedEntry.result.diagram_type)
+        setLintSupported(cachedEntry.result.lintSupported ?? null)
         setMetrics(cachedEntry.result.metrics ?? null)
         setAnalyzeError(null)
         setAnalysisHints(normalizeHints(cachedEntry.result.hints))
@@ -521,6 +525,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             })
             setViolations(Array.isArray(result.results) ? result.results : [])
             setDiagramType(result.diagram_type)
+            setLintSupported(result.lintSupported ?? null)
             setMetrics(result.metrics ?? null)
             setAnalyzeError(null)
             setAnalysisHints(normalizeHints(result.hints))
@@ -543,6 +548,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             setAnalysisHints(parsedError.hints)
             setViolations([])
             setDiagramType(null)
+            setLintSupported(null)
             setMetrics(null)
             setLastCompletedRun({
               id: runId,
@@ -629,6 +635,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           pruneAnalysisCache(analysisCacheRef.current, Date.now())
           setViolations(Array.isArray(result.results) ? result.results : [])
           setDiagramType(result.diagram_type)
+          setLintSupported(result.lintSupported ?? null)
           setMetrics(result.metrics ?? null)
           setAnalyzeError(null)
           setAnalysisHints(normalizeHints(result.hints))
@@ -651,6 +658,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           setAnalysisHints(parsedError.hints)
           setViolations([])
           setDiagramType(null)
+          setLintSupported(null)
           setMetrics(null)
           setLastCompletedRun({
             id: runId,
@@ -768,6 +776,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     analyzeError,
     analysisHints,
     diagramType,
+    lintSupported,
     metrics,
     lastCompletedRun,
     triggerAnalysis,

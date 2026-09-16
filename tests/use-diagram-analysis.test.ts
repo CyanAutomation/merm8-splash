@@ -442,6 +442,25 @@ it('hash-colliding legacy code strings never share in-flight entries', async () 
   const rerenderedHook = useDiagramAnalysis()
   expect(rerenderedHook.violations[0].rule_id).toBe('second')
 })
+
+it('preserves an API report that linting is unavailable for the diagram type', async () => {
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => ({
+      diagram_type: 'sequence',
+      lintSupported: false,
+      results: [],
+    }),
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.forceAnalysis('https://example.test', 'sequenceDiagram\nAlice->>Bob: Hello', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+  expect(rerenderedHook.lintSupported).toBe(false)
+})
 it('coalesced joiner waits for retry lifecycle and receives eventual success', async () => {
   const firstAttempt = createDeferred()
   let callCount = 0

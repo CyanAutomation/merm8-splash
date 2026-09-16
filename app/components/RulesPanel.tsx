@@ -32,6 +32,7 @@ export default function RulesPanel({
   const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
   const displayedRules = rules.filter((rule) => applicableRuleIds.has(rule.id))
   const applicableEnabledRules = enabledRules.filter((id) => applicableRuleIds.has(id))
+  const hasNoRulesForDiagramType = Boolean(diagramType && rules.length > 0 && displayedRules.length === 0)
   const rulesBadgeLabel = isUnavailable
     ? 'Server defaults'
     : `${applicableEnabledRules.length}/${displayedRules.length}`
@@ -71,7 +72,7 @@ export default function RulesPanel({
             {rulesBadgeLabel}
           </span>
         </div>
-        {!collapsed && (
+        {!collapsed && displayedRules.length > 0 && (
           <div style={{ display: 'flex', gap: '4px' }} onClick={(e) => e.stopPropagation()}>
             <button
               className="btn"
@@ -96,6 +97,8 @@ export default function RulesPanel({
         <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '8px' }}>
           {isUnavailable
             ? 'Analysis uses server defaults for linting.'
+            : hasNoRulesForDiagramType
+              ? `No lint rules are available for ${diagramType} diagrams on this API.`
             : displayedRules.length > 0
               ? 'Analysis uses your selected rules.'
               : 'Connect and test API to fetch rules metadata.'}
@@ -114,7 +117,9 @@ export default function RulesPanel({
             </div>
           ) : displayedRules.length === 0 ? (
             <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>
-              No rules loaded yet. Connect and test API to fetch rules metadata.
+              {hasNoRulesForDiagramType
+                ? `No lint rules are available for ${diagramType} diagrams on this API.`
+                : 'No rules loaded yet. Connect and test API to fetch rules metadata.'}
             </div>
           ) : (
             displayedRules.map((rule) => (
