@@ -9,6 +9,7 @@ interface ResultsPanelProps {
   isAnalyzing: boolean;
   analyzeError: string | null;
   analysisHints: string[];
+  lintSupported?: boolean | null;
   parseError?: string | null;
   onJumpToLine?: (line: number) => void;
   showInternalHeader?: boolean;
@@ -41,6 +42,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
       isAnalyzing,
       analyzeError,
       analysisHints,
+      lintSupported,
       parseError,
       onJumpToLine,
       showInternalHeader = true,
@@ -271,6 +273,22 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
                       );
                     })}
                   </ol>
+                </div>
+              )}
+
+              {lintSupported === false && !analyzeError && (
+                <div
+                  style={{
+                    border: "1px solid var(--color-info)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    marginBottom: "8px",
+                    background: "var(--color-bg-secondary)",
+                    color: "var(--color-text-primary)",
+                    fontSize: "12px",
+                  }}
+                >
+                  ℹ Syntax is valid, but this API has no lint rules for this diagram type.
                 </div>
               )}
 

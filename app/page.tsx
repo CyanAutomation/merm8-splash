@@ -93,6 +93,7 @@ function HomeContent() {
     analyzeError,
     analysisHints,
     diagramType,
+    lintSupported,
     metrics,
     lastCompletedRun,
     triggerAnalysis,
@@ -721,6 +722,7 @@ function HomeContent() {
                       isAnalyzing={isAnalyzing}
                       analyzeError={analyzeError}
                       analysisHints={analysisHints}
+                      lintSupported={lintSupported}
                       parseError={parseErrorDetail}
                       onJumpToLine={handleJumpToLine}
                       showInternalHeader={false}
@@ -779,6 +781,7 @@ function HomeContent() {
           violationCount={Array.isArray(violations) ? violations.length : 0}
           apiEndpoint={endpoint}
           diagramType={diagramType}
+          lintSupported={lintSupported}
           onTestConnection={handleTestConnection}
           statusMessage={
             rulesUnavailableForEndpoint
