@@ -11,6 +11,7 @@ interface StatusBarProps {
   violationCount: number
   apiEndpoint: string
   diagramType?: string | null
+  lintSupported?: boolean | null
   onTestConnection?: () => void
   statusMessage?: string
 }
@@ -22,6 +23,7 @@ export default function StatusBar({
   violationCount,
   apiEndpoint,
   diagramType,
+  lintSupported,
   onTestConnection,
   statusMessage,
 }: StatusBarProps) {
@@ -79,6 +81,10 @@ export default function StatusBar({
           <span style={{ color: 'var(--color-accent-secondary)' }}>
             Type: {diagramType}
           </span>
+        )}
+
+        {lintSupported === false && (
+          <span style={{ color: 'var(--color-info)' }}>Syntax checked only</span>
         )}
 
         <span>
