@@ -24,6 +24,13 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Check for peer dependency conflicts
+        run: |
+          if npm ls 2>&1 | grep -E "WARN|invalid|unmet"; then
+            echo "⚠️ Peer dependency conflicts detected!"
+            npm ls 2>&1 | grep -E "WARN|invalid|unmet" || true
+            exit 1
+          fi
       - run: npm test
       - run: npm run lint
       - run: npm run build
