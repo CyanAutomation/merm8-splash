@@ -2,7 +2,7 @@ name: Kaseki Docs Sweep
 
 on:
   schedule:
-    - cron: "0 5 * * 4"
+    - cron: "0 5 * * 6"
   workflow_dispatch:
 
 run-name: >-
