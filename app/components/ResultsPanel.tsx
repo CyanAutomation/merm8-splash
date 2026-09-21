@@ -3,6 +3,7 @@
 import { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
 import { Violation } from "@/lib/api";
 import { extractLineNumber } from "@/lib/errorUtils";
+import { severityColor } from "@/lib/severity";
 
 interface ResultsPanelProps {
   results: Violation[];
@@ -18,17 +19,6 @@ interface ResultsPanelProps {
 export interface ResultsPanelRef {
   focus: () => void;
 }
-
-const severityColor = (severity: string) => {
-  switch (severity) {
-    case "error":
-      return "var(--color-error)";
-    case "warning":
-      return "var(--color-warning)";
-    default:
-      return "var(--color-info)";
-  }
-};
 
 const violationKey = (violation: Violation, index: number): string => {
   const { rule_id, severity, message, line, node_id } = violation;
