@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Rule, deriveDisplayName } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
+import { severityColor } from '@/lib/severity'
 
 interface RulesPanelProps {
   rules: Rule[]
@@ -36,14 +37,6 @@ export default function RulesPanel({
   const rulesBadgeLabel = isUnavailable
     ? 'Server defaults'
     : `${applicableEnabledRules.length}/${displayedRules.length}`
-
-  const severityColor = (severity: string) => {
-    switch (severity) {
-      case 'error': return 'var(--color-error)'
-      case 'warning': return 'var(--color-warning)'
-      default: return 'var(--color-info)'
-    }
-  }
 
   return (
     <div className="panel" style={{ height: '100%' }}>
@@ -99,9 +92,9 @@ export default function RulesPanel({
             ? 'Analysis uses server defaults for linting.'
             : hasNoRulesForDiagramType
               ? `No lint rules are available for ${diagramType} diagrams on this API.`
-            : displayedRules.length > 0
-              ? 'Analysis uses your selected rules.'
-              : 'Connect and test API to fetch rules metadata.'}
+              : displayedRules.length > 0
+                ? 'Analysis uses your selected rules.'
+                : 'Connect and test API to fetch rules metadata.'}
         </div>
       )}
 
