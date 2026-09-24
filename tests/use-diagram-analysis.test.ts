@@ -144,7 +144,7 @@ function createTimerControls() {
   }
 }
 
-function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl, isCancelImpl }) {
+function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isApiRequestErrorImpl }) {
   const sourcePath = path.join(__dirname, '..', 'lib', 'useDiagramAnalysis.ts')
   const source = fs.readFileSync(sourcePath, 'utf8')
   const { outputText } = ts.transpileModule(source, {
@@ -159,13 +159,9 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl, isCan
   const reactMock = createReactMock()
   const timerControls = createTimerControls()
 
-  const axiosMock = {
-    isAxiosError: isAxiosErrorImpl ?? (() => false),
-    isCancel: isCancelImpl ?? (() => false),
-  }
-
   const apiMock = {
     analyzeCode: analyzeCodeImpl,
+    isApiRequestError: isApiRequestErrorImpl ?? (() => false),
   }
 
   const constantsMock = {
@@ -181,7 +177,6 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isAxiosErrorImpl, isCan
   const module = { exports: {} }
   const localRequire = (specifier) => {
     if (specifier === 'react') return reactMock
-    if (specifier === 'axios') return axiosMock
     if (specifier === './api') return apiMock
     if (specifier === './constants') return constantsMock
     return require(specifier)
@@ -465,11 +460,9 @@ it('coalesced joiner waits for retry lifecycle and receives eventual success', a
   const firstAttempt = createDeferred()
   let callCount = 0
 
-  const retryableAxiosError = {
-    __isAxiosError: true,
-    response: {
-      status: 504,
-    },
+  const retryableApiError = {
+    __isApiRequestError: true,
+    status: 504,
   }
 
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
@@ -483,7 +476,7 @@ it('coalesced joiner waits for retry lifecycle and receives eventual success', a
         results: [{ rule_id: 'retried', severity: 'warning', message: 'eventual success', line: 1 }],
       }
     },
-    isAxiosErrorImpl: (err) => Boolean(err && err.__isAxiosError),
+    isApiRequestErrorImpl: (err) => Boolean(err && err.__isApiRequestError),
   })
 
   reactMock.__prepareRender()
@@ -494,7 +487,7 @@ it('coalesced joiner waits for retry lifecycle and receives eventual success', a
 
   expect(callCount).toBe(1)
 
-  firstAttempt.reject(retryableAxiosError)
+  firstAttempt.reject(retryableApiError)
   await new Promise((resolve) => setImmediate(resolve))
 
   await timerControls.advanceBy(1000)
@@ -554,7 +547,6 @@ it('coalesced request cancellation exits analyzing state without waiting for sha
       callCount += 1
       return deferred.promise
     },
-    isCancelImpl: (err) => err instanceof Error && err.name === 'CanceledError',
   })
 
   reactMock.__prepareRender()
@@ -725,26 +717,23 @@ it('expired cache entry triggers fresh network analysis', async () => {
 })
 
 it('parseAnalysisError builds fallback summary for object payloads without standard keys', async () => {
-  const axiosError = {
-    __isAxiosError: true,
+  const apiError = {
+    __isApiRequestError: true,
     message: 'Request failed with status code 400',
-    response: {
-      data: {
-        status: 'invalid_request',
-        reason: 'Node references an undeclared target',
-        fields: ['line', 'node_id'],
-      },
-      headers: {
-        'x-request-id': 'req-400-fallback',
-      },
+    status: 400,
+    data: {
+      status: 'invalid_request',
+      reason: 'Node references an undeclared target',
+      fields: ['line', 'node_id'],
     },
+    headers: new Headers({ 'x-request-id': 'req-400-fallback' }),
   }
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async () => {
-      throw axiosError
+      throw apiError
     },
-    isAxiosErrorImpl: (err) => Boolean(err && err.__isAxiosError),
+    isApiRequestErrorImpl: (err) => Boolean(err && err.__isApiRequestError),
   })
 
   reactMock.__prepareRender()
@@ -762,25 +751,22 @@ it('parseAnalysisError builds fallback summary for object payloads without stand
 })
 
 it('parseAnalysisError adds request id hint alongside API-provided hints', async () => {
-  const axiosError = {
-    __isAxiosError: true,
+  const apiError = {
+    __isApiRequestError: true,
     message: 'Request failed with status code 400',
-    response: {
-      data: {
-        title: 'Validation failed',
-        hints: ['Fix syntax around line 2'],
-      },
-      headers: {
-        'x-request-id': 'req-400-with-hints',
-      },
+    status: 400,
+    data: {
+      title: 'Validation failed',
+      hints: ['Fix syntax around line 2'],
     },
+    headers: new Headers({ 'x-request-id': 'req-400-with-hints' }),
   }
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async () => {
-      throw axiosError
+      throw apiError
     },
-    isAxiosErrorImpl: (err) => Boolean(err && err.__isAxiosError),
+    isApiRequestErrorImpl: (err) => Boolean(err && err.__isApiRequestError),
   })
 
   reactMock.__prepareRender()

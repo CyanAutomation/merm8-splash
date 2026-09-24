@@ -2,7 +2,6 @@
 
 import { ConnectionStatus } from '@/lib/useApiEndpoint'
 import { getParseStatusLabel, ParseStatus } from '@/lib/status'
-import clsx from 'clsx'
 
 interface StatusBarProps {
   connectionStatus: ConnectionStatus
@@ -48,12 +47,7 @@ export default function StatusBar({
       <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
         <span>
           <span
-            className={clsx('status-dot', {
-              'status-dot-connected': connectionStatus === 'connected',
-              'status-dot-error': connectionStatus === 'error',
-              'status-dot-checking': connectionStatus === 'checking',
-              'status-dot-disconnected': connectionStatus === 'disconnected',
-            })}
+            className={`status-dot status-dot-${connectionStatus}`}
           />
           {connectionStatus === 'connected'
             ? 'API Connected'
