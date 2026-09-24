@@ -3,7 +3,6 @@
 import { useRef, useImperativeHandle, forwardRef, useState } from 'react'
 import { validateApiEndpoint } from '@/lib/api'
 import { ConnectionStatus } from '@/lib/useApiEndpoint'
-import clsx from 'clsx'
 
 interface ApiConfigPanelProps {
   endpoint: string
@@ -102,12 +101,7 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flex: 1, minWidth: '200px' }}>
             <span
-              className={clsx('status-dot', {
-                'status-dot-connected': connectionStatus === 'connected',
-                'status-dot-error': connectionStatus === 'error',
-                'status-dot-checking': connectionStatus === 'checking',
-                'status-dot-disconnected': connectionStatus === 'disconnected',
-              })}
+              className={`status-dot status-dot-${connectionStatus}`}
             />
             <input
               ref={inputRef}

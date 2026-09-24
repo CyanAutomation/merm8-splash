@@ -1,4 +1,3 @@
-import axios, { AxiosInstance } from 'axios'
 import { parseDiagramType, filterRulesByDiagramType } from './diagramTypes'
 
 export interface Rule {
@@ -78,6 +77,87 @@ export interface AnalyzeResponse {
 }
 
 export const DEFAULT_API_ENDPOINT = 'https://merm8.scheimann.workers.dev'
+
+const API_REQUEST_TIMEOUT_MS = 10_000
+
+export class ApiRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly data: unknown,
+    readonly headers: Headers
+  ) {
+    super(`Request failed with status code ${status}`)
+    this.name = 'ApiRequestError'
+  }
+}
+
+export function isApiRequestError(error: unknown): error is ApiRequestError {
+  return error instanceof ApiRequestError
+}
+
+async function readResponseData(response: Response): Promise<unknown> {
+  const text = await response.text()
+  if (!text) return undefined
+
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return text
+  }
+}
+
+function resolveApiUrl(endpoint: string, path: string): string {
+  const baseUrl = endpoint.endsWith('/') ? endpoint : `${endpoint}/`
+  return new URL(path.replace(/^\/+/, ''), baseUrl).toString()
+}
+
+async function requestApi<T>(
+  endpoint: string,
+  path: string,
+  options: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal } = {}
+): Promise<T> {
+  const controller = new AbortController()
+  const { method = 'GET', body, signal } = options
+  let didTimeout = false
+
+  const forwardAbort = () => controller.abort(signal?.reason)
+  if (signal?.aborted) {
+    forwardAbort()
+  } else {
+    signal?.addEventListener('abort', forwardAbort, { once: true })
+  }
+
+  const timeoutId = setTimeout(() => {
+    didTimeout = true
+    const timeoutError = new Error(`API request timed out after ${API_REQUEST_TIMEOUT_MS / 1000} seconds.`)
+    timeoutError.name = 'TimeoutError'
+    controller.abort(timeoutError)
+  }, API_REQUEST_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(resolveApiUrl(endpoint, path), {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: controller.signal,
+    })
+    const data = await readResponseData(response)
+
+    if (!response.ok) {
+      throw new ApiRequestError(response.status, data, response.headers)
+    }
+
+    return data as T
+  } catch (error) {
+    if (didTimeout) {
+      throw new Error(`API request timed out after ${API_REQUEST_TIMEOUT_MS / 1000} seconds.`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', forwardAbort)
+  }
+}
 
 export type AnalyzeHint = string | Record<string, unknown>
 
@@ -768,23 +848,12 @@ export function isValidEndpoint(url: string): boolean {
   return validateApiEndpoint(url).valid
 }
 
-export function createApiClient(endpoint: string): AxiosInstance {
-  return axios.create({
-    baseURL: endpoint,
-    timeout: 10000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-}
-
 export async function fetchHealthz(
   endpoint: string,
   signal?: AbortSignal
 ): Promise<HealthzResponse> {
-  const client = createApiClient(endpoint)
-  const response = await client.get<unknown>('/v1/healthz', { signal })
-  return validateHealthzResponse(response.data)
+  const response = await requestApi<unknown>(endpoint, '/v1/healthz', { signal })
+  return validateHealthzResponse(response)
 }
 
 export interface FetchRulesResult {
@@ -793,9 +862,8 @@ export interface FetchRulesResult {
 }
 
 export async function fetchRules(endpoint: string, signal?: AbortSignal): Promise<FetchRulesResult> {
-  const client = createApiClient(endpoint)
-  const response = await client.get<{ rules: Rule[] }>('/v1/rules', { signal })
-  return normalizeRulesResponse(response?.data)
+  const response = await requestApi<{ rules: Rule[] } | null | undefined>(endpoint, '/v1/rules', { signal })
+  return normalizeRulesResponse(response)
 }
 
 export async function analyzeCode(
@@ -808,11 +876,12 @@ export async function analyzeCode(
 ): Promise<AnalyzeResponse> {
   const request = buildAnalyzeRequest(code, enabledRules, rulesMetadata, options)
 
-  const client = createApiClient(endpoint)
-  const response = await client.post<AnalyzeResponse>('/v1/analyze', request, {
+  const response = await requestApi<AnalyzeResponse | undefined>(endpoint, '/v1/analyze', {
+    method: 'POST',
+    body: request,
     signal,
   })
-  return normalizeAnalyzeResponse(response?.data)
+  return normalizeAnalyzeResponse(response)
 }
 
 export function buildAnalyzeRequest(
@@ -854,9 +923,6 @@ export async function analyzeCodeSarif(
   enabledRules: string[],
   rulesMetadata: Rule[]
 ): Promise<unknown> {
-  const client = createApiClient(endpoint)
   const request = buildAnalyzeRequest(code, enabledRules, rulesMetadata)
-
-  const response = await client.post('/v1/analyze/sarif', request)
-  return response.data
+  return requestApi(endpoint, '/v1/analyze/sarif', { method: 'POST', body: request })
 }
