@@ -1,8 +1,16 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import axios from 'axios'
-import { analyzeCode, AnalyzeRequestOptions, AnalyzeResponse, Violation, Rule, AnalyzeHint, AnalysisMetrics } from './api'
+import {
+  analyzeCode,
+  AnalyzeRequestOptions,
+  AnalyzeResponse,
+  Violation,
+  Rule,
+  AnalyzeHint,
+  AnalysisMetrics,
+  isApiRequestError,
+} from './api'
 import { DEFAULT_DIAGRAM } from './constants'
 
 export interface UseDiagramAnalysisReturn {
@@ -97,15 +105,19 @@ function createCanceledError(): Error {
   return error
 }
 
+function isCancellationError(error: unknown): boolean {
+  return error instanceof Error && (error.name === 'AbortError' || error.name === 'CanceledError')
+}
+
 function isRetryableError(err: unknown): boolean {
-  if (axios.isAxiosError(err)) {
-    const status = err.response?.status
+  if (isApiRequestError(err)) {
+    const status = err.status
     // Retry on 504 (Gateway Timeout) and 503 (Service Unavailable)
     if (status === 504 || status === 503) {
       return true
     }
     // Also check for parser_timeout error code in response
-    const data = err.response?.data
+    const data = err.data
     if (data && typeof data === 'object' && !Array.isArray(data)) {
       const errorObj = (data as Record<string, unknown>).error
       if (errorObj && typeof errorObj === 'object' && !Array.isArray(errorObj)) {
@@ -211,14 +223,9 @@ function normalizeHints(hints: AnalyzeHint[] | undefined): string[] {
 }
 
 function parseAnalysisError(err: unknown): ParsedAnalysisError {
-  if (axios.isAxiosError(err)) {
-    const responseData = err.response?.data
-    const responseHeaders = err.response?.headers
-
-    const requestIdHeader =
-      typeof responseHeaders?.get === 'function'
-        ? responseHeaders.get('x-request-id')
-        : responseHeaders?.['x-request-id']
+  if (isApiRequestError(err)) {
+    const responseData = err.data
+    const requestIdHeader = err.headers.get('x-request-id')
 
     const requestIdHint =
       typeof requestIdHeader === 'string' && requestIdHeader.trim().length > 0
@@ -538,7 +545,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
             })
           }
         } catch (err) {
-          if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
+          if (isCancellationError(err)) {
             return
           }
 
@@ -603,7 +610,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
               controller.signal
             )
           } catch (err) {
-            if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
+            if (isCancellationError(err)) {
               throw err
             }
 
@@ -648,7 +655,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           })
         }
       } catch (err) {
-        if (axios.isCancel(err) || (err instanceof Error && err.name === 'CanceledError')) {
+        if (isCancellationError(err)) {
           return
         }
 

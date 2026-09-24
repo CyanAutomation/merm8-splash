@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-function loadApiModule() {
+function loadApiModule({ fetchImpl = globalThis.fetch } = {}) {
   const tsModuleCache = new Map()
 
   function loadTranspiledTsModule(sourcePath) {
@@ -50,6 +50,9 @@ function loadApiModule() {
       process,
       console,
       AbortController,
+      fetch: (...args) => fetchImpl(...args),
+      setTimeout,
+      clearTimeout,
       URL,
       URLSearchParams,
       localStorage: undefined,
@@ -62,6 +65,22 @@ function loadApiModule() {
 
   const sourcePath = path.join(__dirname, '..', 'lib', 'api.ts')
   return loadTranspiledTsModule(sourcePath)
+}
+
+function mockJsonFetch(responses) {
+  const responseQueue = [...(Array.isArray(responses) ? responses : [responses])]
+  const calls = []
+  const fetchImpl = async (url, init = {}) => {
+    calls.push({ url: String(url), init })
+    const nextResponse = responseQueue.shift()
+    if (nextResponse instanceof Response) return nextResponse
+    const body = nextResponse === undefined ? null : JSON.stringify(nextResponse)
+    return new Response(body, {
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  return { fetchImpl, calls }
 }
 
 
@@ -386,231 +405,138 @@ it('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filte
 
 
 it('analyzeCode sends compatibility payload with empty rules when using server defaults', async () => {
-  const api = loadApiModule()
-  const axios = require('axios')
-  const originalCreate = axios.create
-  const requests = []
+  const { fetchImpl, calls } = mockJsonFetch([{ diagram_type: 'flowchart', results: [] }])
+  const api = loadApiModule({ fetchImpl })
 
-  axios.create = () => ({
-    post: async (_url, requestBody) => {
-      requests.push(requestBody)
-      return {
-        data: {
-          diagram_type: 'flowchart',
-          results: [],
-        },
-      }
-    },
-  })
+  const response = await api.analyzeCode(
+    'https://example.test',
+    'graph TD; A-->B',
+    ['no-empty-label'],
+    [],
+    { useServerDefaults: true }
+  )
 
-  try {
-    const response = await api.analyzeCode(
-      'https://example.test',
-      'graph TD; A-->B',
-      ['no-empty-label'],
-      [],
-      { useServerDefaults: true }
-    )
-
-    expect(response.diagram_type).toBe('flowchart')
-    expect(requests.length).toBe(1)
-    expect(requests[0].config['schema-version']).toBe('v1')
-    expect(JSON.stringify(requests[0].config.rules)).toBe(JSON.stringify({}))
-  } finally {
-    axios.create = originalCreate
-  }
+  expect(response.diagram_type).toBe('flowchart')
+  expect(calls).toHaveLength(1)
+  const requestBody = JSON.parse(calls[0].init.body)
+  expect(requestBody.config['schema-version']).toBe('v1')
+  expect(requestBody.config.rules).toEqual({})
 })
 it('analyzeCode normalizes missing results to empty array', async () => {
-  const axios = require('axios')
-  const originalCreate = axios.create
+  const { fetchImpl } = mockJsonFetch([{ diagram_type: 'flowchart' }])
+  const { analyzeCode } = loadApiModule({ fetchImpl })
+  const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-  axios.create = () => ({
-    post: async () => ({
-      data: { diagram_type: 'flowchart' },
-    }),
-  })
-
-  try {
-    const { analyzeCode } = loadApiModule()
-    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-
-    expect(Array.isArray(response.results)).toBeTruthy()
-    expect(response.results.length).toBe(0)
-    expect(response.diagram_type).toBe('flowchart')
-  } finally {
-    axios.create = originalCreate
-  }
+  expect(Array.isArray(response.results)).toBeTruthy()
+  expect(response.results.length).toBe(0)
+  expect(response.diagram_type).toBe('flowchart')
 })
 
 it('analyzeCode normalizes null and non-array results without throwing', async () => {
-  const axios = require('axios')
-  const originalCreate = axios.create
-  const payloads = [
-    { data: { diagram_type: 'sequence', results: null } },
-    { data: { diagram_type: 'class', results: 'not-an-array' } },
+  const { fetchImpl } = mockJsonFetch([
+    { diagram_type: 'sequence', results: null },
+    { diagram_type: 'class', results: 'not-an-array' },
   ]
-  let index = 0
+  )
+  const { analyzeCode } = loadApiModule({ fetchImpl })
 
-  axios.create = () => ({
-    post: async () => payloads[index++],
-  })
+  const first = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+  const second = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-  try {
-    const { analyzeCode } = loadApiModule()
-
-    const first = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-    const second = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-
-    expect(first.results.length).toBe(0)
-    expect(second.results.length).toBe(0)
-    expect(Array.isArray(first.results)).toBeTruthy()
-    expect(Array.isArray(second.results)).toBeTruthy()
-  } finally {
-    axios.create = originalCreate
-  }
+  expect(first.results.length).toBe(0)
+  expect(second.results.length).toBe(0)
+  expect(Array.isArray(first.results)).toBeTruthy()
+  expect(Array.isArray(second.results)).toBeTruthy()
 })
 
 it('analyzeCode accepts the Worker kebab-case analysis response', async () => {
-  const axios = require('axios')
-  const originalCreate = axios.create
-
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        valid: true,
-        'diagram-type': 'flowchart',
-        issues: [{
-          'rule-id': 'no-cycles',
-          severity: 'error',
-          message: 'cycle detected involving node: A',
-          line: 2,
-        }],
-      },
-    }),
-  })
-
-  try {
-    const { analyzeCode } = loadApiModule()
-    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-
-    expect(response.diagram_type).toBe('flowchart')
-    expect(response.results).toEqual([{
-      rule_id: 'no-cycles',
+  const { fetchImpl } = mockJsonFetch({
+    valid: true,
+    'diagram-type': 'flowchart',
+    issues: [{
+      'rule-id': 'no-cycles',
       severity: 'error',
       message: 'cycle detected involving node: A',
       line: 2,
-    }])
-  } finally {
-    axios.create = originalCreate
-  }
+    }],
+  })
+  const { analyzeCode } = loadApiModule({ fetchImpl })
+  const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+
+  expect(response.diagram_type).toBe('flowchart')
+  expect(response.results).toEqual([{
+    rule_id: 'no-cycles',
+    severity: 'error',
+    message: 'cycle detected involving node: A',
+    line: 2,
+  }])
 })
 
 it('analyzeCode normalizes missing data payload to UI-safe defaults', async () => {
-  const axios = require('axios')
-  const originalCreate = axios.create
+  const { fetchImpl } = mockJsonFetch(undefined)
+  const { analyzeCode } = loadApiModule({ fetchImpl })
+  const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-  axios.create = () => ({
-    post: async () => ({}),
-  })
-
-  try {
-    const { analyzeCode } = loadApiModule()
-    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-
-    expect(Array.isArray(response.results)).toBeTruthy()
-    expect(response.results.length).toBe(0)
-    expect(response.diagram_type).toBe('')
-    expect(response.results.length).toBe((Array.isArray(response.results) ? response.results.length : 0))
-  } finally {
-    axios.create = originalCreate
-  }
+  expect(Array.isArray(response.results)).toBeTruthy()
+  expect(response.results.length).toBe(0)
+  expect(response.diagram_type).toBe('')
+  expect(response.results.length).toBe((Array.isArray(response.results) ? response.results.length : 0))
 })
 
 it('analyzeCode normalizes issue-count maps to finite numeric values', async () => {
-  const axios = require('axios')
-  const originalCreate = axios.create
-
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        diagram_type: 'flowchart',
-        results: [],
-        metrics: {
-          'diagram-type': 'flowchart',
-          'issue-counts': {
-            'by-severity': {
-              error: 2,
-              warning: '3',
-              info: ' 4 ',
-              invalid: 'NaN',
-              overflow: 'Infinity',
-              nested: {},
-            },
-            'by-rule': {
-              'no-empty-label': '5',
-              'max-depth': 6,
-              'max-fanout': null,
-              'no-cycles': 'not-a-number',
-            },
-          },
+  const { fetchImpl } = mockJsonFetch({
+    diagram_type: 'flowchart',
+    results: [],
+    metrics: {
+      'diagram-type': 'flowchart',
+      'issue-counts': {
+        'by-severity': {
+          error: 2,
+          warning: '3',
+          info: ' 4 ',
+          invalid: 'NaN',
+          overflow: 'Infinity',
+          nested: {},
+        },
+        'by-rule': {
+          'no-empty-label': '5',
+          'max-depth': 6,
+          'max-fanout': null,
+          'no-cycles': 'not-a-number',
         },
       },
-    }),
+    },
   })
+  const { analyzeCode } = loadApiModule({ fetchImpl })
+  const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-  try {
-    const { analyzeCode } = loadApiModule()
-    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-
-    expect(JSON.stringify(response.metrics.issueCounts.bySeverity)).toBe(JSON.stringify({ error: 2, warning: 3, info: 4 }))
-    expect(JSON.stringify(response.metrics.issueCounts.byRule)).toBe(JSON.stringify({ 'no-empty-label': 5, 'max-depth': 6 }))
-  } finally {
-    axios.create = originalCreate
-  }
+  expect(JSON.stringify(response.metrics.issueCounts.bySeverity)).toBe(JSON.stringify({ error: 2, warning: 3, info: 4 }))
+  expect(JSON.stringify(response.metrics.issueCounts.byRule)).toBe(JSON.stringify({ 'no-empty-label': 5, 'max-depth': 6 }))
 })
 
 it('analyzeCode defaults malformed issue-count maps to empty objects', async () => {
-  const axios = require('axios')
-  const originalCreate = axios.create
-
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        diagram_type: 'flowchart',
-        results: [],
-        metrics: {
-          'issue-counts': {
-            'by-severity': ['error', 2],
-            'by-rule': 'bad-shape',
-          },
-        },
+  const { fetchImpl } = mockJsonFetch({
+    diagram_type: 'flowchart',
+    results: [],
+    metrics: {
+      'issue-counts': {
+        'by-severity': ['error', 2],
+        'by-rule': 'bad-shape',
       },
-    }),
+    },
   })
+  const { analyzeCode } = loadApiModule({ fetchImpl })
+  const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-  try {
-    const { analyzeCode } = loadApiModule()
-    const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-
-    expect(JSON.stringify(response.metrics.issueCounts.bySeverity)).toBe(JSON.stringify({}))
-    expect(JSON.stringify(response.metrics.issueCounts.byRule)).toBe(JSON.stringify({}))
-  } finally {
-    axios.create = originalCreate
-  }
+  expect(JSON.stringify(response.metrics.issueCounts.bySeverity)).toBe(JSON.stringify({}))
+  expect(JSON.stringify(response.metrics.issueCounts.byRule)).toBe(JSON.stringify({}))
 })
 
 it('fetchRules normalizes malformed payloads to an empty rules list with malformed status', async () => {
-  const api = loadApiModule()
-  const axios = require('axios')
-  const originalCreate = axios.create
+  const { fetchImpl } = mockJsonFetch([null, { rules: 'not-an-array' }])
+  const api = loadApiModule({ fetchImpl })
   const originalWarn = console.warn
   const warnings = []
-  const payloads = [{ data: null }, { data: { rules: 'not-an-array' } }]
-  let index = 0
-
-  axios.create = () => ({
-    get: async () => payloads[index++],
-  })
 
   console.warn = (message) => {
     warnings.push(String(message))
@@ -629,46 +555,38 @@ it('fetchRules normalizes malformed payloads to an empty rules list with malform
     expect(warnings.some((message) => message.includes('[api.fetchRules] Normalized malformed rules response'))).toBe(true) // 'expected a warning for malformed rules payloads'
   } finally {
     console.warn = originalWarn
-    axios.create = originalCreate
   }
 })
 
 it('fetchRules filters malformed rule entries and warns with drop summary', async () => {
-  const api = loadApiModule()
-  const axios = require('axios')
-  const originalCreate = axios.create
+  const { fetchImpl } = mockJsonFetch({
+    rules: [
+      {
+        id: 'valid-rule',
+        description: 'A valid rule description',
+        severity: 'warning',
+      },
+      null,
+      {
+        id: 'missing-description',
+        severity: 'error',
+      },
+      {
+        id: 'bad-severity',
+        description: 'Unsupported severity should be removed',
+        severity: 'critical',
+      },
+      {
+        id: 'planned-rule',
+        description: 'Planned rule should be filtered out',
+        severity: 'info',
+        state: 'planned',
+      },
+    ],
+  })
+  const api = loadApiModule({ fetchImpl })
   const originalWarn = console.warn
   const warnings = []
-
-  axios.create = () => ({
-    get: async () => ({
-      data: {
-        rules: [
-          {
-            id: 'valid-rule',
-            description: 'A valid rule description',
-            severity: 'warning',
-          },
-          null,
-          {
-            id: 'missing-description',
-            severity: 'error',
-          },
-          {
-            id: 'bad-severity',
-            description: 'Unsupported severity should be removed',
-            severity: 'critical',
-          },
-          {
-            id: 'planned-rule',
-            description: 'Planned rule should be filtered out',
-            severity: 'info',
-            state: 'planned',
-          },
-        ],
-      },
-    }),
-  })
 
   console.warn = (message) => {
     warnings.push(String(message))
@@ -687,26 +605,17 @@ it('fetchRules filters malformed rule entries and warns with drop summary', asyn
     expect(warnings.some((message) => message.includes('Dropped 4 invalid rule entries during normalization'))).toBe(true) // 'expected warning that malformed rule entries were dropped'
   } finally {
     console.warn = originalWarn
-    axios.create = originalCreate
   }
 })
 
 describe('fetchHealthz response validation', () => {
-  const axios = require('axios')
-
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
   function mockHealthzResponse(data: unknown) {
-    vi.spyOn(axios, 'create').mockReturnValue({
-      get: vi.fn().mockResolvedValue({ data }),
-    })
+    return mockJsonFetch(data)
   }
 
   it('accepts the healthy API status', async () => {
-    mockHealthzResponse({ status: 'ok' })
-    const { fetchHealthz } = loadApiModule()
+    const { fetchImpl } = mockHealthzResponse({ status: 'ok' })
+    const { fetchHealthz } = loadApiModule({ fetchImpl })
 
     await expect(fetchHealthz('https://api.example.com')).resolves.toEqual({ status: 'ok' })
   })
@@ -716,8 +625,8 @@ describe('fetchHealthz response validation', () => {
     ['an object without status', {}],
     ['a non-object payload', 'ok'],
   ])('rejects %s', async (_description, payload) => {
-    mockHealthzResponse(payload)
-    const { fetchHealthz } = loadApiModule()
+    const { fetchImpl } = mockHealthzResponse(payload)
+    const { fetchHealthz } = loadApiModule({ fetchImpl })
 
     await expect(fetchHealthz('https://api.example.com')).rejects.toThrow(
       'API health check failed: expected status "ok".'
@@ -748,7 +657,6 @@ it('validateApiEndpoint rejects endpoint with username/password credentials', ()
 
 
 describe('analyzeCode hint normalization', () => {
-  const axios = require('axios')
   const validHints = ['Use concise labels', { code: 'prefer-short-labels' }]
   const normalizationCases = [
     {
@@ -779,11 +687,7 @@ describe('analyzeCode hint normalization', () => {
   ]
 
   function mockAnalyzeResponse(hints: unknown) {
-    vi.spyOn(axios, 'create').mockReturnValue({
-      post: vi.fn().mockResolvedValue({
-        data: { diagram_type: 'flowchart', results: [], hints },
-      }),
-    })
+    return mockJsonFetch({ diagram_type: 'flowchart', results: [], hints })
   }
 
   afterEach(() => {
@@ -791,8 +695,8 @@ describe('analyzeCode hint normalization', () => {
   })
 
   it.each(normalizationCases)('normalizes $name', async ({ hints, expected }) => {
-    mockAnalyzeResponse(hints)
-    const { analyzeCode } = loadApiModule()
+    const { fetchImpl } = mockAnalyzeResponse(hints)
+    const { analyzeCode } = loadApiModule({ fetchImpl })
 
     const response = await analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
@@ -806,9 +710,9 @@ describe('analyzeCode hint normalization', () => {
     { name: 'a nested array', hints: normalizationCases[2].hints, warning: 'invalid entries in `hints`' },
     { name: 'unsupported primitives', hints: normalizationCases[3].hints, warning: 'invalid entries in `hints`' },
   ])('warns in development for $name', async ({ hints, warning }) => {
-    mockAnalyzeResponse(hints)
+    const { fetchImpl } = mockAnalyzeResponse(hints)
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const { analyzeCode } = loadApiModule()
+    const { analyzeCode } = loadApiModule({ fetchImpl })
 
     await analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
@@ -817,37 +721,30 @@ describe('analyzeCode hint normalization', () => {
 })
 
 it('analyzeCode filters malformed violations and keeps only safe entries', async () => {
-  const api = loadApiModule()
-  const axios = require('axios')
-  const originalCreate = axios.create
+  const { fetchImpl } = mockJsonFetch({
+    diagram_type: 'flowchart',
+    results: [
+      null,
+      {
+        rule_id: 'valid-rule',
+        severity: 'warning',
+        message: 'Keep labels short',
+        line: 12,
+      },
+      {
+        rule_id: 'no-severity',
+        message: 'Missing severity should be dropped',
+      },
+      {
+        rule_id: 'numeric-message',
+        severity: 'error',
+        message: 123,
+      },
+    ],
+  })
+  const api = loadApiModule({ fetchImpl })
   const originalWarn = console.warn
   const warnings = []
-
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        diagram_type: 'flowchart',
-        results: [
-          null,
-          {
-            rule_id: 'valid-rule',
-            severity: 'warning',
-            message: 'Keep labels short',
-            line: 12,
-          },
-          {
-            rule_id: 'no-severity',
-            message: 'Missing severity should be dropped',
-          },
-          {
-            rule_id: 'numeric-message',
-            severity: 'error',
-            message: 123,
-          },
-        ],
-      },
-    }),
-  })
 
   console.warn = (message) => {
     warnings.push(String(message))
@@ -866,40 +763,28 @@ it('analyzeCode filters malformed violations and keeps only safe entries', async
     expect(warnings.some((message) => message.includes('invalid entries in `results`'))).toBe(true) // 'expected a warning for malformed results'
   } finally {
     console.warn = originalWarn
-    axios.create = originalCreate
   }
 })
 
 it('analyzeCode ignores non-numeric line values on violations', async () => {
-  const api = loadApiModule()
-  const axios = require('axios')
-  const originalCreate = axios.create
-
-  axios.create = () => ({
-    post: async () => ({
-      data: {
-        diagram_type: 'flowchart',
-        results: [
-          {
-            rule_id: 'line-string',
-            severity: 'info',
-            message: 'String line should be ignored',
-            line: '42',
-          },
-        ],
+  const { fetchImpl } = mockJsonFetch({
+    diagram_type: 'flowchart',
+    results: [
+      {
+        rule_id: 'line-string',
+        severity: 'info',
+        message: 'String line should be ignored',
+        line: '42',
       },
-    }),
+    ],
   })
+  const api = loadApiModule({ fetchImpl })
 
-  try {
-    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
+  const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-    expect(response.results.length).toBe(1)
-    expect('line' in response.results[0]).toBe(false)
-    expect(response.results[0].message).toBe('String line should be ignored')
-  } finally {
-    axios.create = originalCreate
-  }
+  expect(response.results.length).toBe(1)
+  expect('line' in response.results[0]).toBe(false)
+  expect(response.results[0].message).toBe('String line should be ignored')
 })
 
 it('validateApiEndpoint blocks normalized local/private bypass forms in production', () => {
@@ -1018,4 +903,85 @@ it('validateApiEndpoint allows public hosts in production', () => {
   } finally {
     process.env.NODE_ENV = originalNodeEnv
   }
+})
+
+describe('native fetch API transport', () => {
+  it('sends health checks through fetch with the endpoint path and caller signal', async () => {
+    const controller = new AbortController()
+    const calls = []
+    let forwardedAbort = false
+    const fetchImpl = async (url, init) => {
+      calls.push({ url, init })
+      controller.abort()
+      forwardedAbort = init.signal.aborted
+      return new Response(JSON.stringify({ status: 'ok' }), {
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+    const { fetchHealthz } = loadApiModule({ fetchImpl })
+
+    await expect(fetchHealthz('http://127.0.0.1:1/api/', controller.signal)).resolves.toEqual({ status: 'ok' })
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0].url).toBe('http://127.0.0.1:1/api/v1/healthz')
+    expect(calls[0].init.method).toBe('GET')
+    expect(calls[0].init.headers['Content-Type']).toBe('application/json')
+    expect(calls[0].init.signal).not.toBe(controller.signal)
+    expect(forwardedAbort).toBe(true)
+  })
+
+  it('posts analyze requests as JSON and parses the response', async () => {
+    const calls = []
+    const fetchImpl = async (url, init) => {
+      calls.push({ url, init })
+      return new Response(JSON.stringify({ diagram_type: 'flowchart', results: [] }), {
+        headers: { 'content-type': 'application/json' },
+      })
+    }
+    const { analyzeCode } = loadApiModule({ fetchImpl })
+
+    const response = await analyzeCode('http://127.0.0.1:1', 'graph TD; A-->B', [], [])
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0].url).toBe('http://127.0.0.1:1/v1/analyze')
+    expect(calls[0].init.method).toBe('POST')
+    expect(JSON.parse(calls[0].init.body)).toMatchObject({ code: 'graph TD; A-->B' })
+    expect(response.diagram_type).toBe('flowchart')
+  })
+
+  it('preserves error status, response payload, and request ID on non-2xx responses', async () => {
+    const fetchImpl = async () => new Response(JSON.stringify({ error: { code: 'parser_timeout' } }), {
+      status: 503,
+      headers: {
+        'content-type': 'application/json',
+        'x-request-id': 'req-timeout-1',
+      },
+    })
+    const { ApiRequestError, fetchRules } = loadApiModule({ fetchImpl })
+
+    await expect(fetchRules('http://127.0.0.1:1')).rejects.toMatchObject({
+      name: ApiRequestError.name,
+      status: 503,
+      data: { error: { code: 'parser_timeout' } },
+      headers: expect.objectContaining({ get: expect.any(Function) }),
+    })
+  })
+
+  it('aborts a request after the existing ten-second timeout', async () => {
+    vi.useFakeTimers()
+
+    try {
+      const fetchImpl = async (_url, init) => new Promise((_resolve, reject) => {
+        init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true })
+      })
+      const { fetchHealthz } = loadApiModule({ fetchImpl })
+      const request = fetchHealthz('http://127.0.0.1:1')
+      const rejection = expect(request).rejects.toThrow('API request timed out after 10 seconds.')
+
+      await vi.advanceTimersByTimeAsync(10_000)
+      await rejection
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
