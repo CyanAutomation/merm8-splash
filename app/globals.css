@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 :root {
   --color-bg-primary: #1c1c1e;
   --color-bg-secondary: #2c2c2e;
@@ -26,6 +22,31 @@
   margin: 0;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  background: transparent;
+  cursor: pointer;
+}
+
 html,
 body {
   max-width: 100vw;
@@ -42,7 +63,6 @@ a {
   text-decoration: none;
 }
 
-@layer utilities {
   .text-severity-error { color: var(--color-error); }
   .text-severity-warning { color: var(--color-warning); }
   .text-severity-info { color: var(--color-info); }
@@ -119,29 +139,6 @@ a {
     margin: 8px 0;
   }
   
-  /* React Resizable Panels customization */
-  [data-panel-group-direction='horizontal'] > [data-panel-resize-handle-enabled] {
-    width: 4px;
-    background-color: var(--color-border);
-    cursor: col-resize;
-    transition: background-color 0.2s ease;
-  }
-  
-  [data-panel-group-direction='horizontal'] > [data-panel-resize-handle-enabled]:hover {
-    background-color: var(--color-accent-primary);
-  }
-  
-  [data-panel-group-direction='vertical'] > [data-panel-resize-handle-enabled] {
-    height: 4px;
-    background-color: var(--color-border);
-    cursor: row-resize;
-    transition: background-color 0.2s ease;
-  }
-  
-  [data-panel-group-direction='vertical'] > [data-panel-resize-handle-enabled]:hover {
-    background-color: var(--color-accent-primary);
-  }
-
   /* Editor with line number gutter */
   .editor-container textarea {
     scrollbar-width: thin;
@@ -224,4 +221,3 @@ a {
       display: none;
     }
   }
-}
