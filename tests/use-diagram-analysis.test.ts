@@ -196,6 +196,7 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isApiRequestErrorImpl }
     setInterval: timerControls.setInterval,
     clearInterval: timerControls.clearInterval,
     AbortController,
+    URL,
     Date: FakeDate,
   })
 
@@ -596,6 +597,61 @@ it('identical forceAnalysis request reuses fresh cache entry', async () => {
   reactMock.__prepareRender()
   const rerenderedHook = useDiagramAnalysis()
   expect(rerenderedHook.violations[0].rule_id).toBe('cached')
+})
+
+it('host-case-only endpoint variations reuse the same cache entry', async () => {
+  const calls = []
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (endpoint) => {
+      calls.push(endpoint)
+      return { diagram_type: 'flowchart', results: [] }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis('HTTPS://EXAMPLE.TEST:443/Api', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis('https://example.test/Api/', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  expect(calls).toEqual(['HTTPS://EXAMPLE.TEST:443/Api'])
+})
+
+it.each([
+  {
+    variation: 'path case',
+    firstEndpoint: 'https://example.test/Api/',
+    secondEndpoint: 'https://example.test/api/',
+  },
+  {
+    variation: 'query case',
+    firstEndpoint: 'https://example.test/api/?mode=Strict',
+    secondEndpoint: 'https://example.test/api/?mode=strict',
+  },
+])('endpoint $variation differences use separate cache entries', async ({ firstEndpoint, secondEndpoint }) => {
+  const calls = []
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (endpoint) => {
+      calls.push(endpoint)
+      return { diagram_type: 'flowchart', results: [] }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis(firstEndpoint, 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis(secondEndpoint, 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  expect(calls).toEqual([firstEndpoint, secondEndpoint])
 })
 
 
