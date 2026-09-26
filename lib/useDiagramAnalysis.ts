@@ -307,13 +307,31 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
   }
 }
 
+function canonicalizeAnalysisEndpoint(endpoint: string): string {
+  const trimmedEndpoint = endpoint.trim()
+
+  try {
+    const url = new URL(trimmedEndpoint)
+    url.protocol = url.protocol.toLowerCase()
+    url.hostname = url.hostname.toLowerCase()
+
+    if (!url.pathname.endsWith('/')) {
+      url.pathname = `${url.pathname}/`
+    }
+
+    return url.toString()
+  } catch {
+    return trimmedEndpoint
+  }
+}
+
 function buildAnalysisCacheKey(
   endpoint: string,
   enabledRules: string[],
   rulesMetadata: Rule[],
   options: AnalyzeRequestOptions
 ): string {
-  const normalizedEndpoint = endpoint.trim().toLowerCase()
+  const normalizedEndpoint = canonicalizeAnalysisEndpoint(endpoint)
   const normalizedRules = [...enabledRules].sort().join(',')
   const metadataFingerprint = buildRulesMetadataFingerprint(rulesMetadata)
   const useServerDefaults = options.useServerDefaults === true ? '1' : '0'
