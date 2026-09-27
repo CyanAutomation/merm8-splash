@@ -599,6 +599,90 @@ it('identical forceAnalysis request reuses fresh cache entry', async () => {
   expect(rerenderedHook.violations[0].rule_id).toBe('cached')
 })
 
+it('switching to a cached analysis aborts an unshared obsolete request', async () => {
+  const endpoint = 'https://example.test'
+  const cachedCode = 'graph TD\nA-->B'
+  const pendingCode = 'graph TD\nA-->C'
+  let pendingSignal
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (_endpoint, code, _enabledRules, _rulesMetadata, _options, signal) => {
+      if (code === cachedCode) {
+        return {
+          diagram_type: 'flowchart',
+          results: [{ rule_id: 'cached', severity: 'warning', message: 'cached', line: 1 }],
+        }
+      }
+
+      pendingSignal = signal
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => {
+          const error = new Error('Aborted')
+          error.name = 'AbortError'
+          reject(error)
+        })
+      })
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis(endpoint, cachedCode, ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis(endpoint, pendingCode, ['r1'], [])
+  expect(pendingSignal.aborted).toBe(false)
+
+  hook.forceAnalysis(endpoint, cachedCode, ['r1'], [])
+  expect(pendingSignal.aborted).toBe(true)
+
+  await new Promise((resolve) => setImmediate(resolve))
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+  expect(rerenderedHook.violations[0].rule_id).toBe('cached')
+})
+
+it('switching to a cached analysis keeps a transport with another waiter alive', async () => {
+  const endpoint = 'https://example.test'
+  const cachedCode = 'graph TD\nA-->B'
+  const sharedCode = 'graph TD\nA-->C'
+  const sharedRequest = createDeferred()
+  let sharedSignal
+  let sharedCallCount = 0
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (_endpoint, code, _enabledRules, _rulesMetadata, _options, signal) => {
+      if (code === cachedCode) {
+        return { diagram_type: 'flowchart', results: [] }
+      }
+
+      sharedCallCount += 1
+      sharedSignal = signal
+      return sharedRequest.promise
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+
+  hook.forceAnalysis(endpoint, cachedCode, ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis(endpoint, sharedCode, ['r1'], [])
+  hook.forceAnalysis(endpoint, sharedCode, ['r1'], [])
+  expect(sharedCallCount).toBe(1)
+
+  hook.forceAnalysis(endpoint, cachedCode, ['r1'], [])
+  expect(sharedSignal.aborted).toBe(false)
+
+  sharedRequest.resolve({ diagram_type: 'flowchart', results: [] })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis(endpoint, sharedCode, ['r1'], [])
+  expect(sharedCallCount).toBe(2)
+})
+
 it('reuses both completed responses across an A to B to A sequence', async () => {
   const calls = []
 
