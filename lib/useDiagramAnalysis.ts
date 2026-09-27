@@ -441,6 +441,13 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     }
   }, [])
 
+  const stopActiveRequest = useCallback(() => {
+    waiterAbortControllerRef.current?.abort()
+    waiterAbortControllerRef.current = null
+    abortTransportIfUnshared(abortControllerRef.current)
+    abortControllerRef.current = null
+  }, [abortTransportIfUnshared])
+
   const cancelAnalysis = useCallback(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current)
@@ -450,10 +457,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     if (abortControllerRef.current || waiterAbortControllerRef.current) {
       requestSeqRef.current += 1
     }
-    waiterAbortControllerRef.current?.abort()
-    waiterAbortControllerRef.current = null
-    abortTransportIfUnshared(abortControllerRef.current)
-    abortControllerRef.current = null
+    stopActiveRequest()
     setViolations([])
     setAnalyzeError(null)
     setAnalysisHints([])
@@ -461,7 +465,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     setLintSupported(null)
     setMetrics(null)
     setIsAnalyzing(false)
-  }, [abortTransportIfUnshared])
+  }, [stopActiveRequest])
 
   const runAnalysis = useCallback(
     async (
@@ -489,6 +493,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       const now = Date.now()
 
       if (cachedEntry && now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS) {
+        stopActiveRequest()
         setViolations(Array.isArray(cachedEntry.result.results) ? cachedEntry.result.results : [])
         setDiagramType(cachedEntry.result.diagram_type)
         setLintSupported(cachedEntry.result.lintSupported ?? null)
@@ -505,7 +510,6 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           error: null,
         })
         setIsAnalyzing(false)
-        abortControllerRef.current = null
         return
       }
 
@@ -700,7 +704,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         }
       }
     },
-    [abortTransportIfUnshared, cancelAnalysis]
+    [abortTransportIfUnshared, cancelAnalysis, stopActiveRequest]
   )
 
   const triggerAnalysis = useCallback(
