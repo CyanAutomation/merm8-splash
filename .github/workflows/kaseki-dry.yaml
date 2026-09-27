@@ -13,7 +13,7 @@ permissions:
 
 # Protect the complete external Kaseki run from overlapping sweeps.
 concurrency:
-  group: kaseki-dry-sweep-${{ github.repository }}
+  group: kaseki-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
@@ -55,6 +55,15 @@ jobs:
             echo "::error title=Invalid Kaseki URL::Use the approved HTTPS controller URL."
             exit 1
           fi
+
+      - name: Check required tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          command -v jq >/dev/null
+          command -v uuidgen >/dev/null
+          command -v curl >/dev/null
 
       - name: Verify controller health
         shell: bash
@@ -124,6 +133,7 @@ jobs:
           idempotency_key="$(
             tr '[:upper:]' '[:lower:]' < /proc/sys/kernel/random/uuid
           )"
+          output_delimiter="$(uuidgen)"
 
           payload="$(
             jq -n \
@@ -216,8 +226,6 @@ jobs:
               exit 1
               ;;
           esac
-
-          output_delimiter="$(uuidgen)"
 
           {
             echo "run_id<<$output_delimiter"
