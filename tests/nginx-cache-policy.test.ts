@@ -21,12 +21,12 @@ it('requires HTML and SPA fallback responses to be revalidated', () => {
 })
 
 it('separates every Content-Security-Policy directive with a semicolon', () => {
-  const contentSecurityPolicy = nginxConfig.match(
+  const contentSecurityPolicyMatch = nginxConfig.match(
     /add_header Content-Security-Policy "([^"]+)" always;/,
-  )?.[1]
+  )
 
-  expect(contentSecurityPolicy).toBeDefined()
-  expect(contentSecurityPolicy).toBe(
+  expect(contentSecurityPolicyMatch).toBeDefined()
+  expect(contentSecurityPolicyMatch?.[1]).toBe(
     "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self';",
   )
 })
