@@ -599,6 +599,48 @@ it('identical forceAnalysis request reuses fresh cache entry', async () => {
   expect(rerenderedHook.violations[0].rule_id).toBe('cached')
 })
 
+it('reuses both completed responses across an A to B to A sequence', async () => {
+  const calls = []
+
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (_endpoint, code) => {
+      calls.push(code)
+      return {
+        diagram_type: 'flowchart',
+        results: [
+          {
+            rule_id: code.endsWith('B') ? 'result-a' : 'result-b',
+            severity: 'warning',
+            message: code,
+            line: 1,
+          },
+        ],
+      }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  const endpoint = 'https://example.test'
+  const codeA = 'graph TD\nA-->B'
+  const codeB = 'graph TD\nA-->C'
+
+  hook.forceAnalysis(endpoint, codeA, ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis(endpoint, codeB, ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  hook.forceAnalysis(endpoint, codeA, ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  expect(calls).toEqual([codeA, codeB])
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+  expect(rerenderedHook.violations[0].rule_id).toBe('result-a')
+})
+
 it('host-case-only endpoint variations reuse the same cache entry', async () => {
   const calls = []
 
@@ -706,17 +748,27 @@ it.each([
       enabledRules: ['r1'],
     },
   },
+  {
+    dimension: 'options',
+    changedRequest: {
+      endpoint: 'https://example.test',
+      code: 'graph TD\nA-->B',
+      enabledRules: ['r1'],
+      options: { useServerDefaults: true },
+    },
+  },
 ])('cache key changes when $dimension changes', async ({ changedRequest }) => {
   const calls = []
   const baselineRequest = {
     endpoint: 'https://example.test',
     code: 'graph TD\nA-->B',
     enabledRules: ['r1'],
+    options: {},
   }
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
-    analyzeCodeImpl: async (endpoint, code, enabledRules) => {
-      calls.push({ endpoint, code, enabledRules: [...enabledRules] })
+    analyzeCodeImpl: async (endpoint, code, enabledRules, _rulesMetadata, options) => {
+      calls.push({ endpoint, code, enabledRules: [...enabledRules], options })
       return { diagram_type: 'flowchart', results: [] }
     },
   })
@@ -729,6 +781,7 @@ it.each([
     baselineRequest.code,
     baselineRequest.enabledRules,
     [],
+    baselineRequest.options,
   )
   await new Promise((resolve) => setImmediate(resolve))
 
@@ -737,15 +790,25 @@ it.each([
     baselineRequest.code,
     baselineRequest.enabledRules,
     [],
+    baselineRequest.options,
   )
   await new Promise((resolve) => setImmediate(resolve))
 
   expect(calls).toEqual([baselineRequest])
 
-  hook.forceAnalysis(changedRequest.endpoint, changedRequest.code, changedRequest.enabledRules, [])
+  hook.forceAnalysis(
+    changedRequest.endpoint,
+    changedRequest.code,
+    changedRequest.enabledRules,
+    [],
+    changedRequest.options,
+  )
   await new Promise((resolve) => setImmediate(resolve))
 
-  expect(calls).toEqual([baselineRequest, changedRequest])
+  expect(calls).toEqual([
+    baselineRequest,
+    { ...changedRequest, options: changedRequest.options ?? {} },
+  ])
 })
 
 it('expired cache entry triggers fresh network analysis', async () => {
