@@ -19,3 +19,14 @@ it('requires HTML and SPA fallback responses to be revalidated', () => {
     /location \/\s*{[\s\S]*?try_files \$uri \$uri\/ \/index\.html;[\s\S]*?}/,
   )
 })
+
+it('separates every Content-Security-Policy directive with a semicolon', () => {
+  const contentSecurityPolicy = nginxConfig.match(
+    /add_header Content-Security-Policy "([^"]+)" always;/,
+  )?.[1]
+
+  expect(contentSecurityPolicy).toBeDefined()
+  expect(contentSecurityPolicy).toBe(
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self';",
+  )
+})
