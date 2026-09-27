@@ -5,6 +5,7 @@ import { expect, it } from 'vitest'
 const repoRoot = process.cwd()
 const workflowDirectory = join(repoRoot, '.github', 'workflows')
 const dryWorkflow = readFileSync(join(workflowDirectory, 'kaseki-dry.yaml'), 'utf8')
+const docsWorkflow = readFileSync(join(workflowDirectory, 'kaseki-docs.yaml'), 'utf8')
 const ciWorkflow = readFileSync(join(workflowDirectory, 'ci.yml'), 'utf8')
 const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
   scripts: Record<string, string>
@@ -38,6 +39,10 @@ function yamlBlock(source: string, header: string): string {
 
 function stepBlock(name: string): string {
   return yamlBlock(dryWorkflow, `- name: ${name}`)
+}
+
+function docsJobBlock(name: string): string {
+  return yamlBlock(docsWorkflow, `${name}:`)
 }
 
 it('limits the secret-bearing Kaseki DRY job to the default branch', () => {
@@ -108,4 +113,47 @@ it('does not persist the checkout token into pull-request build commands', () =>
   const checkoutStep = yamlBlock(ciWorkflow, '- uses: actions/checkout@')
 
   expect(checkoutStep).toContain('persist-credentials: false')
+})
+
+it('fails the dependency check based on npm ls exit status instead of output text', () => {
+  const dependencyCheck = yamlBlock(ciWorkflow, '- name: Check for peer dependency conflicts')
+
+  expect(dependencyCheck.match(/\bnpm ls\b/g)).toHaveLength(1)
+  expect(dependencyCheck).toContain('if ! npm ls; then')
+  expect(dependencyCheck).not.toContain('grep -E')
+})
+
+it('keeps Kaseki docs API retries within the job timeout budget', () => {
+  const apiConnection = docsJobBlock('api_connection')
+  const timeoutMinutes = apiConnection.match(/^\s+timeout-minutes:\s*(\d+)$/m)?.[1]
+
+  expect(Number(timeoutMinutes)).toBeGreaterThanOrEqual(5)
+})
+
+it('checks DRY runner tools before contacting Kaseki and creates the output delimiter before submission', () => {
+  const requiredTools = stepBlock('Check required tools')
+  const submitStep = stepBlock('Submit DRY sweep')
+
+  expect(requiredTools).toContain('command -v jq >/dev/null')
+  expect(requiredTools).toContain('command -v uuidgen >/dev/null')
+  expect(requiredTools).toContain('command -v curl >/dev/null')
+  expect(dryWorkflow.indexOf(requiredTools)).toBeLessThan(
+    dryWorkflow.indexOf(stepBlock('Verify controller health')),
+  )
+
+  const delimiterPosition = submitStep.indexOf('output_delimiter="$(uuidgen)"')
+  const postPosition = submitStep.indexOf('--request POST')
+  expect(delimiterPosition).toBeGreaterThanOrEqual(0)
+  expect(delimiterPosition).toBeLessThan(postPosition)
+})
+
+it('serializes Kaseki workflows for the same repository', () => {
+  const dryConcurrency = yamlBlock(dryWorkflow, 'concurrency:')
+  const docsConcurrency = yamlBlock(docsWorkflow, 'concurrency:')
+  const expectedGroup = 'group: kaseki-${{ github.repository }}'
+
+  expect(dryConcurrency).toContain(expectedGroup)
+  expect(docsConcurrency).toContain(expectedGroup)
+  expect(dryConcurrency).toContain('cancel-in-progress: false')
+  expect(docsConcurrency).toContain('cancel-in-progress: false')
 })
