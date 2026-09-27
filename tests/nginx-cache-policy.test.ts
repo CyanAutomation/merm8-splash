@@ -25,6 +25,7 @@ it('separates every Content-Security-Policy directive with a semicolon', () => {
     /add_header Content-Security-Policy "([^"]+)" always;/,
   )?.[1]
 
+  expect(contentSecurityPolicy).toBeDefined()
   expect(contentSecurityPolicy).toBe(
     "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self';",
   )
