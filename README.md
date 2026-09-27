@@ -128,7 +128,7 @@ docker build -t merm8-splash .
 docker run -p 80:80 merm8-splash
 ```
 
-The Dockerfile uses a multi-stage build for minimal image size, with nginx serving the static Next.js output.
+The Dockerfile uses a multi-stage build for minimal image size, with nginx serving the static Next.js output. Nginx caches fingerprinted files under `/_next/static/` for one year with `immutable`; HTML entry points are served with `no-cache` so clients revalidate SPA updates, while other root assets use a short, revalidating cache policy.
 
 **Production deployment:**
 
