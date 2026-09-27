@@ -78,13 +78,11 @@ const ANALYSIS_MAX_RETRIES = 2
 const ANALYSIS_RETRY_DELAY_MS = 1000
 
 interface AnalysisCacheEntry {
-  code: string
   result: AnalyzeResponse
   ts: number
 }
 
 interface InFlightAnalysisRequest {
-  code: string
   promise: Promise<AnalyzeResponse>
   abortController: AbortController
   waiters: number
@@ -325,8 +323,9 @@ function canonicalizeAnalysisEndpoint(endpoint: string): string {
   }
 }
 
-function buildAnalysisCacheKey(
+function buildAnalysisRequestKey(
   endpoint: string,
+  code: string,
   enabledRules: string[],
   rulesMetadata: Rule[],
   options: AnalyzeRequestOptions
@@ -335,17 +334,7 @@ function buildAnalysisCacheKey(
   const normalizedRules = [...enabledRules].sort().join(',')
   const metadataFingerprint = buildRulesMetadataFingerprint(rulesMetadata)
   const useServerDefaults = options.useServerDefaults === true ? '1' : '0'
-  return `${normalizedEndpoint}::${normalizedRules}::${metadataFingerprint}::${useServerDefaults}`
-}
-
-function buildInFlightAnalysisKey(
-  endpoint: string,
-  enabledRules: string[],
-  rulesMetadata: Rule[],
-  options: AnalyzeRequestOptions,
-  newCode: string
-): string {
-  return `${buildAnalysisCacheKey(endpoint, enabledRules, rulesMetadata, options)}::${newCode}`
+  return `${normalizedEndpoint}::${normalizedRules}::${metadataFingerprint}::${useServerDefaults}::${code}`
 }
 
 function stableSerializeUnknown(value: unknown): string {
@@ -488,17 +477,18 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         return
       }
       const seq = ++requestSeqRef.current
-      const cacheKey = buildAnalysisCacheKey(endpoint, enabledRules, rulesMetadata, options)
-      const inFlightKey = buildInFlightAnalysisKey(endpoint, enabledRules, rulesMetadata, options, newCode)
+      const requestKey = buildAnalysisRequestKey(
+        endpoint,
+        newCode,
+        enabledRules,
+        rulesMetadata,
+        options
+      )
       const runId = ++runSeqRef.current
-      const cachedEntry = analysisCacheRef.current.get(cacheKey)
+      const cachedEntry = analysisCacheRef.current.get(requestKey)
       const now = Date.now()
 
-      if (
-        cachedEntry &&
-        cachedEntry.code === newCode &&
-        now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS
-      ) {
+      if (cachedEntry && now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS) {
         setViolations(Array.isArray(cachedEntry.result.results) ? cachedEntry.result.results : [])
         setDiagramType(cachedEntry.result.diagram_type)
         setLintSupported(cachedEntry.result.lintSupported ?? null)
@@ -520,16 +510,16 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
       }
 
       if (cachedEntry) {
-        analysisCacheRef.current.delete(cacheKey)
+        analysisCacheRef.current.delete(requestKey)
       }
 
       const waiterController = new AbortController()
       waiterAbortControllerRef.current?.abort()
       waiterAbortControllerRef.current = waiterController
 
-      const existingInFlight = inFlightRequestsRef.current.get(inFlightKey)
+      const existingInFlight = inFlightRequestsRef.current.get(requestKey)
 
-      if (existingInFlight && existingInFlight.code === newCode) {
+      if (existingInFlight) {
         existingInFlight.waiters += 1
         abortControllerRef.current = existingInFlight.abortController
         setIsAnalyzing(true)
@@ -543,8 +533,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           )
 
           if (seq === requestSeqRef.current) {
-            analysisCacheRef.current.set(cacheKey, {
-              code: newCode,
+            analysisCacheRef.current.set(requestKey, {
               result,
               ts: Date.now(),
             })
@@ -586,7 +575,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         } finally {
           existingInFlight.waiters -= 1
           if (existingInFlight.waiters <= 0) {
-            inFlightRequestsRef.current.delete(inFlightKey)
+            inFlightRequestsRef.current.delete(requestKey)
           }
 
           if (seq === requestSeqRef.current) {
@@ -641,8 +630,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         throw new Error('Analysis failed')
       })()
 
-      inFlightRequestsRef.current.set(inFlightKey, {
-        code: newCode,
+      inFlightRequestsRef.current.set(requestKey, {
         promise: requestPromise,
         abortController: controller,
         waiters: 1,
@@ -652,8 +640,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         const result = await waitForPromiseWithSignal(requestPromise, waiterController.signal)
 
         if (seq === requestSeqRef.current) {
-          analysisCacheRef.current.set(cacheKey, {
-            code: newCode,
+          analysisCacheRef.current.set(requestKey, {
             result,
             ts: Date.now(),
           })
@@ -694,11 +681,11 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
           })
         }
       } finally {
-        const currentInFlight = inFlightRequestsRef.current.get(inFlightKey)
+        const currentInFlight = inFlightRequestsRef.current.get(requestKey)
         if (currentInFlight && currentInFlight.promise === requestPromise) {
           currentInFlight.waiters -= 1
           if (currentInFlight.waiters <= 0) {
-            inFlightRequestsRef.current.delete(inFlightKey)
+            inFlightRequestsRef.current.delete(requestKey)
           }
         }
 
