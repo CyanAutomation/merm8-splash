@@ -1,9 +1,10 @@
 import { parseDiagramType, filterRulesByDiagramType } from './diagramTypes'
+import { isSeverity, Severity } from './theme'
 
 export interface Rule {
   id: string
   description: string
-  severity: 'error' | 'warning' | 'info'
+  severity: Severity
   state?: 'implemented' | 'planned'
   availability?: string
   defaultConfig?: Record<string, unknown>
@@ -37,7 +38,7 @@ export interface AnalyzeRequestOptions {
 
 export interface Violation {
   rule_id: string
-  severity: 'error' | 'warning' | 'info'
+  severity: Severity
   message: string
   node_id?: string
   line?: number
@@ -182,7 +183,7 @@ function normalizeViolation(rawViolation: unknown): Violation | null {
   const { severity, message, node_id, line } = violation
 
   if (typeof rule_id !== 'string') return null
-  if (severity !== 'error' && severity !== 'warning' && severity !== 'info') return null
+  if (!isSeverity(severity)) return null
   if (typeof message !== 'string') return null
 
   const normalized: Violation = {
@@ -212,7 +213,7 @@ function normalizeRule(raw: unknown): Rule | null {
 
   if (typeof id !== 'string') return null
   if (typeof description !== 'string') return null
-  if (severity !== 'error' && severity !== 'warning' && severity !== 'info') return null
+  if (!isSeverity(severity)) return null
 
   const normalized: Rule = {
     id,
@@ -520,7 +521,7 @@ function normalizeRulesResponse(rawData: unknown): NormalizedRulesResponse {
           const rule = rawRule as Record<string, unknown>
           if (typeof rule.id !== 'string') reasonCounts.missingId += 1
           if (typeof rule.description !== 'string') reasonCounts.missingDescription += 1
-          if (rule.severity !== 'error' && rule.severity !== 'warning' && rule.severity !== 'info') {
+          if (!isSeverity(rule.severity)) {
             reasonCounts.invalidSeverity += 1
           }
 
