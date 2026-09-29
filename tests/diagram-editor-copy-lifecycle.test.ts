@@ -6,6 +6,8 @@ const { showSnackbar } = vi.hoisted(() => ({ showSnackbar: vi.fn() }))
 
 vi.mock('@/lib/constants', () => ({ EXAMPLE_DIAGRAMS: [] }))
 
+vi.mock('@/lib/clipboard', async () => import('../lib/clipboard'))
+
 vi.mock('@/app/components/Snackbar', () => ({
   useSnackbar: () => ({ show: showSnackbar }),
 }))

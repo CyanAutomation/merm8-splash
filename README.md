@@ -202,7 +202,6 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 │   │   ├── DiagramPreview.tsx    # Mermaid rendering
 │   │   ├── ErrorBoundary.tsx     # Error boundary wrapper
 │   │   ├── ExportDropdown.tsx    # Export analyzed diagrams
-│   │   ├── LoadingSpinner.tsx    # Loading indicator
 │   │   ├── Modal.tsx             # Modal dialog wrapper
 │   │   ├── ResultsPanel.tsx      # Analysis results display
 │   │   ├── RulesPanel.tsx        # Rule configuration
