@@ -26,90 +26,63 @@ export function parseDiagramType(code: string): string | null {
     return null
   }
 
-  // Scan for first meaningful declaration line
-  const lines = code.split('\n')
   let inDirectiveBlock = false
 
-  for (const line of lines) {
-    const trimmed = line.trim()
+  for (const rawLine of code.split('\n')) {
+    const line = rawLine.trim()
+    if (!line) continue
 
-    if (!trimmed) {
+    const directive = readDirectiveDeclaration(line, inDirectiveBlock)
+    if (directive) {
+      inDirectiveBlock = directive.inDirectiveBlock
+      if (directive.diagramType) return directive.diagramType
       continue
     }
 
-    if (inDirectiveBlock) {
-      const directiveEndIndex = trimmed.indexOf('}%%')
-      if (directiveEndIndex !== -1) {
-        inDirectiveBlock = false
-        // Process content after directive closing on same line
-        const remaining = trimmed.substring(directiveEndIndex + 3).trim()
-        if (remaining && !remaining.startsWith('%%')) {
-          const normalized = remaining.toLowerCase()
-          if (normalized.startsWith('sequencediagram')) return 'sequence'
-          if (normalized.startsWith('classdiagram')) return 'class'
-          if (normalized.startsWith('erdiagram')) return 'er'
-          if (isStateDiagramDeclaration(normalized)) return 'state'
-          if (normalized.startsWith('xychart-')) return 'xychart'
-          if (isFlowchartDeclaration(normalized)) return 'flowchart'
-        }
-      }
-      continue
-    }
+    if (line.startsWith('%%')) continue
 
-    if (trimmed.startsWith('%%{')) {
-      const directiveEndIndex = trimmed.indexOf('}%%')
-      if (directiveEndIndex === -1) {
-        inDirectiveBlock = true
-        continue
-      }
-      // Process content after single-line directive
-      const remaining = trimmed.substring(directiveEndIndex + 3).trim()
-      if (!remaining || remaining.startsWith('%%')) {
-        continue
-      }
-      // Check remaining content for diagram type
-      const normalized = remaining.toLowerCase()
-      if (normalized.startsWith('sequencediagram')) return 'sequence'
-      if (normalized.startsWith('classdiagram')) return 'class'
-      if (normalized.startsWith('erdiagram')) return 'er'
-      if (isStateDiagramDeclaration(normalized)) return 'state'
-      if (normalized.startsWith('xychart-')) return 'xychart'
-      if (isFlowchartDeclaration(normalized)) return 'flowchart'
-      continue
-    }
-
-    if (trimmed.startsWith('%%')) {
-      continue
-    }
-
-    const normalized = trimmed.toLowerCase()
-
-    // Check for diagram type markers
-    if (normalized.startsWith('sequencediagram')) {
-      return 'sequence'
-    }
-    if (normalized.startsWith('classdiagram')) {
-      return 'class'
-    }
-    if (normalized.startsWith('erdiagram')) {
-      return 'er'
-    }
-    if (isStateDiagramDeclaration(normalized)) {
-      return 'state'
-    }
-    if (normalized.startsWith('xychart-')) {
-      return 'xychart'
-    }
-    // Flowchart/Graph detection (graph TD, flowchart LR, etc.)
-    if (isFlowchartDeclaration(normalized)) {
-      return 'flowchart'
-    }
-
-    // First meaningful declaration line did not match known patterns
-    return null
+    // The first meaningful declaration determines the result, even when unknown.
+    return classifyDiagramDeclaration(line)
   }
 
-  // No declaration line found
+  return null
+}
+
+interface DirectiveLineResult {
+  inDirectiveBlock: boolean
+  diagramType: string | null
+}
+
+function readDirectiveDeclaration(
+  line: string,
+  inDirectiveBlock: boolean
+): DirectiveLineResult | null {
+  if (!inDirectiveBlock && !line.startsWith('%%{')) return null
+
+  const closingIndex = line.indexOf('}%%')
+  if (closingIndex === -1) {
+    return { inDirectiveBlock: true, diagramType: null }
+  }
+
+  const remainder = line.slice(closingIndex + 3).trim()
+  return {
+    inDirectiveBlock: false,
+    diagramType: remainder && !remainder.startsWith('%%')
+      ? classifyDiagramDeclaration(remainder)
+      : null,
+  }
+}
+
+function classifyDiagramDeclaration(declaration: string): string | null {
+  const normalized = declaration.toLowerCase()
+
+  if (normalized.startsWith('sequencediagram')) return 'sequence'
+  if (normalized.startsWith('classdiagram')) return 'class'
+  if (normalized.startsWith('erdiagram')) return 'er'
+  if (isStateDiagramDeclaration(normalized)) return 'state'
+  if (normalized.startsWith('xychart-')) return 'xychart'
+  if (isFlowchartDeclaration(normalized)) return 'flowchart'
+
   return null
 }
 

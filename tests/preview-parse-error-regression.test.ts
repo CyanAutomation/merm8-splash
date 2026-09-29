@@ -47,6 +47,7 @@ vi.mock('react', async (importOriginal) => {
 })
 
 vi.mock('next/image', () => ({ default: () => null }))
+// fallow-ignore-next-line unresolved-import
 vi.mock('@/design/rem-avatar.png', () => ({ default: '' }))
 vi.mock('../app/components/ApiConfigPanel', () => ({ default: () => null }))
 vi.mock('../app/components/RulesPanel', () => ({ default: () => null }))
