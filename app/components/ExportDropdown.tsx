@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Violation, analyzeCodeSarif, Rule, validateApiEndpoint } from '@/lib/api'
+import { copyTextWithFallback } from '@/lib/clipboard'
 import { useSnackbar } from '@/app/components/Snackbar'
 
 interface ExportDropdownProps {
@@ -201,89 +202,35 @@ export default function ExportDropdown({
     await handleCopyExport(text, 'text', 'merm8-analysis.txt', 'text/plain')
   }
 
-  const fallbackCopyWithTextarea = (text: string): boolean => {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.setAttribute('readonly', '')
-    textarea.style.position = 'fixed'
-    textarea.style.opacity = '0'
-    textarea.style.left = '-9999px'
-    document.body.appendChild(textarea)
-    textarea.select()
-
-    let success = false
-    try {
-      success = document.execCommand('copy')
-    } catch {
-      success = false
-    } finally {
-      if (textarea.parentNode) {
-        textarea.parentNode.removeChild(textarea)
-      }
-    }
-
-    return success
-  }
-
   const handleCopyExport = async (
     text: string,
     format: 'markdown' | 'text',
     fallbackFilename: string,
     fallbackMime: string
   ) => {
-    const hasClipboardApi = typeof navigator !== 'undefined' && !!navigator.clipboard?.writeText
-
-    if (hasClipboardApi) {
-      try {
-        await navigator.clipboard.writeText(text)
-        if (!isMountedRef.current) {
-          return
-        }
-        setCopyingSafely(format)
-        showSnackbarSafely(`Copied ${format} to clipboard.`, 'success')
-        scheduleCopyingReset()
-        setOpenSafely(false)
-        return
-      } catch {
-        const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
-        if (textareaFallbackSucceeded) {
-          if (!isMountedRef.current) {
-            return
-          }
-          setCopyingSafely(format)
-          showSnackbarSafely(`Clipboard access failed, but copied ${format} using fallback.`, 'success')
-          scheduleCopyingReset()
-          setOpenSafely(false)
-          return
-        }
-
-        downloadFile(text, fallbackFilename, fallbackMime)
-        if (!isMountedRef.current) {
-          return
-        }
-        showSnackbarSafely(`Clipboard access failed. Downloaded ${fallbackFilename} instead.`, 'error')
-        setOpenSafely(false)
-        return
-      }
+    const copyResult = await copyTextWithFallback(text)
+    if (!isMountedRef.current) {
+      return
     }
 
-    const textareaFallbackSucceeded = fallbackCopyWithTextarea(text)
-    if (textareaFallbackSucceeded) {
-      if (!isMountedRef.current) {
-        return
-      }
+    if (copyResult.copied) {
       setCopyingSafely(format)
-      showSnackbarSafely(`Clipboard API unavailable; copied ${format} using fallback.`, 'success')
+      const message = copyResult.method === 'clipboard'
+        ? `Copied ${format} to clipboard.`
+        : copyResult.clipboardAvailable
+          ? `Clipboard access failed, but copied ${format} using fallback.`
+          : `Clipboard API unavailable; copied ${format} using fallback.`
+      showSnackbarSafely(message, 'success')
       scheduleCopyingReset()
       setOpenSafely(false)
       return
     }
 
     downloadFile(text, fallbackFilename, fallbackMime)
-    if (!isMountedRef.current) {
-      return
-    }
-    showSnackbarSafely(`Clipboard unavailable. Downloaded ${fallbackFilename} instead.`, 'error')
+    const message = copyResult.clipboardAvailable
+      ? `Clipboard access failed. Downloaded ${fallbackFilename} instead.`
+      : `Clipboard unavailable. Downloaded ${fallbackFilename} instead.`
+    showSnackbarSafely(message, 'error')
     setOpenSafely(false)
   }
 

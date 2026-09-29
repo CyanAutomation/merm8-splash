@@ -4,6 +4,7 @@ import path from 'node:path'
 import vm from 'node:vm'
 import ts from 'typescript'
 import { fileURLToPath } from 'node:url'
+import { buildAnalyzeRequest } from '../lib/api'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -25,8 +26,8 @@ function loadApiModule({ fetchImpl = globalThis.fetch } = {}) {
       fileName: sourcePath,
     })
 
-    const module = { exports: {} }
-    tsModuleCache.set(sourcePath, module.exports)
+    const transpiledModule = { exports: {} }
+    tsModuleCache.set(sourcePath, transpiledModule.exports)
 
     const dirname = path.dirname(sourcePath)
     const localRequire = (specifier) => {
@@ -42,8 +43,8 @@ function loadApiModule({ fetchImpl = globalThis.fetch } = {}) {
 
     const script = new vm.Script(outputText, { filename: `${path.basename(sourcePath)}.transpiled.cjs` })
     const context = vm.createContext({
-      module,
-      exports: module.exports,
+      module: transpiledModule,
+      exports: transpiledModule.exports,
       require: localRequire,
       __dirname: dirname,
       __filename: sourcePath,
@@ -59,8 +60,8 @@ function loadApiModule({ fetchImpl = globalThis.fetch } = {}) {
     })
 
     script.runInContext(context)
-    tsModuleCache.set(sourcePath, module.exports)
-    return module.exports
+    tsModuleCache.set(sourcePath, transpiledModule.exports)
+    return transpiledModule.exports
   }
 
   const sourcePath = path.join(__dirname, '..', 'lib', 'api.ts')
@@ -96,11 +97,11 @@ function loadRulesStateModule() {
     fileName: sourcePath,
   })
 
-  const module = { exports: {} }
+  const transpiledModule = { exports: {} }
   const script = new vm.Script(outputText, { filename: `${path.basename(sourcePath)}.transpiled.cjs` })
   const context = vm.createContext({
-    module,
-    exports: module.exports,
+    module: transpiledModule,
+    exports: transpiledModule.exports,
     require,
     __dirname: path.dirname(sourcePath),
     __filename: sourcePath,
@@ -109,7 +110,7 @@ function loadRulesStateModule() {
   })
 
   script.runInContext(context)
-  return module.exports
+  return transpiledModule.exports
 }
 
 it('uses the hosted Worker as the fallback API endpoint', () => {
@@ -119,7 +120,6 @@ it('uses the hosted Worker as the fallback API endpoint', () => {
 })
 
 it('builds a server-default request when rules metadata is malformed', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
   const { shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
 
   const useServerDefaults = shouldTreatRulesPayloadAsUnavailable('malformed_payload')
@@ -195,8 +195,6 @@ it('rule selection removes unavailable rules without restoring defaults after in
 })
 
 it('buildAnalyzeRequest explicitly disables all known rules when no rules are selected', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
   const request = buildAnalyzeRequest(
     'graph TD; A-->B',
     [],
@@ -223,8 +221,6 @@ it('buildAnalyzeRequest explicitly disables all known rules when no rules are se
 
 
 it('buildAnalyzeRequest includes explicit rule config when metadata is available', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
   const request = buildAnalyzeRequest(
     'graph TD; A-->B',
     ['no-empty-label'],
@@ -250,8 +246,6 @@ it('buildAnalyzeRequest includes explicit rule config when metadata is available
 
 
 it('buildAnalyzeRequest keeps universal rules enabled for known diagram types', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
   const request = buildAnalyzeRequest(
     'graph TD\nA-->B',
     ['max-depth', 'no-empty-label', 'sequence-max-participants'],
@@ -281,8 +275,6 @@ it('buildAnalyzeRequest keeps universal rules enabled for known diagram types', 
 
 
 it('buildAnalyzeRequest detects diagram type after leading Mermaid comments and init block', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
   const request = buildAnalyzeRequest(
     '%% this is a leading comment\n%%{init: {\"theme\": \"dark\"}}%%\nflowchart LR\nA-->B',
     ['max-depth', 'sequence-max-participants', 'no-empty-label'],
@@ -311,8 +303,6 @@ it('buildAnalyzeRequest detects diagram type after leading Mermaid comments and 
 })
 
 it('buildAnalyzeRequest detects diagram type after multi-line Mermaid init block', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
   const request = buildAnalyzeRequest(
     '%%{\ninit: {\"theme\": \"neutral\"}\n}%%\nsequenceDiagram\nAlice->>Bob: Hello',
     ['sequence-max-participants', 'max-depth', 'no-empty-label'],
@@ -343,8 +333,6 @@ it('buildAnalyzeRequest detects diagram type after multi-line Mermaid init block
 
 
 it('buildAnalyzeRequest detects flowchart declarations with tab whitespace', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
   const request = buildAnalyzeRequest(
     'graph\tTD\nA-->B',
     ['max-depth', 'sequence-max-participants', 'no-empty-label'],
@@ -372,8 +360,6 @@ it('buildAnalyzeRequest detects flowchart declarations with tab whitespace', () 
   expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
 it('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filtering', () => {
-  const { buildAnalyzeRequest } = loadApiModule()
-
   const request = buildAnalyzeRequest(
     '%%{init: {"theme": "dark"}}%% stateDiagram-v2\n[*] --> Idle\nIdle --> Active',
     ['state-no-unreachable-states', 'max-depth', 'no-empty-label'],
@@ -470,6 +456,48 @@ it('analyzeCode accepts the Worker kebab-case analysis response', async () => {
     message: 'cycle detected involving node: A',
     line: 2,
   }])
+})
+
+it('combines API error suggestions with hints and preserves optional response fields', async () => {
+  const { fetchImpl } = mockJsonFetch({
+    'diagram-type': 'flowchart',
+    issues: [{
+      'rule-id': 'no-cycles',
+      severity: 'warning',
+      message: 'Cycle found',
+      line: 4,
+    }],
+    hints: ['Check this path', null],
+    valid: true,
+    'lint-supported': false,
+    'syntax-error': null,
+    error: {
+      code: 'analysis_warning',
+      message: 'Analysis completed with guidance',
+      details: { suggestion: 'Review the graph connections.' },
+    },
+    'request-id': 'req-42',
+    timestamp: 123,
+  })
+  const { analyzeCode } = loadApiModule({ fetchImpl })
+
+  const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
+
+  expect(response).toMatchObject({
+    diagram_type: 'flowchart',
+    results: [{ rule_id: 'no-cycles', line: 4 }],
+    hints: ['Check this path', 'Review the graph connections.'],
+    valid: true,
+    lintSupported: false,
+    syntaxError: null,
+    error: {
+      code: 'analysis_warning',
+      message: 'Analysis completed with guidance',
+      details: { suggestion: 'Review the graph connections.' },
+    },
+    requestId: 'req-42',
+    timestamp: 123,
+  })
 })
 
 it('analyzeCode normalizes missing data payload to UI-safe defaults', async () => {
@@ -957,10 +985,10 @@ describe('native fetch API transport', () => {
         'x-request-id': 'req-timeout-1',
       },
     })
-    const { ApiRequestError, fetchRules } = loadApiModule({ fetchImpl })
+    const { fetchRules } = loadApiModule({ fetchImpl })
 
     await expect(fetchRules('http://127.0.0.1:1')).rejects.toMatchObject({
-      name: ApiRequestError.name,
+      name: 'ApiRequestError',
       status: 503,
       data: { error: { code: 'parser_timeout' } },
       headers: expect.objectContaining({ get: expect.any(Function) }),

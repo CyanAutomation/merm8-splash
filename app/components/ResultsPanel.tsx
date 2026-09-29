@@ -2,6 +2,7 @@
 
 import { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
 import { Violation } from "@/lib/api";
+import { copyTextWithFallback } from "@/lib/clipboard";
 import { extractLineNumber } from "@/lib/errorUtils";
 import { severityColor } from "@/lib/severity";
 
@@ -67,52 +68,15 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
 
     const filtered = results;
 
-    const fallbackCopyWithTextarea = (text: string): boolean => {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      textarea.style.left = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.select();
-
-      let success = false;
-      try {
-        success = document.execCommand("copy");
-      } catch {
-        success = false;
-      } finally {
-        if (textarea.parentNode) {
-          textarea.parentNode.removeChild(textarea);
-        }
-      }
-
-      return success;
-    };
-
     const copyViolation = async (v: Violation, key: string) => {
       const text = `[${v.severity}] ${v.rule_id}: ${v.message}${v.line != null ? ` (line ${v.line})` : ""}`;
-
-      const hasClipboardApi = typeof navigator !== "undefined" && !!navigator.clipboard?.writeText;
-      let copied = false;
-
-      if (hasClipboardApi) {
-        try {
-          await navigator.clipboard.writeText(text);
-          copied = true;
-        } catch {
-          copied = fallbackCopyWithTextarea(text);
-        }
-      } else {
-        copied = fallbackCopyWithTextarea(text);
-      }
+      const copyResult = await copyTextWithFallback(text);
 
       if (!isMountedRef.current) {
         return;
       }
 
-      if (copied) {
+      if (copyResult.copied) {
         if (copiedTimeoutRef.current) {
           clearTimeout(copiedTimeoutRef.current);
         }

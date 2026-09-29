@@ -77,11 +77,11 @@ export interface AnalyzeResponse {
   timestamp?: number
 }
 
-export const DEFAULT_API_ENDPOINT = 'https://merm8.scheimann.workers.dev'
+const DEFAULT_API_ENDPOINT = 'https://merm8.scheimann.workers.dev'
 
 const API_REQUEST_TIMEOUT_MS = 10_000
 
-export class ApiRequestError extends Error {
+class ApiRequestError extends Error {
   constructor(
     readonly status: number,
     readonly data: unknown,
@@ -92,7 +92,9 @@ export class ApiRequestError extends Error {
   }
 }
 
-export function isApiRequestError(error: unknown): error is ApiRequestError {
+export function isApiRequestError(
+  error: unknown
+): error is Error & { status: number; data: unknown; headers: Headers } {
   return error instanceof ApiRequestError
 }
 
@@ -354,48 +356,129 @@ function normalizeAnalysisError(rawError: unknown): AnalysisError | null {
   return { code, message, details }
 }
 
-function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
-  const data = rawData && typeof rawData === 'object' ? rawData : null
+function readFirstPresentField(
+  data: Record<string, unknown> | null,
+  fieldNames: string[]
+): unknown {
+  for (const fieldName of fieldNames) {
+    if (data && fieldName in data) return data[fieldName]
+  }
+  return undefined
+}
 
-  // Support both old format (results) and new format (issues)
-  const rawResults =
-    data && 'results' in data
-      ? (data as { results?: unknown }).results
-      : data && 'issues' in data
-        ? (data as { issues?: unknown }).issues
-        : undefined
+function normalizeAnalyzeResults(rawResults: unknown): Violation[] {
+  if (!Array.isArray(rawResults)) return []
+  return rawResults.map(normalizeViolation).filter((result): result is Violation => result !== null)
+}
 
-  // Support both old format (diagram_type) and new format (metrics.diagram-type)
-  const rawDiagramType =
-    data && 'diagram_type' in data
-      ? (data as { diagram_type?: unknown }).diagram_type
-      : data && 'diagram-type' in data
-        ? (data as { 'diagram-type'?: unknown })['diagram-type']
-        : undefined
-  const rawMetrics = data && 'metrics' in data ? (data as { metrics?: unknown }).metrics : undefined
-  const normalizedMetrics = normalizeMetrics(rawMetrics)
-  const diagramTypeFromMetrics = normalizedMetrics?.diagramType
-
-  const rawHints = data && 'hints' in data ? (data as { hints?: unknown }).hints : undefined
-  const normalizedHints = normalizeAnalyzeHints(rawHints)
-
-  // Extract hints from error.details.suggestion if present
-  const rawError = data && 'error' in data ? (data as { error?: unknown }).error : undefined
-  const normalizedError = normalizeAnalysisError(rawError)
-  const errorSuggestion =
-    normalizedError?.details && typeof normalizedError.details.suggestion === 'string'
-      ? normalizedError.details.suggestion
-      : undefined
-
-  const normalizedResults = Array.isArray(rawResults)
-    ? rawResults.map(normalizeViolation).filter((result): result is Violation => result !== null)
-    : []
-
-  // Combine explicit hints with error suggestion
-  const combinedHints: AnalyzeHint[] = [...(normalizedHints ?? [])]
-  if (errorSuggestion) {
+function combineAnalyzeHints(
+  rawHints: unknown,
+  normalizedHints: AnalyzeHint[] | undefined,
+  normalizedError: AnalysisError | null
+): AnalyzeHint[] | undefined {
+  const combinedHints = [...(normalizedHints ?? [])]
+  const errorSuggestion = normalizedError?.details?.suggestion
+  if (typeof errorSuggestion === 'string' && errorSuggestion) {
     combinedHints.push(errorSuggestion)
   }
+
+  return rawHints !== undefined || combinedHints.length > 0 ? combinedHints : undefined
+}
+
+type OptionalAnalyzeResponseFields = Pick<
+  AnalyzeResponse,
+  'valid' | 'lintSupported' | 'syntaxError' | 'requestId' | 'timestamp'
+>
+
+function normalizeOptionalAnalyzeFields(
+  data: Record<string, unknown> | null
+): OptionalAnalyzeResponseFields {
+  const fields: OptionalAnalyzeResponseFields = {}
+  if (!data) return fields
+
+  if ('valid' in data) {
+    fields.valid = typeof data.valid === 'boolean' ? data.valid : undefined
+  }
+  if ('lint-supported' in data) {
+    const lintSupported = data['lint-supported']
+    fields.lintSupported = typeof lintSupported === 'boolean' ? lintSupported : undefined
+  }
+  if ('syntax-error' in data) {
+    const syntaxError = data['syntax-error']
+    fields.syntaxError = typeof syntaxError === 'string' || syntaxError === null
+      ? syntaxError
+      : undefined
+  }
+  if ('request-id' in data) {
+    fields.requestId = typeof data['request-id'] === 'string' ? data['request-id'] : undefined
+  }
+  if ('timestamp' in data) {
+    fields.timestamp = typeof data.timestamp === 'number' ? data.timestamp : undefined
+  }
+
+  return fields
+}
+
+interface AnalyzeResponseNormalizationContext {
+  data: Record<string, unknown> | null
+  rawResults: unknown
+  rawDiagramType: unknown
+  diagramTypeFromMetrics: string | undefined
+  rawHints: unknown
+  normalizedHints: AnalyzeHint[] | undefined
+  normalizedResults: Violation[]
+}
+
+function warnForMalformedAnalyzeResponse({
+  data,
+  rawResults,
+  rawDiagramType,
+  diagramTypeFromMetrics,
+  rawHints,
+  normalizedHints,
+  normalizedResults,
+}: AnalyzeResponseNormalizationContext): void {
+  if (process.env.NODE_ENV === 'production') return
+
+  const malformedReasons: string[] = []
+  if (!data) malformedReasons.push('missing `data` payload')
+  if (!Array.isArray(rawResults)) malformedReasons.push('non-array `results`/`issues`')
+  if (Array.isArray(rawResults) && normalizedResults.length !== rawResults.length) {
+    malformedReasons.push('invalid entries in `results`/`issues`')
+  }
+  if (typeof rawDiagramType !== 'string' && !diagramTypeFromMetrics) {
+    malformedReasons.push('missing/invalid `diagram_type`/`metrics.diagram-type`')
+  }
+  if (rawHints !== undefined) {
+    if (!Array.isArray(rawHints)) {
+      malformedReasons.push('non-array `hints`')
+    } else if (normalizedHints && normalizedHints.length !== rawHints.length) {
+      malformedReasons.push('invalid entries in `hints`')
+    }
+  }
+
+  if (malformedReasons.length > 0) {
+    console.warn(
+      `[api.analyzeCode] Normalized malformed analyze response: ${malformedReasons.join(', ')}`
+    )
+  }
+}
+
+function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
+  const data = rawData && typeof rawData === 'object'
+    ? rawData as Record<string, unknown>
+    : null
+  const rawResults = readFirstPresentField(data, ['results', 'issues'])
+  const rawDiagramType = readFirstPresentField(data, ['diagram_type', 'diagram-type'])
+  const rawMetrics = readFirstPresentField(data, ['metrics'])
+  const normalizedMetrics = normalizeMetrics(rawMetrics)
+  const diagramTypeFromMetrics = normalizedMetrics?.diagramType
+  const rawHints = readFirstPresentField(data, ['hints'])
+  const normalizedHints = normalizeAnalyzeHints(rawHints)
+  const rawError = readFirstPresentField(data, ['error'])
+  const normalizedError = normalizeAnalysisError(rawError)
+  const normalizedResults = normalizeAnalyzeResults(rawResults)
+  const combinedHints = combineAnalyzeHints(rawHints, normalizedHints, normalizedError)
 
   const normalized: AnalyzeResponse = {
     diagram_type:
@@ -403,66 +486,21 @@ function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
         ? rawDiagramType
         : diagramTypeFromMetrics ?? '',
     results: normalizedResults,
-    // Include hints property when rawHints was present (even if empty after normalization)
-    // or when we have error suggestions to surface
-    ...(rawHints !== undefined || combinedHints.length > 0 ? { hints: combinedHints } : {}),
+    ...(combinedHints === undefined ? {} : { hints: combinedHints }),
+    ...normalizeOptionalAnalyzeFields(data),
+    ...(normalizedError ? { error: normalizedError } : {}),
+    ...(normalizedMetrics ? { metrics: normalizedMetrics } : {}),
   }
 
-  // New API fields
-  if (data && 'valid' in data) {
-    normalized.valid = typeof (data as { valid?: unknown }).valid === 'boolean'
-      ? (data as { valid: boolean }).valid
-      : undefined
-  }
-  if (data && 'lint-supported' in data) {
-    normalized.lintSupported = typeof (data as { 'lint-supported'?: unknown })['lint-supported'] === 'boolean'
-      ? (data as { 'lint-supported': boolean })['lint-supported']
-      : undefined
-  }
-  if (data && 'syntax-error' in data) {
-    const se = (data as { 'syntax-error'?: unknown })['syntax-error']
-    normalized.syntaxError = typeof se === 'string' ? se : se === null ? null : undefined
-  }
-  if (normalizedError) {
-    normalized.error = normalizedError
-  }
-  if (normalizedMetrics) {
-    normalized.metrics = normalizedMetrics
-  }
-  if (data && 'request-id' in data) {
-    const rid = (data as { 'request-id'?: unknown })['request-id']
-    normalized.requestId = typeof rid === 'string' ? rid : undefined
-  }
-  if (data && 'timestamp' in data) {
-    const ts = (data as { timestamp?: unknown }).timestamp
-    normalized.timestamp = typeof ts === 'number' ? ts : undefined
-  }
-
-  if (process.env.NODE_ENV !== 'production') {
-    const malformedReasons: string[] = []
-
-    if (!data) malformedReasons.push('missing `data` payload')
-    if (!Array.isArray(rawResults)) malformedReasons.push('non-array `results`/`issues`')
-    if (Array.isArray(rawResults) && normalizedResults.length !== rawResults.length) {
-      malformedReasons.push('invalid entries in `results`/`issues`')
-    }
-    if (typeof rawDiagramType !== 'string' && !diagramTypeFromMetrics) {
-      malformedReasons.push('missing/invalid `diagram_type`/`metrics.diagram-type`')
-    }
-    if (rawHints !== undefined) {
-      if (!Array.isArray(rawHints)) {
-        malformedReasons.push('non-array `hints`')
-      } else if (normalizedHints && normalizedHints.length !== rawHints.length) {
-        malformedReasons.push('invalid entries in `hints`')
-      }
-    }
-
-    if (malformedReasons.length > 0) {
-      console.warn(
-        `[api.analyzeCode] Normalized malformed analyze response: ${malformedReasons.join(', ')}`
-      )
-    }
-  }
+  warnForMalformedAnalyzeResponse({
+    data,
+    rawResults,
+    rawDiagramType,
+    diagramTypeFromMetrics,
+    rawHints,
+    normalizedHints,
+    normalizedResults,
+  })
 
   return normalized
 }
@@ -843,10 +881,6 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
   } catch {
     return { valid: false, message: `Enter a valid URL (example: ${DEFAULT_API_ENDPOINT}).` }
   }
-}
-
-export function isValidEndpoint(url: string): boolean {
-  return validateApiEndpoint(url).valid
 }
 
 export async function fetchHealthz(
