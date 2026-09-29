@@ -2,6 +2,7 @@
 
 import { useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
+import { copyTextWithFallback } from '@/lib/clipboard'
 import { useSnackbar } from '@/app/components/Snackbar'
 
 interface DiagramEditorProps {
@@ -55,55 +56,15 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       snackbar.show(`Loaded example ${nextIndex + 1} (${nextExample.type}).`)
     }
 
-    const fallbackCopyWithTextarea = (text: string): boolean => {
-      if (!mountedRef.current) return false
-
-      const textarea = document.createElement('textarea')
-      textarea.value = text
-      textarea.setAttribute('readonly', '')
-      textarea.style.position = 'fixed'
-      textarea.style.opacity = '0'
-      textarea.style.left = '-9999px'
-      document.body.appendChild(textarea)
-      textarea.select()
-
-      let success = false
-      try {
-        success = document.execCommand('copy')
-      } catch {
-        success = false
-      } finally {
-        if (textarea.parentNode) {
-          textarea.parentNode.removeChild(textarea)
-        }
-      }
-
-      return success
-    }
-
     const handleCopyClick = async () => {
-      const hasClipboardApi = typeof navigator !== 'undefined' && !!navigator.clipboard?.writeText
-      let copied = false
-
-      if (hasClipboardApi) {
-        try {
-          await navigator.clipboard.writeText(value)
-          if (!mountedRef.current) return
-          copied = true
-        } catch {
-          if (!mountedRef.current) return
-          copied = fallbackCopyWithTextarea(value)
-        }
-      } else {
-        if (!mountedRef.current) return
-        copied = fallbackCopyWithTextarea(value)
-      }
+      const copyResult = await copyTextWithFallback(value, () => mountedRef.current)
+      if (!mountedRef.current) return
 
       if (copyStatusTimeoutRef.current) {
         clearTimeout(copyStatusTimeoutRef.current)
       }
 
-      if (copied) {
+      if (copyResult.copied) {
         setCopyStatus('success')
         snackbar.show('Diagram code copied.')
         copyStatusTimeoutRef.current = setTimeout(() => {

@@ -174,7 +174,7 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isApiRequestErrorImpl }
     }
   }
 
-  const module = { exports: {} }
+  const transpiledModule = { exports: {} }
   const localRequire = (specifier) => {
     if (specifier === 'react') return reactMock
     if (specifier === './api') return apiMock
@@ -184,8 +184,8 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isApiRequestErrorImpl }
 
   const script = new vm.Script(outputText, { filename: 'useDiagramAnalysis.transpiled.cjs' })
   const context = vm.createContext({
-    module,
-    exports: module.exports,
+    module: transpiledModule,
+    exports: transpiledModule.exports,
     require: localRequire,
     __dirname: path.dirname(sourcePath),
     __filename: sourcePath,
@@ -202,7 +202,7 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isApiRequestErrorImpl }
 
   script.runInContext(context)
   return {
-    useDiagramAnalysis: module.exports.useDiagramAnalysis,
+    useDiagramAnalysis: transpiledModule.exports.useDiagramAnalysis,
     reactMock,
     timerControls,
   }

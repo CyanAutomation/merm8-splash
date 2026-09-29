@@ -88,6 +88,17 @@ interface InFlightAnalysisRequest {
   waiters: number
 }
 
+interface AnalysisWaitContext {
+  requestKey: string
+  requestPromise: Promise<AnalyzeResponse>
+  seq: number
+  runId: number
+  source: AnalysisRunSource
+  waiterController: AbortController
+  transportController: AbortController
+  pruneCacheOnSuccess: boolean
+}
+
 interface ParsedAnalysisError {
   summary: string
   hints: string[]
@@ -220,82 +231,86 @@ function normalizeHints(hints: AnalyzeHint[] | undefined): string[] {
   return normalizeHintsFromUnknown(hints)
 }
 
+function getRequestIdHint(headers: Headers): string | null {
+  const requestId = headers.get('x-request-id')?.trim()
+  return requestId ? `Request ID: ${requestId}` : null
+}
+
+function formatFallbackErrorValue(value: unknown): string {
+  const serializedValue = typeof value === 'string'
+    ? value
+    : Array.isArray(value)
+      ? value.join(', ')
+      : JSON.stringify(value)
+  const safeValue = typeof serializedValue === 'string' && serializedValue.length > 0
+    ? serializedValue
+    : String(value)
+  const compactValue = safeValue.replace(/\s+/g, ' ').trim()
+
+  return compactValue.length > MAX_FALLBACK_VALUE_LENGTH
+    ? `${compactValue.slice(0, MAX_FALLBACK_VALUE_LENGTH)}…`
+    : compactValue
+}
+
+function summarizeFallbackErrorFields(data: Record<string, unknown>): string {
+  return Object.entries(data)
+    .filter(([, value]) => value !== null && value !== undefined)
+    .slice(0, MAX_FALLBACK_PAIRS)
+    .map(([key, value]) => `${key}: ${formatFallbackErrorValue(value)}`)
+    .join(' | ')
+    .slice(0, MAX_FALLBACK_SUMMARY_LENGTH)
+}
+
+function summarizeApiError(data: Record<string, unknown>, fallbackMessage: string): string {
+  return (typeof data.message === 'string' && data.message) ||
+    (typeof data.detail === 'string' && data.detail) ||
+    (typeof data.error === 'string' && data.error) ||
+    (typeof data.title === 'string' && data.title) ||
+    summarizeFallbackErrorFields(data) ||
+    fallbackMessage ||
+    'Analysis failed'
+}
+
+function getApiErrorHints(data: Record<string, unknown>, requestIdHint: string | null): string[] {
+  const hints = [
+    ...normalizeHintsFromUnknown(data.hints),
+    ...normalizeHintsFromUnknown(data.guidance),
+    ...normalizeHintsFromUnknown(data.suggestions),
+    ...(requestIdHint ? [requestIdHint] : []),
+  ]
+  const error = data.error
+  if (!error || typeof error !== 'object' || Array.isArray(error)) return hints
+
+  const details = (error as Record<string, unknown>).details
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return hints
+
+  const suggestion = (details as Record<string, unknown>).suggestion
+  if (typeof suggestion === 'string' && suggestion.trim()) {
+    hints.push(suggestion.trim())
+  }
+
+  return hints
+}
+
 function parseAnalysisError(err: unknown): ParsedAnalysisError {
-  if (isApiRequestError(err)) {
-    const responseData = err.data
-    const requestIdHeader = err.headers.get('x-request-id')
-
-    const requestIdHint =
-      typeof requestIdHeader === 'string' && requestIdHeader.trim().length > 0
-        ? `Request ID: ${requestIdHeader.trim()}`
-        : null
-
-    if (typeof responseData === 'string' && responseData.trim().length > 0) {
-      return {
-        summary: responseData,
-        hints: requestIdHint ? [requestIdHint] : [],
-      }
+  if (!isApiRequestError(err)) {
+    return {
+      summary: err instanceof Error ? err.message : 'Analysis failed',
+      hints: [],
     }
+  }
 
-    if (responseData && typeof responseData === 'object') {
-      const data = responseData as Record<string, unknown>
-      const summary =
-        (typeof data.message === 'string' && data.message) ||
-        (typeof data.detail === 'string' && data.detail) ||
-        (typeof data.error === 'string' && data.error) ||
-        (typeof data.title === 'string' && data.title) ||
-        Object.entries(data)
-          .filter(([, value]) => value !== null && value !== undefined)
-          .slice(0, MAX_FALLBACK_PAIRS)
-          .map(([key, value]) => {
-            const serializedValue =
-              typeof value === 'string'
-                ? value
-                : Array.isArray(value)
-                  ? value.join(', ')
-                  : JSON.stringify(value)
+  const requestIdHint = getRequestIdHint(err.headers)
+  const responseData = err.data
+  if (typeof responseData === 'string' && responseData.trim()) {
+    return { summary: responseData, hints: requestIdHint ? [requestIdHint] : [] }
+  }
 
-            const safeValue =
-              typeof serializedValue === 'string' && serializedValue.length > 0
-                ? serializedValue
-                : String(value)
-
-            const compactValue = safeValue.replace(/\s+/g, ' ').trim()
-            const truncatedValue =
-              compactValue.length > MAX_FALLBACK_VALUE_LENGTH
-                ? `${compactValue.slice(0, MAX_FALLBACK_VALUE_LENGTH)}…`
-                : compactValue
-
-            return `${key}: ${truncatedValue}`
-          })
-          .join(' | ')
-          .slice(0, MAX_FALLBACK_SUMMARY_LENGTH) ||
-        err.message ||
-        'Analysis failed'
-
-      const hints = [
-        ...normalizeHintsFromUnknown(data.hints),
-        ...normalizeHintsFromUnknown(data.guidance),
-        ...normalizeHintsFromUnknown(data.suggestions),
-        ...(requestIdHint ? [requestIdHint] : []),
-      ]
-
-      // Extract suggestion from new API error format: error.details.suggestion
-      const errorObj = data.error
-      if (errorObj && typeof errorObj === 'object' && !Array.isArray(errorObj)) {
-        const errorDetails = (errorObj as Record<string, unknown>).details
-        if (errorDetails && typeof errorDetails === 'object' && !Array.isArray(errorDetails)) {
-          const suggestion = (errorDetails as Record<string, unknown>).suggestion
-          if (typeof suggestion === 'string' && suggestion.trim().length > 0) {
-            hints.push(suggestion.trim())
-          }
-        }
-      }
-
-      return {
-        summary,
-        hints,
-      }
+  if (responseData && typeof responseData === 'object') {
+    const data = responseData as Record<string, unknown>
+    return {
+      summary: summarizeApiError(data, err.message),
+      hints: getApiErrorHints(data, requestIdHint),
     }
   }
 
@@ -467,6 +482,95 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     setIsAnalyzing(false)
   }, [stopActiveRequest])
 
+  const applyAnalysisResult = useCallback((
+    result: AnalyzeResponse,
+    runId: number,
+    source: AnalysisRunSource
+  ) => {
+    const results = Array.isArray(result.results) ? result.results : []
+    setViolations(results)
+    setDiagramType(result.diagram_type)
+    setLintSupported(result.lintSupported ?? null)
+    setMetrics(result.metrics ?? null)
+    setAnalyzeError(null)
+    setAnalysisHints(normalizeHints(result.hints))
+    setLastCompletedRun({
+      id: runId,
+      source,
+      status: 'success',
+      violationsCount: results.length,
+      error: null,
+    })
+  }, [])
+
+  const applyAnalysisError = useCallback((
+    error: unknown,
+    runId: number,
+    source: AnalysisRunSource
+  ) => {
+    const parsedError = parseAnalysisError(error)
+    setAnalyzeError(parsedError.summary)
+    setAnalysisHints(parsedError.hints)
+    setViolations([])
+    setDiagramType(null)
+    setLintSupported(null)
+    setMetrics(null)
+    setLastCompletedRun({
+      id: runId,
+      source,
+      status: 'error',
+      violationsCount: 0,
+      error: parsedError.summary,
+    })
+  }, [])
+
+  const completeAnalysisRequest = useCallback(async ({
+    requestKey,
+    requestPromise,
+    seq,
+    runId,
+    source,
+    waiterController,
+    transportController,
+    pruneCacheOnSuccess,
+  }: AnalysisWaitContext) => {
+    try {
+      const result = await waitForPromiseWithSignal(requestPromise, waiterController.signal)
+
+      if (seq === requestSeqRef.current) {
+        analysisCacheRef.current.set(requestKey, { result, ts: Date.now() })
+        if (pruneCacheOnSuccess) {
+          pruneAnalysisCache(analysisCacheRef.current, Date.now())
+        }
+        applyAnalysisResult(result, runId, source)
+      }
+    } catch (error) {
+      if (isCancellationError(error)) return
+
+      if (seq === requestSeqRef.current) {
+        applyAnalysisError(error, runId, source)
+      }
+    } finally {
+      const currentInFlight = inFlightRequestsRef.current.get(requestKey)
+      if (currentInFlight?.promise === requestPromise) {
+        currentInFlight.waiters -= 1
+        if (currentInFlight.waiters <= 0) {
+          inFlightRequestsRef.current.delete(requestKey)
+        }
+      }
+
+      if (seq === requestSeqRef.current) {
+        setIsAnalyzing(false)
+        if (abortControllerRef.current === transportController) {
+          abortControllerRef.current = null
+        }
+        if (waiterAbortControllerRef.current === waiterController) {
+          waiterAbortControllerRef.current = null
+        }
+      }
+    }
+  }, [applyAnalysisError, applyAnalysisResult])
+
   const runAnalysis = useCallback(
     async (
       endpoint: string,
@@ -494,21 +598,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
 
       if (cachedEntry && now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS) {
         stopActiveRequest()
-        setViolations(Array.isArray(cachedEntry.result.results) ? cachedEntry.result.results : [])
-        setDiagramType(cachedEntry.result.diagram_type)
-        setLintSupported(cachedEntry.result.lintSupported ?? null)
-        setMetrics(cachedEntry.result.metrics ?? null)
-        setAnalyzeError(null)
-        setAnalysisHints(normalizeHints(cachedEntry.result.hints))
-        setLastCompletedRun({
-          id: runId,
-          source,
-          status: 'success',
-          violationsCount: Array.isArray(cachedEntry.result.results)
-            ? cachedEntry.result.results.length
-            : 0,
-          error: null,
-        })
+        applyAnalysisResult(cachedEntry.result, runId, source)
         setIsAnalyzing(false)
         return
       }
@@ -529,70 +619,16 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         setIsAnalyzing(true)
         setAnalyzeError(null)
         setAnalysisHints([])
-
-        try {
-          const result = await waitForPromiseWithSignal(
-            existingInFlight.promise,
-            waiterController.signal
-          )
-
-          if (seq === requestSeqRef.current) {
-            analysisCacheRef.current.set(requestKey, {
-              result,
-              ts: Date.now(),
-            })
-            setViolations(Array.isArray(result.results) ? result.results : [])
-            setDiagramType(result.diagram_type)
-            setLintSupported(result.lintSupported ?? null)
-            setMetrics(result.metrics ?? null)
-            setAnalyzeError(null)
-            setAnalysisHints(normalizeHints(result.hints))
-            setLastCompletedRun({
-              id: runId,
-              source,
-              status: 'success',
-              violationsCount: Array.isArray(result.results) ? result.results.length : 0,
-              error: null,
-            })
-          }
-        } catch (err) {
-          if (isCancellationError(err)) {
-            return
-          }
-
-          if (seq === requestSeqRef.current) {
-            const parsedError = parseAnalysisError(err)
-            setAnalyzeError(parsedError.summary)
-            setAnalysisHints(parsedError.hints)
-            setViolations([])
-            setDiagramType(null)
-            setLintSupported(null)
-            setMetrics(null)
-            setLastCompletedRun({
-              id: runId,
-              source,
-              status: 'error',
-              violationsCount: 0,
-              error: parsedError.summary,
-            })
-          }
-        } finally {
-          existingInFlight.waiters -= 1
-          if (existingInFlight.waiters <= 0) {
-            inFlightRequestsRef.current.delete(requestKey)
-          }
-
-          if (seq === requestSeqRef.current) {
-            setIsAnalyzing(false)
-            if (abortControllerRef.current === existingInFlight.abortController) {
-              abortControllerRef.current = null
-            }
-            if (waiterAbortControllerRef.current === waiterController) {
-              waiterAbortControllerRef.current = null
-            }
-          }
-        }
-
+        await completeAnalysisRequest({
+          requestKey,
+          requestPromise: existingInFlight.promise,
+          seq,
+          runId,
+          source,
+          waiterController,
+          transportController: existingInFlight.abortController,
+          pruneCacheOnSuccess: false,
+        })
         return
       }
 
@@ -640,71 +676,24 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
         waiters: 1,
       })
 
-      try {
-        const result = await waitForPromiseWithSignal(requestPromise, waiterController.signal)
-
-        if (seq === requestSeqRef.current) {
-          analysisCacheRef.current.set(requestKey, {
-            result,
-            ts: Date.now(),
-          })
-          pruneAnalysisCache(analysisCacheRef.current, Date.now())
-          setViolations(Array.isArray(result.results) ? result.results : [])
-          setDiagramType(result.diagram_type)
-          setLintSupported(result.lintSupported ?? null)
-          setMetrics(result.metrics ?? null)
-          setAnalyzeError(null)
-          setAnalysisHints(normalizeHints(result.hints))
-          setLastCompletedRun({
-            id: runId,
-            source,
-            status: 'success',
-            violationsCount: Array.isArray(result.results) ? result.results.length : 0,
-            error: null,
-          })
-        }
-      } catch (err) {
-        if (isCancellationError(err)) {
-          return
-        }
-
-        if (seq === requestSeqRef.current) {
-          const parsedError = parseAnalysisError(err)
-          setAnalyzeError(parsedError.summary)
-          setAnalysisHints(parsedError.hints)
-          setViolations([])
-          setDiagramType(null)
-          setLintSupported(null)
-          setMetrics(null)
-          setLastCompletedRun({
-            id: runId,
-            source,
-            status: 'error',
-            violationsCount: 0,
-            error: parsedError.summary,
-          })
-        }
-      } finally {
-        const currentInFlight = inFlightRequestsRef.current.get(requestKey)
-        if (currentInFlight && currentInFlight.promise === requestPromise) {
-          currentInFlight.waiters -= 1
-          if (currentInFlight.waiters <= 0) {
-            inFlightRequestsRef.current.delete(requestKey)
-          }
-        }
-
-        if (seq === requestSeqRef.current) {
-          setIsAnalyzing(false)
-          if (abortControllerRef.current === controller) {
-            abortControllerRef.current = null
-          }
-          if (waiterAbortControllerRef.current === waiterController) {
-            waiterAbortControllerRef.current = null
-          }
-        }
-      }
+      await completeAnalysisRequest({
+        requestKey,
+        requestPromise,
+        seq,
+        runId,
+        source,
+        waiterController,
+        transportController: controller,
+        pruneCacheOnSuccess: true,
+      })
     },
-    [abortTransportIfUnshared, cancelAnalysis, stopActiveRequest]
+    [
+      abortTransportIfUnshared,
+      applyAnalysisResult,
+      cancelAnalysis,
+      completeAnalysisRequest,
+      stopActiveRequest,
+    ]
   )
 
   const triggerAnalysis = useCallback(
