@@ -1,12 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { parseDiagramType } from '@/lib/diagramTypes'
-import { extractLineNumber } from '@/lib/errorUtils'
-import ToggleSlider from './ToggleSlider'
-
-// Diagram types supported by beautiful-mermaid
-const BM_SUPPORTED = new Set(['flowchart', 'sequence', 'class', 'state', 'er', 'xychart'])
+import { useId, useState } from 'react'
+import type { DiagramColorMode } from './diagramRenderer'
+import DiagramPreviewErrorPanel from './DiagramPreviewErrorPanel'
+import DiagramPreviewToolbar from './DiagramPreviewToolbar'
+import { useDiagramPreviewRenderer } from './useDiagramPreviewRenderer'
 
 interface DiagramPreviewProps {
   code: string
@@ -20,68 +18,9 @@ interface DiagramPreviewProps {
   onExpandToFullscreen?: () => void
 }
 
-type DiagramColorMode = 'dark' | 'light'
-
-const BEAUTIFUL_RENDER_TOKENS: Record<DiagramColorMode, { bg: string; fg: string; accent: string }> = {
-  dark: {
-    bg: '#1c1c1e',
-    fg: '#e1e1e1',
-    accent: '#0a84ff',
-  },
-  light: {
-    bg: '#ffffff',
-    fg: '#1f2937',
-    accent: '#0a84ff',
-  },
-}
-
-const MERMAID_THEME_CONFIG: Record<
-  DiagramColorMode,
-  {
-    theme: 'dark' | 'default'
-    darkMode: boolean
-    themeVariables: {
-      primaryColor: string
-      primaryTextColor: string
-      primaryBorderColor: string
-      lineColor: string
-      background: string
-      mainBkg: string
-    }
-  }
-> = {
-  dark: {
-    theme: 'dark',
-    darkMode: true,
-    themeVariables: {
-      primaryColor: '#0a84ff',
-      primaryTextColor: '#e1e1e1',
-      primaryBorderColor: '#444444',
-      lineColor: '#a0a0a0',
-      background: '#1c1c1e',
-      mainBkg: '#2c2c2e',
-    },
-  },
-  light: {
-    theme: 'default',
-    darkMode: false,
-    themeVariables: {
-      primaryColor: '#0a84ff',
-      primaryTextColor: '#1f2937',
-      primaryBorderColor: '#9ca3af',
-      lineColor: '#4b5563',
-      background: '#ffffff',
-      mainBkg: '#f9fafb',
-    },
-  },
-}
-
-const isMermaidErrorHtml = (html: string): boolean =>
-  html.includes('aria-roledescription="error"') && html.includes('dmermaid-')
-
-export default function DiagramPreview({ 
-  code, 
-  onParseStateChange, 
+export default function DiagramPreview({
+  code,
+  onParseStateChange,
   parseErrorMessage,
   useBeautifulRenderer = false,
   onToggleBeautifulRenderer,
@@ -90,614 +29,68 @@ export default function DiagramPreview({
   onJumpToLine,
   onExpandToFullscreen,
 }: DiagramPreviewProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const svgRef = useRef<SVGSVGElement | null>(null)
-  const [renderError, setRenderError] = useState<string | null>(null)
-  const [fullRenderError, setFullRenderError] = useState<string | null>(null)
+  const reactId = useId()
+  const stableId = reactId.replace(/[^a-zA-Z0-9_-]/g, '-')
+  const previewId = `diagram-preview-${stableId}`
   const [diagramColorMode, setDiagramColorMode] = useState<DiagramColorMode>('dark')
   const effectiveDiagramColorMode = controlledDiagramColorMode ?? diagramColorMode
-  const [isErrorExpanded, setIsErrorExpanded] = useState(false)
-  const [isRendering, setIsRendering] = useState(false)
-  const idCounterRef = useRef(0)
-  const rafIdRef = useRef<number | null>(null)
-  const nestedRafIdRef = useRef<number | null>(null)
-  const renderSequenceRef = useRef(0)
-  const lastRenderIdRef = useRef<string | null>(null)
-  const ownedRenderIdsRef = useRef<Set<string>>(new Set())
-  const reactId = useId()
-  const stableId = useMemo(() => reactId.replace(/[^a-zA-Z0-9_-]/g, '-'), [reactId])
-  const previewId = `diagram-preview-${stableId}`
-
-  const markOwnedRenderedNodes = useCallback((renderId?: string) => {
-    if (!containerRef.current) return
-
-    containerRef.current
-      .querySelectorAll('svg')
-      .forEach((node) => {
-        node.setAttribute('data-preview-id', previewId)
-        if (renderId) {
-          node.setAttribute('data-render-id', renderId)
-        } else {
-          node.removeAttribute('data-render-id')
-        }
-      })
-
-    if (renderId) {
-      const fallbackNode = containerRef.current.querySelector(`#d${renderId}`)
-      if (fallbackNode) {
-        fallbackNode.setAttribute('data-preview-id', previewId)
-        fallbackNode.setAttribute('data-render-id', renderId)
-      }
-    }
-  }, [previewId])
-
-  const removeMermaidFallbackNodes = useCallback((renderId?: string) => {
-    if (!containerRef.current) return
-
-    const container = containerRef.current
-
-    // Remove fallback error nodes injected by mermaid in this preview container only.
-    container
-      .querySelectorAll('[id^="dmermaid-"]')
-      .forEach((node) => node.remove())
-
-    // Remove any locally rendered error SVGs owned by this preview instance.
-    container
-      .querySelectorAll(`svg[aria-roledescription="error"][data-preview-id="${previewId}"]`)
-      .forEach((node) => node.remove())
-
-    const targetRenderIds = new Set<string>()
-    if (renderId && ownedRenderIdsRef.current.has(renderId)) {
-      targetRenderIds.add(renderId)
-    }
-    if (lastRenderIdRef.current && ownedRenderIdsRef.current.has(lastRenderIdRef.current)) {
-      targetRenderIds.add(lastRenderIdRef.current)
-    }
-    for (const ownedRenderId of ownedRenderIdsRef.current) {
-      targetRenderIds.add(ownedRenderId)
-    }
-    for (const targetRenderId of targetRenderIds) {
-      const fallbackNode = container.querySelector(`#d${targetRenderId}`)
-      if (fallbackNode?.getAttribute('data-preview-id') === previewId) {
-        fallbackNode.remove()
-      }
-      ownedRenderIdsRef.current.delete(targetRenderId)
-    }
-  }, [previewId])
-
-  const sanitizeRenderedOutput = useCallback((renderContainer: HTMLDivElement, renderId: string, svg: string): string => {
-    // Mermaid may inject local fallback error nodes into the target render container.
-    // Clean only within this preview instance so concurrent previews remain isolated.
-    renderContainer
-      .querySelectorAll('[id^="dmermaid-"]')
-      .forEach((node) => node.remove())
-
-    const renderFallbackNode = renderContainer.querySelector(`#d${renderId}`)
-    if (renderFallbackNode) {
-      renderFallbackNode.remove()
-    }
-
-    return isMermaidErrorHtml(svg) ? '' : svg
-  }, [])
-
-  const clearPendingFitRaf = () => {
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current)
-      rafIdRef.current = null
-    }
-
-    if (nestedRafIdRef.current !== null) {
-      cancelAnimationFrame(nestedRafIdRef.current)
-      nestedRafIdRef.current = null
-    }
-  }
-
-  // Extract first line of error message for collapsed view
-  const extractErrorFirstLine = (message: string | null): string | null => {
-    if (!message) return null
-    const firstLine = message.split('\n')[0]
-    return firstLine || message
-  }
-
-  // Detect if an SVG contains mermaid error content (returns error message if found, null otherwise)
-  const detectMermaidErrorInSvg = (svg: string): string | null => {
-    if (!svg) return null
-
-    // Mermaid error SVGs contain specific visual error markers
-    // Check for the patterns that indicate a mermaid-generated error SVG
-    const hasErrorIndicator = 
-      svg.includes('aria-roledescription="error"') ||
-      svg.includes('Syntax error') ||
-      svg.includes('Parse error') ||
-      (svg.includes('mermaid version') && svg.includes('text'))
-
-    if (!hasErrorIndicator) {
-      return null
-    }
-
-    // This looks like an error SVG - extract a meaningful error message
-    try {
-      // Look for text content in the SVG that describes the error
-      if (svg.includes('Syntax error')) {
-        // Try to extract the full error text
-        const syntaxMatch = svg.match(/Syntax error[^<>]*/)
-        if (syntaxMatch) {
-          return `Syntax error in diagram (line error detected)`
-        }
-        return 'Syntax error in diagram'
-      }
-
-      if (svg.includes('Parse error')) {
-        return 'Parse error in diagram'
-      }
-
-      if (svg.includes('mermaid version')) {
-        // This is definitely a mermaid error SVG
-        return 'Mermaid diagram rendering error'
-      }
-    } catch (e) {
-      console.debug('Error processing SVG:', e)
-    }
-
-    return 'Diagram error'
-  }
-
-  // Fit diagram to container dimensions
-  const fitDiagramToContainer = () => {
-    if (!svgRef.current || !containerRef.current) return
-
-    try {
-      const svg = svgRef.current
-      const container = containerRef.current
-
-      // Get container's actual rendered dimensions
-      const containerWidth = container.clientWidth
-      const containerHeight = container.clientHeight
-
-      if (containerWidth === 0 || containerHeight === 0) {
-        console.debug('Container has no dimensions yet')
-        return
-      }
-
-      let svgWidth: number
-      let svgHeight: number
-
-      // Try to get SVG's viewBox first
-      const viewBoxAttr = svg.getAttribute('viewBox')
-      if (viewBoxAttr) {
-        // Parse viewBox: "x y width height" (may be space or comma separated)
-        const viewBoxParts = viewBoxAttr.split(/[\s,]+/).map(Number)
-        svgWidth = viewBoxParts[2]
-        svgHeight = viewBoxParts[3]
-
-        if (!svgWidth || !svgHeight) {
-          console.debug('Invalid viewBox, falling back to getBBox')
-          const bbox = svg.getBBox()
-          svgWidth = bbox.width
-          svgHeight = bbox.height
-        }
-      } else {
-        // No viewBox, use getBBox
-        console.debug('No viewBox attribute, using getBBox')
-        const bbox = svg.getBBox()
-        svgWidth = bbox.width
-        svgHeight = bbox.height
-      }
-
-      if (svgWidth === 0 || svgHeight === 0 || !svgWidth || !svgHeight) {
-        console.debug(`Invalid SVG dimensions: ${svgWidth}x${svgHeight}`)
-        return
-      }
-
-      // Calculate available space (accounting for padding)
-      const padding = 16 * 2 // 16px on each side
-      const availWidth = containerWidth - padding
-      const availHeight = containerHeight - padding
-
-      // Calculate scale to fit both dimensions while preserving aspect ratio
-      const scaleX = availWidth / svgWidth
-      const scaleY = availHeight / svgHeight
-      const scale = Math.min(scaleX, scaleY, 1) // Don't enlarge small diagrams
-
-      // Calculate final dimensions
-      const finalWidth = svgWidth * scale
-      const finalHeight = svgHeight * scale
-
-      console.debug(
-        `Auto-fit: container=${containerWidth}x${containerHeight}, svg=${svgWidth.toFixed(1)}x${svgHeight.toFixed(1)}, scale=${scale.toFixed(3)}, final=${finalWidth.toFixed(0)}x${finalHeight.toFixed(0)}`
-      )
-
-      // Apply dimensions directly to SVG element as inline styles
-      // Using !important to ensure they override any CSS rules and attributes
-      // Also remove width/height attributes that might be set by beautiful-mermaid
-      svg.removeAttribute('width')
-      svg.removeAttribute('height')
-      svg.style.setProperty('width', `${finalWidth}px`, 'important')
-      svg.style.setProperty('height', `${finalHeight}px`, 'important')
-      svg.style.setProperty('display', 'block', 'important')
-    } catch (err) {
-      console.debug('Auto-fit calculation error:', err instanceof Error ? err.message : err)
-    }
-  }
-
-  useEffect(() => {
-    clearPendingFitRaf()
-    const renderSequence = ++renderSequenceRef.current
-
-    if (!code.trim()) {
-      if (containerRef.current) containerRef.current.innerHTML = ''
-      setRenderError(null)
-      setFullRenderError(null)
-      setIsErrorExpanded(false)
-      onParseStateChange?.({ hasParseError: false, message: null })
-      setIsRendering(false)
-      return
-    }
-
-    if (parseErrorMessage) {
-      if (containerRef.current) {
-        containerRef.current.innerHTML = ''
-      }
-      removeMermaidFallbackNodes(lastRenderIdRef.current ?? undefined)
-      setRenderError(null)
-      setFullRenderError(null)
-      setIsErrorExpanded(false)
-      onParseStateChange?.({ hasParseError: true, message: parseErrorMessage })
-      setIsRendering(false)
-      return
-    }
-
-    let cancelled = false
-    setIsRendering(true)
-
-    const renderDiagram = async () => {
-      try {
-        // Check if beautiful-mermaid should be used
-        if (useBeautifulRenderer) {
-          const diagramType = parseDiagramType(code)
-          if (diagramType && BM_SUPPORTED.has(diagramType)) {
-            try {
-              const beautifulMermaid = await import('beautiful-mermaid')
-              const beautifulRenderTokens = BEAUTIFUL_RENDER_TOKENS[effectiveDiagramColorMode]
-              const svg = beautifulMermaid.renderMermaidSVG(code, {
-                bg: beautifulRenderTokens.bg,
-                fg: beautifulRenderTokens.fg,
-                accent: beautifulRenderTokens.accent,
-                transparent: true,
-              })
-
-              // Check if the returned SVG contains mermaid error content
-              const mermaidError = detectMermaidErrorInSvg(svg)
-              if (mermaidError) {
-                throw new Error(mermaidError)
-              }
-              
-              if (!cancelled) {
-                setRenderError(null)
-                setFullRenderError(null)
-                setIsErrorExpanded(false)
-                onParseStateChange?.({ hasParseError: false, message: null })
-
-                if (containerRef.current) {
-                  containerRef.current.innerHTML = svg
-                  markOwnedRenderedNodes()
-                  
-                  // Safety check: remove any error SVGs that might have been rendered
-                  containerRef.current.querySelectorAll('svg[aria-roledescription="error"]').forEach(node => {
-                    console.debug('Removing error SVG from beautiful-mermaid render')
-                    node.remove()
-                  })
-                  
-                  const svgEl = containerRef.current.querySelector('svg')
-                  if (svgEl) {
-                    svgRef.current = svgEl as SVGSVGElement
-                    rafIdRef.current = requestAnimationFrame(() => {
-                      nestedRafIdRef.current = requestAnimationFrame(() => {
-                        if (renderSequenceRef.current !== renderSequence) return
-                        fitDiagramToContainer()
-                      })
-                    })
-                  }
-                }
-              }
-              return
-            } catch (bmErr) {
-              console.debug('beautiful-mermaid render failed, falling back to standard mermaid:', bmErr instanceof Error ? bmErr.message : bmErr)
-            }
-          }
-        }
-
-        const mermaid = (await import('mermaid')).default
-        const mermaidThemeConfig = MERMAID_THEME_CONFIG[effectiveDiagramColorMode]
-        
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: mermaidThemeConfig.theme,
-          darkMode: mermaidThemeConfig.darkMode,
-          themeVariables: mermaidThemeConfig.themeVariables,
-          securityLevel: 'strict',
-          logLevel: 'error',
-        })
-
-        const id = `mermaid-${stableId}-${++idCounterRef.current}`
-        removeMermaidFallbackNodes()
-        ownedRenderIdsRef.current.add(id)
-        lastRenderIdRef.current = id
-        
-        const renderContainer = containerRef.current
-        if (!renderContainer) {
-          return
-        }
-
-        // Mermaid parse failures can inject fallback error nodes like dmermaid-* / d${id}; we clean/sanitize locally after render.
-        const result = await mermaid.render(id, code, renderContainer ?? undefined)
-        const svg = sanitizeRenderedOutput(renderContainer, id, result.svg)
-
-        // Check if the returned SVG contains mermaid error content
-        const mermaidError = detectMermaidErrorInSvg(svg)
-        if (mermaidError) {
-          console.debug('Detected mermaid error SVG rendering, throwing:', mermaidError)
-          throw new Error(mermaidError)
-        }
-
-        // Additional safety: if SVG string starts with error indicators, reject it
-        if (svg.trim().length === 0 || svg.includes('aria-roledescription="error"')) {
-          throw new Error('Mermaid returned error SVG')
-        }
-
-        if (!cancelled) {
-          setRenderError(null)
-          setFullRenderError(null)
-          setIsErrorExpanded(false)
-          onParseStateChange?.({ hasParseError: false, message: null })
-
-          if (containerRef.current) {
-            containerRef.current.innerHTML = svg
-            markOwnedRenderedNodes(id)
-            
-            // Safety check: remove any error SVGs that might have been rendered
-            containerRef.current.querySelectorAll('svg[aria-roledescription="error"]').forEach(node => {
-              console.debug('Removing error SVG from container')
-              node.remove()
-            })
-            
-            const svgEl = containerRef.current.querySelector('svg')
-            if (svgEl) {
-              svgRef.current = svgEl as SVGSVGElement
-              // Apply auto-fit after SVG is in the DOM
-              // Use requestAnimationFrame twice to ensure layout has settled
-              rafIdRef.current = requestAnimationFrame(() => {
-                nestedRafIdRef.current = requestAnimationFrame(() => {
-                  if (renderSequenceRef.current !== renderSequence) return
-                  fitDiagramToContainer()
-                })
-              })
-            }
-          }
-        }
-      } catch (err) {
-        if (!cancelled) {
-          const message = err instanceof Error ? err.message : 'Render error'
-          const collapsedMessage = extractErrorFirstLine(message)
-          setRenderError(collapsedMessage)
-          setFullRenderError(message)
-          setIsErrorExpanded(false)
-          onParseStateChange?.({ hasParseError: true, message: collapsedMessage })
-          removeMermaidFallbackNodes(lastRenderIdRef.current ?? undefined)
-          
-          // Clean container and remove any stray error SVGs from the page
-          if (containerRef.current) {
-            containerRef.current.innerHTML = ''
-          }
-        }
-      } finally {
-        if (!cancelled) setIsRendering(false)
-      }
-    }
-
-    renderDiagram()
-    return () => {
-      cancelled = true
-      clearPendingFitRaf()
-    }
-  }, [
+  const {
+    containerRef,
+    renderError,
+    fullRenderError,
+    isErrorExpanded,
+    isRendering,
+    onExpandError,
+    fitDiagramToContainer,
+  } = useDiagramPreviewRenderer({
     code,
-    effectiveDiagramColorMode,
-    onParseStateChange,
+    previewId,
+    stableId,
+    colorMode: effectiveDiagramColorMode,
     parseErrorMessage,
     useBeautifulRenderer,
-    markOwnedRenderedNodes,
-    removeMermaidFallbackNodes,
-    sanitizeRenderedOutput,
-    stableId,
-  ])
+    onParseStateChange,
+  })
 
-  useEffect(() => {
-    return () => {
-      clearPendingFitRaf()
+  const currentErrorMessage = parseErrorMessage ?? renderError
+  const hasError = Boolean(parseErrorMessage || renderError)
+  const hasCode = Boolean(code.trim())
+
+  const toggleColorMode = () => {
+    const nextMode = effectiveDiagramColorMode === 'dark' ? 'light' : 'dark'
+    if (onToggleDiagramColorMode) {
+      onToggleDiagramColorMode(nextMode)
+      return
     }
-  }, [])
+    setDiagramColorMode(nextMode)
+  }
 
   return (
     <div className="panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <div className="panel-heading" style={{ marginBottom: 0 }}>◈ Diagram Preview</div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {!parseErrorMessage && !renderError && code.trim() !== '' && (
-            <button
-              onClick={() => {
-                const nextMode = effectiveDiagramColorMode === 'dark' ? 'light' : 'dark'
-                if (onToggleDiagramColorMode) {
-                  onToggleDiagramColorMode(nextMode)
-                  return
-                }
-                setDiagramColorMode(nextMode)
-              }}
-              title={`Switch to ${effectiveDiagramColorMode === 'dark' ? 'light' : 'dark'} diagram mode`}
-              aria-label={`Toggle diagram mode. Current mode: ${effectiveDiagramColorMode}`}
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                border: '1px solid var(--color-border)',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-primary)'
-                ;(e.currentTarget as HTMLButtonElement).style.color = '#000'
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg-secondary)'
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'
-              }}
-            >
-              {effectiveDiagramColorMode === 'dark' ? '☾ Dark' : '☀︎ Light'}
-            </button>
-          )}
-          {!parseErrorMessage && !renderError && code.trim() !== '' && (
-            <button
-              onClick={fitDiagramToContainer}
-              title="Reset zoom to fit diagram in view"
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                border: '1px solid var(--color-border)',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-primary)'
-                ;(e.currentTarget as HTMLButtonElement).style.color = '#000'
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg-secondary)'
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'
-              }}
-            >
-              ↔ Fit
-            </button>
-          )}
-          {!parseErrorMessage && !renderError && code.trim() !== '' && onExpandToFullscreen && (
-            <button
-              onClick={onExpandToFullscreen}
-              title="Expand diagram to full screen"
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                border: '1px solid var(--color-border)',
-                background: 'var(--color-bg-secondary)',
-                color: 'var(--color-text-primary)',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent-primary)'
-                ;(e.currentTarget as HTMLButtonElement).style.color = '#000'
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-bg-secondary)'
-                ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--color-text-primary)'
-              }}
-            >
-              ⛶ Expand
-            </button>
-          )}
-          {!parseErrorMessage && !renderError && code.trim() !== '' && onToggleBeautifulRenderer && (
-            <ToggleSlider
-              value={useBeautifulRenderer}
-              onChange={onToggleBeautifulRenderer}
-              label="✨ Beautiful"
-              title="Toggle beautiful-mermaid renderer"
-            />
-          )}
-          {isRendering && (
-            <span style={{ fontSize: '12px', color: 'var(--color-accent-primary)' }}>
-              ⠋ Rendering...
-            </span>
-          )}
-        </div>
+        <DiagramPreviewToolbar
+          hasCode={hasCode}
+          hasError={hasError}
+          colorMode={effectiveDiagramColorMode}
+          useBeautifulRenderer={useBeautifulRenderer}
+          isRendering={isRendering}
+          canToggleBeautifulRenderer={Boolean(onToggleBeautifulRenderer)}
+          canExpand={Boolean(onExpandToFullscreen)}
+          onToggleColorMode={toggleColorMode}
+          onFit={fitDiagramToContainer}
+          onExpand={onExpandToFullscreen}
+          onToggleBeautifulRenderer={onToggleBeautifulRenderer}
+        />
       </div>
 
-      {(parseErrorMessage ?? renderError) && (
-        <div
-          style={{
-            padding: '12px',
-            border: '1px solid var(--color-error)',
-            background: 'rgba(255,85,85,0.05)',
-            color: 'var(--color-error)',
-            fontSize: '12px',
-            marginBottom: '8px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-            <div style={{ fontWeight: 600 }}>⚠ Syntax Error</div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {(() => {
-                const line = extractLineNumber(parseErrorMessage ?? renderError ?? '');
-                return line != null && onJumpToLine ? (
-                  <button
-                    onClick={() => onJumpToLine(line)}
-                    style={{
-                      padding: '2px 8px',
-                      fontSize: '11px',
-                      border: '1px solid rgba(255,85,85,0.4)',
-                      background: 'transparent',
-                      color: 'var(--color-error)',
-                      borderRadius: '3px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,85,85,0.1)'
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                    }}
-                  >
-                    Show me where
-                  </button>
-                ) : null;
-              })()}
-              {fullRenderError && fullRenderError !== (parseErrorMessage ?? renderError) && (
-                <button
-                  onClick={() => setIsErrorExpanded(!isErrorExpanded)}
-                  style={{
-                    padding: '2px 8px',
-                    fontSize: '11px',
-                    border: '1px solid rgba(255,85,85,0.4)',
-                    background: 'transparent',
-                    color: 'var(--color-error)',
-                    borderRadius: '3px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,85,85,0.1)'
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                  }}
-                >
-                  {isErrorExpanded ? 'Hide details' : 'Show details'}
-                </button>
-              )}
-            </div>
-          </div>
-          <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{parseErrorMessage ?? renderError}</pre>
-          {isErrorExpanded && fullRenderError && fullRenderError !== (parseErrorMessage ?? renderError) && (
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '10px', marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px' }}>
-              {fullRenderError}
-            </pre>
-          )}
-        </div>
-      )}
+      <DiagramPreviewErrorPanel
+        message={currentErrorMessage}
+        fullMessage={fullRenderError}
+        expanded={isErrorExpanded}
+        onToggleExpanded={onExpandError}
+        onJumpToLine={onJumpToLine}
+      />
 
       <div
         ref={containerRef}
@@ -714,7 +107,7 @@ export default function DiagramPreview({
           padding: '16px',
         }}
       >
-        {!code.trim() && (
+        {!hasCode && (
           <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
             No diagram code yet
           </span>

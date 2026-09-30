@@ -120,6 +120,25 @@ vi.mock('@/lib/useLayoutPreferences', () => ({
     resetPrefs: vi.fn(),
   }),
 }))
+vi.mock('@/lib/useRulesConfiguration', () => ({
+  useRulesConfiguration: () => ({
+    rules: [],
+    enabledRules: [],
+    rulesLoading: false,
+    rulesLoadedEndpoint: null,
+    rulesUnavailableEndpoint: null,
+    toggleRule: vi.fn(),
+    enableAllRules: vi.fn(),
+    disableAllRules: vi.fn(),
+  }),
+}))
+vi.mock('@/lib/useScheduledAnalysis', () => ({ useScheduledAnalysis: vi.fn() }))
+vi.mock('@/lib/useEndpointFeedback', () => ({
+  useEndpointFeedback: () => ({ handleTestConnection: vi.fn(), handleSaveEndpoint: vi.fn() }),
+}))
+vi.mock('@/lib/useManualRecheck', () => ({
+  useManualRecheck: () => ({ canRecheck: false, handleRecheck: vi.fn() }),
+}))
 vi.mock('@/lib/api', () => ({ fetchRules: vi.fn() }))
 vi.mock('@/lib/diagramTypes', () => ({ getApplicableRules: () => new Set<string>() }))
 vi.mock('@/lib/rulesState', () => ({
@@ -128,6 +147,7 @@ vi.mock('@/lib/rulesState', () => ({
 }))
 
 import Home from '../app/page'
+import WorkspaceArea from '../app/components/WorkspaceArea'
 import DiagramEditor from '../app/components/DiagramEditor'
 import DiagramPreview from '../app/components/DiagramPreview'
 import ResultsPanel from '../app/components/ResultsPanel'
@@ -140,6 +160,9 @@ function visit(node: ReactNode): void {
   if (!React.isValidElement(node)) return
 
   const element = node as ReactElement<Record<string, unknown>>
+  if (element.type === WorkspaceArea) {
+    visit((WorkspaceArea as (props: Record<string, unknown>) => ReactNode)(element.props))
+  }
   if (element.type === DiagramEditor || element.type === DiagramPreview || element.type === ResultsPanel) {
     ;(element.type as (props: Record<string, unknown>) => ReactNode)(element.props)
   }
