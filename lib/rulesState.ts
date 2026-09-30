@@ -20,6 +20,15 @@ export function shouldTreatRulesPayloadAsUnavailable(signal: RulesAvailabilitySi
   return signal === 'transport_failure' || signal === 'malformed_payload'
 }
 
+export function isCurrentRulesRequest(
+  requestId: number,
+  requestEndpoint: string,
+  currentRequestId: number,
+  currentEndpoint: string
+): boolean {
+  return requestId === currentRequestId && requestEndpoint === currentEndpoint
+}
+
 export function reconcileRuleSelection(
   previousSelection: string[],
   fetchedRuleIds: string[],

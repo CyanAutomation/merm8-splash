@@ -194,6 +194,14 @@ it('rule selection removes unavailable rules without restoring defaults after in
   expect(Array.from(reloadedSelection)).toEqual(['no-empty-label'])
 })
 
+it('only accepts the latest rules response for the current endpoint', () => {
+  const { isCurrentRulesRequest } = loadRulesStateModule()
+
+  expect(isCurrentRulesRequest(3, 'https://api.example.test', 3, 'https://api.example.test')).toBe(true)
+  expect(isCurrentRulesRequest(2, 'https://api.example.test', 3, 'https://api.example.test')).toBe(false)
+  expect(isCurrentRulesRequest(3, 'https://old.example.test', 3, 'https://new.example.test')).toBe(false)
+})
+
 it('buildAnalyzeRequest explicitly disables all known rules when no rules are selected', () => {
   const request = buildAnalyzeRequest(
     'graph TD; A-->B',
