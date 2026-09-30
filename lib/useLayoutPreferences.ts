@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-interface LayoutPreferences {
+export interface LayoutPreferences {
   leftPanelSize: number // percentage
   editorSize: number // percentage of left column
   previewSize: number // percentage of right column

@@ -1,73 +1,24 @@
 'use client'
 
-import { useRef, useState, useCallback, useEffect } from 'react'
-import Image from 'next/image'
-import remAvatar from '@/design/rem-avatar.png'
-import ApiConfigPanel, { ApiConfigPanelRef } from './components/ApiConfigPanel'
-import DiagramEditor, { DiagramEditorRef } from './components/DiagramEditor'
-import DiagramPreview from './components/DiagramPreview'
-import RulesPanel from './components/RulesPanel'
-import ResultsPanel, { ResultsPanelRef } from './components/ResultsPanel'
+import { useRef, useState, useCallback } from 'react'
+import type { ApiConfigPanelRef } from './components/ApiConfigPanel'
+import type { DiagramEditorRef } from './components/DiagramEditor'
+import type { ResultsPanelRef } from './components/ResultsPanel'
 import StatusBar from './components/StatusBar'
 import { SnackbarProvider, useSnackbar } from './components/Snackbar'
-import ExportDropdown from './components/ExportDropdown'
 import ErrorBoundary from './components/ErrorBoundary'
-import Modal from './components/Modal'
+import HomeDialogs from './components/HomeDialogs'
+import HomeHeader from './components/HomeHeader'
+import WorkspaceArea from './components/WorkspaceArea'
+import { useEndpointFeedback } from '@/lib/useEndpointFeedback'
+import { useManualRecheck } from '@/lib/useManualRecheck'
+import { useScheduledAnalysis } from '@/lib/useScheduledAnalysis'
 import { useApiEndpoint } from '@/lib/useApiEndpoint'
 import { useDiagramAnalysis } from '@/lib/useDiagramAnalysis'
 import { useLayoutPreferences } from '@/lib/useLayoutPreferences'
-import { fetchRules, Rule } from '@/lib/api'
-import { getApplicableRules } from '@/lib/diagramTypes'
-import {
-  reconcileRuleSelection,
-  resolveRulesAvailabilityState,
-  shouldTreatRulesPayloadAsUnavailable,
-} from '@/lib/rulesState'
-
-function MetricItem({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '4px 8px',
-        background: 'var(--color-bg-primary)',
-        borderRadius: '4px',
-      }}
-    >
-      <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
-      <span style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontFamily: 'monospace' }}>
-        {value}
-      </span>
-    </div>
-  )
-}
+import { useRulesConfiguration } from '@/lib/useRulesConfiguration'
 
 function HomeContent() {
-  const headerControlButtonStyle = {
-    padding: '4px 12px',
-    fontSize: '12px',
-    background: 'transparent',
-    color: 'var(--color-text-secondary)',
-    border: '1px solid var(--color-border)',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  }
-
-  const handleHeaderControlMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.color = 'var(--color-accent-primary)'
-    e.currentTarget.style.borderColor = 'var(--color-accent-primary)'
-    e.currentTarget.style.background = 'rgba(10, 132, 255, 0.1)'
-  }
-
-  const handleHeaderControlMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.color = 'var(--color-text-secondary)'
-    e.currentTarget.style.borderColor = 'var(--color-border)'
-    e.currentTarget.style.background = 'transparent'
-  }
-
   const apiConfigRef = useRef<ApiConfigPanelRef>(null)
   const editorRef = useRef<DiagramEditorRef>(null)
   const resultsRef = useRef<ResultsPanelRef>(null)
@@ -101,11 +52,17 @@ function HomeContent() {
     cancelAnalysis,
   } = useDiagramAnalysis()
 
-  const [rules, setRules] = useState<Rule[]>([])
-  const [enabledRules, setEnabledRules] = useState<string[]>([])
-  const [rulesLoading, setRulesLoading] = useState(false)
-  const [rulesLoadedEndpoint, setRulesLoadedEndpoint] = useState<string | null>(null)
-  const [rulesUnavailableEndpoint, setRulesUnavailableEndpoint] = useState<string | null>(null)
+  const {
+    rules,
+    enabledRules,
+    rulesLoading,
+    rulesLoadedEndpoint,
+    rulesUnavailableEndpoint,
+    toggleRule,
+    enableAllRules,
+    disableAllRules,
+  } = useRulesConfiguration(endpoint, connectionStatus, diagramType)
+
   const [hasParseError, setHasParseError] = useState(false)
   const [parseErrorDetail, setParseErrorDetail] = useState<string | null>(null)
   const [showResetConfirmation, setShowResetConfirmation] = useState(false)
@@ -113,161 +70,8 @@ function HomeContent() {
   const [showApiConfigModal, setShowApiConfigModal] = useState(false)
   const [showFullscreenDiagram, setShowFullscreenDiagram] = useState(false)
   const [showMetrics, setShowMetrics] = useState(false)
-  const rulesRequestRef = useRef(0)
-  const latestEndpointRef = useRef(endpoint)
-  const rulesSelectionRef = useRef({
-    endpoint,
-    hasInitializedOrModifiedSelection: false,
-  })
-  const rulesAbortControllerRef = useRef<AbortController | null>(null)
-  const dragCleanupFnsRef = useRef<Set<() => void>>(new Set())
-  const previousAnalysisCodeRef = useRef(code)
-  const previousConnectionStatusRef = useRef(connectionStatus)
-  const previousStatusMessageRef = useRef(statusMessage)
-  const pendingSnackbarActionRef = useRef<'test-connection' | 'save-endpoint' | null>(null)
-  const pendingSnackbarOperationRef = useRef(0)
-  const pendingManualRunRef = useRef(false)
-  const lastManualRunSnackbarIdRef = useRef(0)
-  const [snackbarOperationTick, setSnackbarOperationTick] = useState(0)
 
-  // Load rules when connected
-  const loadRules = useCallback(async () => {
-    if (!endpoint) return
-
-    rulesAbortControllerRef.current?.abort()
-    const controller = new AbortController()
-    rulesAbortControllerRef.current = controller
-
-    const requestId = ++rulesRequestRef.current
-    const requestEndpoint = endpoint
-    latestEndpointRef.current = endpoint
-
-    setRulesLoading(true)
-    setRulesUnavailableEndpoint(null)
-    try {
-      const fetched = await fetchRules(requestEndpoint, controller.signal)
-      if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
-        const normalizedFetched = Array.isArray(fetched.rules) ? fetched.rules : []
-        const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable(fetched.status)
-
-        setRules(normalizedFetched)
-        if (!rulesAreUnavailable) {
-          const selectionState = rulesSelectionRef.current
-          const isSameEndpoint = selectionState.endpoint === requestEndpoint
-          const hasInitializedOrModifiedSelection = isSameEndpoint
-            && selectionState.hasInitializedOrModifiedSelection
-
-          setEnabledRules((prev) => reconcileRuleSelection(
-            prev,
-            normalizedFetched.map((rule) => rule.id),
-            hasInitializedOrModifiedSelection
-          ))
-          rulesSelectionRef.current = {
-            endpoint: requestEndpoint,
-            hasInitializedOrModifiedSelection: true,
-          }
-        }
-        setRulesLoadedEndpoint(rulesAreUnavailable ? null : requestEndpoint)
-        setRulesUnavailableEndpoint(rulesAreUnavailable ? requestEndpoint : null)
-      }
-    } catch {
-      if (controller.signal.aborted) {
-        return
-      }
-
-      if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
-        setRules([])
-        setRulesLoadedEndpoint(null)
-        setRulesUnavailableEndpoint(requestEndpoint)
-      }
-    } finally {
-      if (requestId === rulesRequestRef.current && requestEndpoint === latestEndpointRef.current) {
-        setRulesLoading(false)
-      }
-    }
-  }, [endpoint])
-
-  useEffect(() => {
-    rulesAbortControllerRef.current?.abort()
-    rulesAbortControllerRef.current = null
-    latestEndpointRef.current = endpoint
-    rulesRequestRef.current += 1
-    // Rule choices belong to an endpoint. A different endpoint starts uninitialized so its
-    // first successful load selects its own defaults instead of inheriting another API's choices.
-    rulesSelectionRef.current = {
-      endpoint,
-      hasInitializedOrModifiedSelection: false,
-    }
-    setRules([])
-    setEnabledRules([])
-    setRulesLoading(false)
-    setRulesLoadedEndpoint(null)
-    setRulesUnavailableEndpoint(null)
-  }, [endpoint])
-
-  useEffect(() => {
-    return () => {
-      rulesAbortControllerRef.current?.abort()
-      rulesAbortControllerRef.current = null
-    }
-  }, [])
-
-  useEffect(() => {
-    const dragCleanupFns = dragCleanupFnsRef.current
-
-    return () => {
-      dragCleanupFns.forEach((cleanup) => cleanup())
-      dragCleanupFns.clear()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (connectionStatus === 'connected') {
-      loadRules()
-    }
-  }, [connectionStatus, loadRules])
-
-  // Trigger analysis when code, endpoint, or rules change
-  useEffect(() => {
-    if (!code.trim()) {
-      previousAnalysisCodeRef.current = code
-      cancelAnalysis()
-      return
-    }
-
-    if (!endpoint) {
-      previousAnalysisCodeRef.current = code
-      cancelAnalysis()
-      return
-    }
-
-    const isConnected = connectionStatus === 'connected'
-    const {
-      isAvailable: rulesReadyForEndpoint,
-      isUnavailable: rulesUnavailableForEndpoint,
-    } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
-    const useServerDefaultRules = rulesUnavailableForEndpoint
-    const canAnalyze = !hasParseError && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
-
-    if (!canAnalyze) {
-      // Cancel immediately so delayed debounce callbacks cannot abort a newer valid analysis.
-      previousAnalysisCodeRef.current = code
-      cancelAnalysis()
-      return
-    }
-
-    const triggerSource = previousAnalysisCodeRef.current === code ? 'config' : 'input'
-    previousAnalysisCodeRef.current = code
-
-    triggerAnalysis(
-      endpoint,
-      code,
-      enabledRules,
-      rules,
-      { useServerDefaults: useServerDefaultRules },
-      { source: triggerSource }
-    )
-  }, [
+  useScheduledAnalysis({
     code,
     endpoint,
     connectionStatus,
@@ -279,117 +83,29 @@ function HomeContent() {
     rules,
     triggerAnalysis,
     cancelAnalysis,
-  ])
-
-  const handleTestConnection = useCallback(async () => {
-    const operationId = pendingSnackbarOperationRef.current + 1
-    pendingSnackbarOperationRef.current = operationId
-    pendingSnackbarActionRef.current = 'test-connection'
-    setSnackbarOperationTick(operationId)
-    await testConnection()
-  }, [testConnection])
-
-  const handleSaveEndpoint = useCallback(() => {
-    const operationId = pendingSnackbarOperationRef.current + 1
-    pendingSnackbarOperationRef.current = operationId
-    pendingSnackbarActionRef.current = 'save-endpoint'
-    setSnackbarOperationTick(operationId)
-    saveEndpoint()
-  }, [saveEndpoint])
-
-  useEffect(() => {
-    const previousConnectionStatus = previousConnectionStatusRef.current
-    const previousStatusMessage = previousStatusMessageRef.current
-    const statusChanged = previousConnectionStatus !== connectionStatus
-    const messageChanged = previousStatusMessage !== statusMessage
-    let handledPendingSnackbarAction = false
-
-    if (pendingSnackbarActionRef.current === 'test-connection' && (statusChanged || messageChanged)) {
-      if (connectionStatus === 'connected' && previousConnectionStatus !== 'connected') {
-        showSnackbar('Connection verified.', 'success')
-        pendingSnackbarActionRef.current = null
-        handledPendingSnackbarAction = true
-      } else if (connectionStatus === 'error' && (previousConnectionStatus !== 'error' || messageChanged)) {
-        const normalizedMessage = (statusMessage || '').toLowerCase()
-        const isInvalidEndpoint = normalizedMessage.includes('invalid endpoint')
-        showSnackbar(
-          isInvalidEndpoint
-            ? 'Invalid endpoint. Check URL format and try again.'
-            : 'Endpoint unreachable. Verify server status and URL.',
-          'error'
-        )
-        pendingSnackbarActionRef.current = null
-        handledPendingSnackbarAction = true
-      }
-    }
-
-    if (pendingSnackbarActionRef.current === 'save-endpoint' && messageChanged) {
-      const normalizedMessage = (statusMessage || '').toLowerCase()
-
-      if (normalizedMessage.includes('saved to localstorage')) {
-        showSnackbar('Endpoint saved.', 'success')
-        pendingSnackbarActionRef.current = null
-        handledPendingSnackbarAction = true
-      } else if (normalizedMessage.includes('invalid endpoint')) {
-        showSnackbar('Save blocked: invalid endpoint.', 'error')
-        pendingSnackbarActionRef.current = null
-        handledPendingSnackbarAction = true
-      } else if (normalizedMessage.includes('could not save endpoint')) {
-        showSnackbar('Save blocked in this browser context.', 'error')
-        pendingSnackbarActionRef.current = null
-        handledPendingSnackbarAction = true
-      }
-    }
-
-    if (pendingSnackbarActionRef.current && !handledPendingSnackbarAction) {
-      pendingSnackbarActionRef.current = null
-    }
-
-    previousConnectionStatusRef.current = connectionStatus
-    previousStatusMessageRef.current = statusMessage
-  }, [connectionStatus, statusMessage, snackbarOperationTick, showSnackbar])
-
-  const handleRecheck = useCallback(() => {
-    const isConnected = connectionStatus === 'connected'
-    const {
-      isAvailable: rulesReadyForEndpoint,
-      isUnavailable: rulesUnavailableForEndpoint,
-    } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
-    const canAnalyze = !hasParseError && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint)
-
-    if (!code.trim() || !endpoint || !canAnalyze) {
-      return
-    }
-
-    pendingManualRunRef.current = true
-    showSnackbar('Re-check started.', 'success')
-    forceAnalysis(endpoint, code, enabledRules, rules, { useServerDefaults: rulesUnavailableForEndpoint })
-  }, [code, endpoint, connectionStatus, hasParseError, rulesLoading, rulesLoadedEndpoint, rulesUnavailableEndpoint, enabledRules, rules, forceAnalysis, showSnackbar])
-
-
-  useEffect(() => {
-    if (!lastCompletedRun || lastCompletedRun.source !== 'manual') {
-      return
-    }
-
-    if (!pendingManualRunRef.current) {
-      return
-    }
-
-    if (lastCompletedRun.id <= lastManualRunSnackbarIdRef.current) {
-      return
-    }
-
-    lastManualRunSnackbarIdRef.current = lastCompletedRun.id
-    pendingManualRunRef.current = false
-
-    if (lastCompletedRun.status === 'success') {
-      showSnackbar(`Check complete: ${lastCompletedRun.violationsCount} violations`, 'success')
-      return
-    }
-
-    showSnackbar(lastCompletedRun.error ? `Check failed: ${lastCompletedRun.error}` : 'Check failed.', 'error')
-  }, [lastCompletedRun, showSnackbar])
+  })
+  const { handleTestConnection, handleSaveEndpoint } = useEndpointFeedback({
+    connectionStatus,
+    statusMessage,
+    testConnection,
+    saveEndpoint,
+    showSnackbar,
+  })
+  const { handleRecheck, canRecheck } = useManualRecheck({
+    code,
+    endpoint,
+    connectionStatus,
+    hasParseError,
+    rulesLoading,
+    rulesLoadedEndpoint,
+    rulesUnavailableEndpoint,
+    enabledRules,
+    rules,
+    isAnalyzing,
+    lastCompletedRun,
+    forceAnalysis,
+    showSnackbar,
+  })
 
   const openApiConfigAndFocus = useCallback(() => {
     setShowApiConfigModal(true)
@@ -398,39 +114,6 @@ function HomeContent() {
       apiConfigRef.current?.focusInput()
     })
   }, [])
-
-  const toggleRule = useCallback((ruleId: string) => {
-    rulesSelectionRef.current = { endpoint, hasInitializedOrModifiedSelection: true }
-    setEnabledRules((prev) =>
-      prev.includes(ruleId)
-        ? prev.filter((r) => r !== ruleId)
-        : [...prev, ruleId]
-    )
-  }, [endpoint])
-
-  const enableAllRules = useCallback(() => {
-    rulesSelectionRef.current = { endpoint, hasInitializedOrModifiedSelection: true }
-    const allRuleIds = rules.map((rule) => rule.id)
-    const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
-
-    setEnabledRules((prev) => {
-      const merged = new Set(prev)
-      allRuleIds.forEach((ruleId) => {
-        if (applicableRuleIds.has(ruleId)) {
-          merged.add(ruleId)
-        }
-      })
-      return Array.from(merged)
-    })
-  }, [diagramType, endpoint, rules])
-
-  const disableAllRules = useCallback(() => {
-    rulesSelectionRef.current = { endpoint, hasInitializedOrModifiedSelection: true }
-    const allRuleIds = rules.map((rule) => rule.id)
-    const applicableRuleIds = getApplicableRules(diagramType, allRuleIds)
-
-    setEnabledRules((prev) => prev.filter((ruleId) => !applicableRuleIds.has(ruleId)))
-  }, [diagramType, endpoint, rules])
 
   const handleJumpToLine = useCallback((lineNum: number) => {
     editorRef.current?.highlightLine(lineNum)
@@ -452,34 +135,7 @@ function HomeContent() {
 
   const diagramPreviewResetKey = code
 
-  const isConnected = connectionStatus === 'connected'
-  const {
-    isAvailable: rulesReadyForEndpoint,
-    isUnavailable: rulesUnavailableForEndpoint,
-  } = resolveRulesAvailabilityState(endpoint, rulesLoadedEndpoint, rulesUnavailableEndpoint)
-  const canRecheck = !hasParseError && !!code.trim() && !!endpoint && isConnected && !rulesLoading && (rulesReadyForEndpoint || rulesUnavailableForEndpoint) && !isAnalyzing
-
-  const resultsHasErrors = violations.some((violation) => violation.severity === 'error')
-
-  const renderResultsHeading = () => (
-    <div className="panel-heading" style={{ marginBottom: 0 }}>
-      ▦ Results{' '}
-      {violations.length > 0 && (
-        <span
-          style={{
-            background: resultsHasErrors ? 'var(--color-error)' : 'var(--color-warning)',
-            color: 'var(--color-bg-primary)',
-            padding: '0 6px',
-            fontSize: '12px',
-            borderRadius: '8px',
-            marginLeft: '4px',
-          }}
-        >
-          {violations.length}
-        </span>
-      )}
-    </div>
-  )
+  const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
 
   return (
       <div
@@ -491,285 +147,38 @@ function HomeContent() {
           background: 'var(--color-bg-primary)',
         }}
       >
-      {/* Header */}
-      <div
-        style={{
-          padding: '8px 16px',
-          borderBottom: '1px solid var(--color-accent-primary)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Image
-            src={remAvatar}
-            alt="rem-avatar mascot"
-            width={40}
-            height={40}
-            priority
-          />
-          <div>
-            <span
-              style={{
-                color: 'var(--color-accent-primary)',
-                fontWeight: 600,
-                fontSize: '16px',
-                marginRight: '8px',
-              }}
-            >
-              merm8-splash
-            </span>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-              Mermaid Linter Interface
-            </span>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            onClick={openApiConfigAndFocus}
-            style={headerControlButtonStyle}
-            onMouseEnter={handleHeaderControlMouseEnter}
-            onMouseLeave={handleHeaderControlMouseLeave}
-          >
-            ⚙ API
-          </button>
-          <button
-            onClick={() => setShowResetConfirmation(true)}
-            style={headerControlButtonStyle}
-            onMouseEnter={handleHeaderControlMouseEnter}
-            onMouseLeave={handleHeaderControlMouseLeave}
-          >
-            ↺ Reset
-          </button>
-        </div>
-      </div>
+      <HomeHeader
+        onOpenApiConfiguration={openApiConfigAndFocus}
+        onResetLayout={() => setShowResetConfirmation(true)}
+      />
 
-      {/* Main Content - Desktop Grid Layout */}
-      <div className="app-main" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <div
-          className="workspace-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `${prefs.leftPanelSize}% 4px 1fr`,
-            gridTemplateRows: `minmax(0, ${prefs.editorSize}%) 4px minmax(0, 1fr)`,
-            height: '100%',
-            width: '100%',
-            gap: 0,
-          }}
-        >
-            {/* Editor Panel - Top Left */}
-            <div className="workspace-pane" style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
-              <div className="workspace-pane-content" style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                <ErrorBoundary>
-                  <DiagramEditor ref={editorRef} value={code} onChange={setCode} />
-                </ErrorBoundary>
-              </div>
-            </div>
-
-            {/* Horizontal Divider - Spans All Columns */}
-            <div
-              className="workspace-divider"
-              style={{
-                gridColumn: '1 / 4',
-                gridRow: 2,
-                background: 'var(--color-border)',
-                cursor: 'row-resize',
-                transition: 'background 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.target as HTMLElement).style.background = 'var(--color-border)'
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                const startY = e.clientY
-                const gridContainer = e.currentTarget.parentElement
-                if (!gridContainer) return
-
-                const handleMouseMove = (moveEvent: MouseEvent) => {
-                  const delta = moveEvent.clientY - startY
-                  const containerHeight = gridContainer.clientHeight
-                  const newEditorSize = Math.max(30, Math.min(70, prefs.editorSize + (delta / containerHeight) * 100))
-                  savePrefs({ editorSize: Math.round(newEditorSize) })
-                }
-
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove)
-                  document.removeEventListener('mouseup', handleMouseUp)
-                  dragCleanupFnsRef.current.delete(handleMouseUp)
-                }
-
-                document.addEventListener('mousemove', handleMouseMove)
-                document.addEventListener('mouseup', handleMouseUp)
-                dragCleanupFnsRef.current.add(handleMouseUp)
-              }}
-            />
-
-            {/* Vertical Divider - Top Section Only */}
-            <div
-              className="workspace-divider"
-              style={{
-                gridColumn: 2,
-                gridRow: '1 / 2',
-                background: 'var(--color-border)',
-                cursor: 'col-resize',
-                transition: 'background 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                ;(e.target as HTMLElement).style.background = 'var(--color-accent-primary)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.target as HTMLElement).style.background = 'var(--color-border)'
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault()
-                const startX = e.clientX
-                const gridContainer = e.currentTarget.parentElement
-                if (!gridContainer) return
-
-                const handleMouseMove = (moveEvent: MouseEvent) => {
-                  const delta = moveEvent.clientX - startX
-                  const containerWidth = gridContainer.clientWidth
-                  const newLeftSize = Math.max(25, Math.min(75, prefs.leftPanelSize + (delta / containerWidth) * 100))
-                  savePrefs({ leftPanelSize: Math.round(newLeftSize) })
-                }
-
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove)
-                  document.removeEventListener('mouseup', handleMouseUp)
-                  dragCleanupFnsRef.current.delete(handleMouseUp)
-                }
-
-                document.addEventListener('mousemove', handleMouseMove)
-                document.addEventListener('mouseup', handleMouseUp)
-                dragCleanupFnsRef.current.add(handleMouseUp)
-              }}
-            />
-
-            {/* Preview Panel - Top Right */}
-            <div className="workspace-pane" style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
-              <div className="workspace-pane-content" style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-                <ErrorBoundary resetKey={diagramPreviewResetKey}>
-                  <DiagramPreview
-                    code={code}
-                    onParseStateChange={handleParseStateChange}
-                    useBeautifulRenderer={prefs.useBeautifulRenderer}
-                    onToggleBeautifulRenderer={(value) => savePrefs({ useBeautifulRenderer: value })}
-                    diagramColorMode={prefs.diagramPreviewMode}
-                    onToggleDiagramColorMode={(value) => savePrefs({ diagramPreviewMode: value })}
-                    onJumpToLine={handleJumpToLine}
-                    onExpandToFullscreen={() => setShowFullscreenDiagram(true)}
-                  />
-                </ErrorBoundary>
-              </div>
-            </div>
-
-            {/* Results Panel - Full Width Bottom */}
-            <div className="workspace-results" style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
-              <div className="workspace-results-content" style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
-                  {renderResultsHeading()}
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <ErrorBoundary>
-                      <ExportDropdown
-                        results={violations}
-                        code={code}
-                        endpoint={endpoint}
-                        enabledRules={enabledRules}
-                        rulesMetadata={rules}
-                      />
-                    </ErrorBoundary>
-                    <button
-                      className="btn"
-                      style={{
-                        fontSize: '12px',
-                        padding: '4px 12px',
-                        ...(showMetrics ? { background: 'var(--color-accent-primary)', color: '#000' } : {}),
-                      }}
-                      onClick={() => setShowMetrics(!showMetrics)}
-                      title="Toggle diagram metrics"
-                      disabled={!metrics}
-                    >
-                      📊 Metrics
-                    </button>
-                    <button
-                      className="btn"
-                      style={{ fontSize: '12px', padding: '4px 12px' }}
-                      onClick={() => setShowRulesModal(true)}
-                      title="Configure rules"
-                    >
-                      ⊞ Rules
-                    </button>
-                    <button
-                      className="btn"
-                      style={{ fontSize: '12px', padding: '4px 12px' }}
-                      onClick={handleRecheck}
-                      disabled={!canRecheck}
-                      title="Re-run analysis"
-                    >
-                      ↺ Check
-                    </button>
-                  </div>
-                </div>
-                <div style={{ flex: 1, overflow: 'auto' }}>
-                  <ErrorBoundary>
-                    <ResultsPanel
-                      ref={resultsRef}
-                      results={violations}
-                      isAnalyzing={isAnalyzing}
-                      analyzeError={analyzeError}
-                      analysisHints={analysisHints}
-                      lintSupported={lintSupported}
-                      parseError={parseErrorDetail}
-                      onJumpToLine={handleJumpToLine}
-                      showInternalHeader={false}
-                    />
-                  </ErrorBoundary>
-                </div>
-                {showMetrics && metrics && (
-                  <div
-                    style={{
-                      marginTop: '8px',
-                      padding: '12px',
-                      background: 'var(--color-bg-secondary)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: 'var(--color-text-primary)',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      Diagram Metrics
-                    </div>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                        gap: '8px',
-                      }}
-                    >
-                      <MetricItem label="Diagram Type" value={metrics.diagramType} />
-                      <MetricItem label="Nodes" value={metrics.nodeCount} />
-                      <MetricItem label="Edges" value={metrics.edgeCount} />
-                      <MetricItem label="Disconnected" value={metrics.disconnectedNodeCount} />
-                      <MetricItem label="Duplicates" value={metrics.duplicateNodeCount} />
-                      <MetricItem label="Max Fan-in" value={metrics.maxFanin} />
-                      <MetricItem label="Max Fan-out" value={metrics.maxFanout} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-        </div>
-      </div>
+      <WorkspaceArea
+        prefs={prefs}
+        savePrefs={savePrefs}
+        code={code}
+        onCodeChange={setCode}
+        editorRef={editorRef}
+        resultsRef={resultsRef}
+        previewResetKey={diagramPreviewResetKey}
+        onParseStateChange={handleParseStateChange}
+        onJumpToLine={handleJumpToLine}
+        onExpandToFullscreen={() => setShowFullscreenDiagram(true)}
+        violations={violations}
+        endpoint={endpoint}
+        enabledRules={enabledRules}
+        rules={rules}
+        isAnalyzing={isAnalyzing}
+        analyzeError={analyzeError}
+        analysisHints={analysisHints}
+        lintSupported={lintSupported}
+        parseErrorDetail={parseErrorDetail}
+        metrics={metrics}
+        showMetrics={showMetrics}
+        canRecheck={canRecheck}
+        onToggleMetrics={() => setShowMetrics((shown) => !shown)}
+        onOpenRules={() => setShowRulesModal(true)}
+        onRecheck={handleRecheck}
+      />
 
       {/* Status Bar */}
       <ErrorBoundary>
@@ -791,164 +200,44 @@ function HomeContent() {
         />
       </ErrorBoundary>
 
-      {/* Reset Confirmation Dialog */}
-      {showResetConfirmation && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowResetConfirmation(false)}
-        >
-          <div
-            style={{
-              background: 'var(--color-bg-primary)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              padding: '24px',
-              minWidth: '320px',
-              maxWidth: '400px',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2
-              style={{
-                margin: '0 0 8px 0',
-                fontSize: '16px',
-                fontWeight: 600,
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              Reset Panel Sizes?
-            </h2>
-            <p
-              style={{
-                margin: '0 0 24px 0',
-                fontSize: '14px',
-                color: 'var(--color-text-secondary)',
-                lineHeight: '1.5',
-              }}
-            >
-              This will restore all panels to their default layout. Your diagram code and rules selection will not be affected.
-            </p>
-            <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'flex-end',
-              }}
-            >
-              <button
-                onClick={() => setShowResetConfirmation(false)}
-                style={{
-                  padding: '6px 16px',
-                  fontSize: '12px',
-                  background: 'transparent',
-                  color: 'var(--color-text-secondary)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  ;(e.target as HTMLElement).style.background = 'var(--color-bg-secondary)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.target as HTMLElement).style.background = 'transparent'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReset}
-                style={{
-                  padding: '6px 16px',
-                  fontSize: '12px',
-                  background: 'var(--color-accent-primary)',
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  ;(e.target as HTMLElement).style.opacity = '0.9'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.target as HTMLElement).style.opacity = '1'
-                }}
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Rules Modal */}
-      <Modal
-        isOpen={showApiConfigModal}
-        onClose={() => setShowApiConfigModal(false)}
-        title="API Configuration"
-      >
-        {showApiConfigModal && (
-          <ErrorBoundary>
-            <ApiConfigPanel
-              ref={apiConfigRef}
-              endpoint={endpoint}
-              onEndpointChange={setEndpoint}
-              connectionStatus={connectionStatus}
-              onTestConnection={handleTestConnection}
-              onSave={handleSaveEndpoint}
-              configSource={configSource}
-              statusMessage={statusMessage}
-            />
-          </ErrorBoundary>
-        )}
-      </Modal>
-
-      <Modal
-        isOpen={showRulesModal}
-        onClose={() => setShowRulesModal(false)}
-        title="Rules Configuration"
-        maxHeight="80vh"
-      >
-        <RulesPanel
-          rules={rules}
-          enabledRules={enabledRules}
-          onToggleRule={toggleRule}
-          onEnableAll={enableAllRules}
-          onDisableAll={disableAllRules}
-          isLoading={rulesLoading}
-          isUnavailable={rulesUnavailableEndpoint === endpoint}
-          diagramType={diagramType}
-        />
-      </Modal>
-
-      {/* Fullscreen Diagram Modal */}
-      <Modal
-        isOpen={showFullscreenDiagram}
-        onClose={() => setShowFullscreenDiagram(false)}
-        title="Diagram Preview"
-        maxWidth="95vw"
-        maxHeight="95vh"
-      >
-        <div style={{ height: '80vh' }}>
-          <DiagramPreview
-            code={code}
-            parseErrorMessage={parseErrorDetail}
-            useBeautifulRenderer={prefs.useBeautifulRenderer}
-            diagramColorMode={prefs.diagramPreviewMode}
-          />
-        </div>
-      </Modal>
+      <HomeDialogs
+        reset={{
+          isOpen: showResetConfirmation,
+          onClose: () => setShowResetConfirmation(false),
+          onReset: handleReset,
+        }}
+        api={{
+          isOpen: showApiConfigModal,
+          onClose: () => setShowApiConfigModal(false),
+          panelRef: apiConfigRef,
+          endpoint,
+          onEndpointChange: setEndpoint,
+          connectionStatus,
+          onTestConnection: handleTestConnection,
+          onSave: handleSaveEndpoint,
+          configSource,
+          statusMessage,
+        }}
+        rules={{
+          isOpen: showRulesModal,
+          onClose: () => setShowRulesModal(false),
+          items: rules,
+          enabledRuleIds: enabledRules,
+          onToggle: toggleRule,
+          onEnableAll: enableAllRules,
+          onDisableAll: disableAllRules,
+          isLoading: rulesLoading,
+          isUnavailable: rulesUnavailableEndpoint === endpoint,
+          diagramType,
+        }}
+        fullscreen={{
+          isOpen: showFullscreenDiagram,
+          onClose: () => setShowFullscreenDiagram(false),
+          code,
+          parseErrorDetail,
+          preferences: prefs,
+        }}
+      />
       </div>
   )
 }
