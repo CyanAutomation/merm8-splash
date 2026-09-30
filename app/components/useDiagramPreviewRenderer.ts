@@ -212,7 +212,7 @@ export function useDiagramPreviewRenderer({
         removeMermaidFallbackNodes(lastRenderIdRef.current ?? undefined)
         if (containerRef.current) containerRef.current.innerHTML = ''
       } finally {
-        if (!cancelled) setIsRendering(false)
+        if (!cancelled && renderSequenceRef.current === renderSequence) setIsRendering(false)
       }
     }
 
