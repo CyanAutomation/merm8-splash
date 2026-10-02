@@ -8,7 +8,11 @@ import { buildAnalyzeRequest } from '../lib/api'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-function loadApiModule({ fetchImpl = globalThis.fetch } = {}) {
+function loadApiModule({
+  fetchImpl = globalThis.fetch,
+  windowImpl,
+  localStorageImpl,
+} = {}) {
   const tsModuleCache = new Map()
 
   function loadTranspiledTsModule(sourcePath) {
@@ -56,7 +60,8 @@ function loadApiModule({ fetchImpl = globalThis.fetch } = {}) {
       clearTimeout,
       URL,
       URLSearchParams,
-      localStorage: undefined,
+      window: windowImpl,
+      localStorage: localStorageImpl,
     })
 
     script.runInContext(context)
@@ -117,6 +122,26 @@ it('uses the hosted Worker as the fallback API endpoint', () => {
   const { resolveApiEndpoint } = loadApiModule()
 
   expect(resolveApiEndpoint()).toBe('https://merm8.scheimann.workers.dev')
+})
+
+it('prefers a valid URL parameter over stored and environment endpoints', () => {
+  const originalEnvironmentEndpoint = process.env.NEXT_PUBLIC_MERM8_API_URL
+  process.env.NEXT_PUBLIC_MERM8_API_URL = 'https://environment.example.test'
+
+  try {
+    const { resolveApiEndpoint } = loadApiModule({
+      windowImpl: { location: { search: '?api=https%3A%2F%2Fquery.example.test' } },
+      localStorageImpl: { getItem: () => 'https://stored.example.test' },
+    })
+
+    expect(resolveApiEndpoint()).toBe('https://query.example.test')
+  } finally {
+    if (originalEnvironmentEndpoint === undefined) {
+      delete process.env.NEXT_PUBLIC_MERM8_API_URL
+    } else {
+      process.env.NEXT_PUBLIC_MERM8_API_URL = originalEnvironmentEndpoint
+    }
+  }
 })
 
 it('builds a server-default request when rules metadata is malformed', () => {
@@ -642,6 +667,46 @@ it('fetchRules filters malformed rule entries and warns with drop summary', asyn
   } finally {
     console.warn = originalWarn
   }
+})
+
+it('fetchRules normalizes optional rule metadata and drops malformed options', async () => {
+  const { fetchImpl } = mockJsonFetch({
+    rules: [{
+      id: 'configurable-rule',
+      description: 'A configurable rule',
+      severity: 'warning',
+      state: 'implemented',
+      availability: 'available',
+      'default-config': { limit: 4 },
+      'configurable-options': [
+        null,
+        { type: 'number', description: 'No name' },
+        { name: 'limit', type: 'number', description: 'Maximum items', constraints: '1..10' },
+        { name: 'label' },
+      ],
+      'diagram-examples': ['graph TD; A-->B', 42, null],
+    }],
+  })
+  const { fetchRules } = loadApiModule({ fetchImpl })
+
+  const result = await fetchRules('https://api.example.com')
+
+  expect(result).toEqual({
+    rules: [{
+      id: 'configurable-rule',
+      description: 'A configurable rule',
+      severity: 'warning',
+      state: 'implemented',
+      availability: 'available',
+      defaultConfig: { limit: 4 },
+      configurableOptions: [
+        { name: 'limit', type: 'number', description: 'Maximum items', constraints: '1..10' },
+        { name: 'label', type: '', description: '', constraints: '' },
+      ],
+      diagramExamples: ['graph TD; A-->B'],
+    }],
+    status: 'success',
+  })
 })
 
 describe('fetchHealthz response validation', () => {
