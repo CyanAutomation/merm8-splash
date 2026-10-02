@@ -175,14 +175,17 @@ export function deriveDisplayName(ruleId: string): string {
     .join(' ')
 }
 
-function normalizeViolation(rawViolation: unknown): Violation | null {
-  if (!rawViolation || typeof rawViolation !== 'object' || Array.isArray(rawViolation)) {
-    return null
-  }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
 
-  const violation = rawViolation as Record<string, unknown>
-  const rule_id = typeof violation.rule_id === 'string' ? violation.rule_id : violation['rule-id']
-  const { severity, message, node_id, line } = violation
+function normalizeViolation(rawViolation: unknown): Violation | null {
+  if (!isRecord(rawViolation)) return null
+
+  const rule_id = typeof rawViolation.rule_id === 'string'
+    ? rawViolation.rule_id
+    : rawViolation['rule-id']
+  const { severity, message, node_id, line } = rawViolation
 
   if (typeof rule_id !== 'string') return null
   if (!isSeverity(severity)) return null
@@ -205,66 +208,73 @@ function normalizeViolation(rawViolation: unknown): Violation | null {
   return normalized
 }
 
-function normalizeRule(raw: unknown): Rule | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return null
+type ConfigurableRuleOption = NonNullable<Rule['configurableOptions']>[number]
+
+function normalizeConfigurableOptions(rawOptions: unknown): ConfigurableRuleOption[] | undefined {
+  if (!Array.isArray(rawOptions)) return undefined
+
+  return rawOptions.flatMap((option) => {
+    if (!isRecord(option)) return []
+
+    const name = typeof option.name === 'string' ? option.name : ''
+    if (!name) return []
+
+    return [{
+      name,
+      type: typeof option.type === 'string' ? option.type : '',
+      description: typeof option.description === 'string' ? option.description : '',
+      constraints: typeof option.constraints === 'string' ? option.constraints : '',
+    }]
+  })
+}
+
+function normalizeRuleState(value: unknown): Rule['state'] {
+  return value === 'implemented' || value === 'planned' ? value : undefined
+}
+
+type ValidRulePayload = Record<string, unknown> & Pick<Rule, 'id' | 'description' | 'severity'>
+
+function isValidRulePayload(raw: unknown): raw is ValidRulePayload {
+  return isRecord(raw) &&
+    typeof raw.id === 'string' &&
+    typeof raw.description === 'string' &&
+    isSeverity(raw.severity)
+}
+
+function normalizeRuleMetadata(raw: Record<string, unknown>): Partial<Omit<Rule, 'id' | 'description' | 'severity'>> {
+  const metadata: Partial<Omit<Rule, 'id' | 'description' | 'severity'>> = {}
+  const state = normalizeRuleState(raw.state)
+  if (state) metadata.state = state
+
+  if (typeof raw.availability === 'string') {
+    metadata.availability = raw.availability
   }
 
-  const rule = raw as Record<string, unknown>
-  const { id, description, severity, state, availability } = rule
+  const defaultConfig = raw['default-config']
+  if (isRecord(defaultConfig)) metadata.defaultConfig = defaultConfig
 
-  if (typeof id !== 'string') return null
-  if (typeof description !== 'string') return null
-  if (!isSeverity(severity)) return null
+  const configurableOptions = normalizeConfigurableOptions(raw['configurable-options'])
+  if (configurableOptions) metadata.configurableOptions = configurableOptions
 
-  const normalized: Rule = {
-    id,
-    description,
-    severity,
-  }
-
-  // Optional state field (implemented | planned)
-  if (state === 'implemented' || state === 'planned') {
-    normalized.state = state
-  }
-
-  // Optional availability string (typically for planned rules)
-  if (typeof availability === 'string') {
-    normalized.availability = availability
-  }
-
-  // Map default-config to defaultConfig
-  const defaultConfig = (rule as Record<string, unknown>)['default-config']
-  if (defaultConfig && typeof defaultConfig === 'object' && !Array.isArray(defaultConfig)) {
-    normalized.defaultConfig = defaultConfig as Record<string, unknown>
-  }
-
-  // Map configurable-options to configurableOptions
-  const configurableOptions = (rule as Record<string, unknown>)['configurable-options']
-  if (Array.isArray(configurableOptions)) {
-    normalized.configurableOptions = configurableOptions
-      .filter(
-        (opt): opt is Record<string, unknown> =>
-          opt !== null && typeof opt === 'object' && !Array.isArray(opt)
-      )
-      .map((opt) => ({
-        name: typeof opt.name === 'string' ? opt.name : '',
-        type: typeof opt.type === 'string' ? opt.type : '',
-        description: typeof opt.description === 'string' ? opt.description : '',
-        constraints: typeof opt.constraints === 'string' ? opt.constraints : '',
-      }))
-      .filter((opt) => opt.name) // Only keep options with valid names
-  }
-
-  // Map diagram-examples to diagramExamples
-  const diagramExamples = (rule as Record<string, unknown>)['diagram-examples']
+  const diagramExamples = raw['diagram-examples']
   if (Array.isArray(diagramExamples)) {
-    normalized.diagramExamples = diagramExamples.filter(
+    metadata.diagramExamples = diagramExamples.filter(
       (ex): ex is string => typeof ex === 'string'
     )
   }
 
-  return normalized
+  return metadata
+}
+
+function normalizeRule(raw: unknown): Rule | null {
+  if (!isValidRulePayload(raw)) return null
+
+  return {
+    id: raw.id,
+    description: raw.description,
+    severity: raw.severity,
+    ...normalizeRuleMetadata(raw),
+  }
 }
 
 function normalizeAnalyzeHints(rawHints: unknown): AnalyzeHint[] | undefined {
@@ -278,11 +288,9 @@ function normalizeAnalyzeHints(rawHints: unknown): AnalyzeHint[] | undefined {
 }
 
 function normalizeNumericMap(rawMap: unknown): Record<string, number> {
-  if (!rawMap || typeof rawMap !== 'object' || Array.isArray(rawMap)) {
-    return {}
-  }
+  if (!isRecord(rawMap)) return {}
 
-  return Object.entries(rawMap as Record<string, unknown>).reduce<Record<string, number>>(
+  return Object.entries(rawMap).reduce<Record<string, number>>(
     (acc, [key, value]) => {
       if (typeof value === 'number' && Number.isFinite(value)) {
         acc[key] = value
@@ -305,38 +313,34 @@ function normalizeNumericMap(rawMap: unknown): Record<string, number> {
   )
 }
 
-function normalizeMetrics(rawMetrics: unknown): AnalysisMetrics | undefined {
-  if (!rawMetrics || typeof rawMetrics !== 'object' || Array.isArray(rawMetrics)) {
-    return undefined
-  }
-
-  const m = rawMetrics as Record<string, unknown>
-  const rawIssueCounts = m['issue-counts']
-
-  let issueCounts: AnalysisMetrics['issueCounts'] = { bySeverity: {}, byRule: {} }
-  if (rawIssueCounts && typeof rawIssueCounts === 'object' && !Array.isArray(rawIssueCounts)) {
-    const ic = rawIssueCounts as Record<string, unknown>
-    const bySeverity = ic['by-severity']
-    const byRule = ic['by-rule']
-    issueCounts = {
-      bySeverity: normalizeNumericMap(bySeverity),
-      byRule: normalizeNumericMap(byRule),
-    }
-  }
+function normalizeIssueCounts(rawIssueCounts: unknown): AnalysisMetrics['issueCounts'] {
+  if (!isRecord(rawIssueCounts)) return { bySeverity: {}, byRule: {} }
 
   return {
-    nodeCount: typeof m['node-count'] === 'number' ? (m['node-count'] as number) : 0,
-    edgeCount: typeof m['edge-count'] === 'number' ? (m['edge-count'] as number) : 0,
-    disconnectedNodeCount:
-      typeof m['disconnected-node-count'] === 'number'
-        ? (m['disconnected-node-count'] as number)
-        : 0,
-    duplicateNodeCount:
-      typeof m['duplicate-node-count'] === 'number' ? (m['duplicate-node-count'] as number) : 0,
-    maxFanin: typeof m['max-fanin'] === 'number' ? (m['max-fanin'] as number) : 0,
-    maxFanout: typeof m['max-fanout'] === 'number' ? (m['max-fanout'] as number) : 0,
-    diagramType: typeof m['diagram-type'] === 'string' ? (m['diagram-type'] as string) : 'unknown',
-    issueCounts,
+    bySeverity: normalizeNumericMap(rawIssueCounts['by-severity']),
+    byRule: normalizeNumericMap(rawIssueCounts['by-rule']),
+  }
+}
+
+function readMetricNumber(metrics: Record<string, unknown>, key: string): number {
+  const value = metrics[key]
+  return typeof value === 'number' ? value : 0
+}
+
+function normalizeMetrics(rawMetrics: unknown): AnalysisMetrics | undefined {
+  if (!isRecord(rawMetrics)) return undefined
+
+  return {
+    nodeCount: readMetricNumber(rawMetrics, 'node-count'),
+    edgeCount: readMetricNumber(rawMetrics, 'edge-count'),
+    disconnectedNodeCount: readMetricNumber(rawMetrics, 'disconnected-node-count'),
+    duplicateNodeCount: readMetricNumber(rawMetrics, 'duplicate-node-count'),
+    maxFanin: readMetricNumber(rawMetrics, 'max-fanin'),
+    maxFanout: readMetricNumber(rawMetrics, 'max-fanout'),
+    diagramType: typeof rawMetrics['diagram-type'] === 'string'
+      ? rawMetrics['diagram-type']
+      : 'unknown',
+    issueCounts: normalizeIssueCounts(rawMetrics['issue-counts']),
   }
 }
 
@@ -390,31 +394,45 @@ type OptionalAnalyzeResponseFields = Pick<
   'valid' | 'lintSupported' | 'syntaxError' | 'requestId' | 'timestamp'
 >
 
+function normalizeOptionalBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
+function normalizeOptionalStringOrNull(value: unknown): string | null | undefined {
+  return typeof value === 'string' || value === null ? value : undefined
+}
+
+function normalizeOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined
+}
+
+function assignOptionalAnalyzeField<K extends keyof OptionalAnalyzeResponseFields>(
+  fields: OptionalAnalyzeResponseFields,
+  data: Record<string, unknown>,
+  sourceName: string,
+  targetName: K,
+  normalize: (value: unknown) => OptionalAnalyzeResponseFields[K]
+): void {
+  if (sourceName in data) {
+    Object.assign(fields, { [targetName]: normalize(data[sourceName]) })
+  }
+}
+
 function normalizeOptionalAnalyzeFields(
   data: Record<string, unknown> | null
 ): OptionalAnalyzeResponseFields {
-  const fields: OptionalAnalyzeResponseFields = {}
-  if (!data) return fields
+  if (!data) return {}
 
-  if ('valid' in data) {
-    fields.valid = typeof data.valid === 'boolean' ? data.valid : undefined
-  }
-  if ('lint-supported' in data) {
-    const lintSupported = data['lint-supported']
-    fields.lintSupported = typeof lintSupported === 'boolean' ? lintSupported : undefined
-  }
-  if ('syntax-error' in data) {
-    const syntaxError = data['syntax-error']
-    fields.syntaxError = typeof syntaxError === 'string' || syntaxError === null
-      ? syntaxError
-      : undefined
-  }
-  if ('request-id' in data) {
-    fields.requestId = typeof data['request-id'] === 'string' ? data['request-id'] : undefined
-  }
-  if ('timestamp' in data) {
-    fields.timestamp = typeof data.timestamp === 'number' ? data.timestamp : undefined
-  }
+  const fields: OptionalAnalyzeResponseFields = {}
+  assignOptionalAnalyzeField(fields, data, 'valid', 'valid', normalizeOptionalBoolean)
+  assignOptionalAnalyzeField(fields, data, 'lint-supported', 'lintSupported', normalizeOptionalBoolean)
+  assignOptionalAnalyzeField(fields, data, 'syntax-error', 'syntaxError', normalizeOptionalStringOrNull)
+  assignOptionalAnalyzeField(fields, data, 'request-id', 'requestId', normalizeOptionalString)
+  assignOptionalAnalyzeField(fields, data, 'timestamp', 'timestamp', normalizeOptionalNumber)
 
   return fields
 }
@@ -429,6 +447,34 @@ interface AnalyzeResponseNormalizationContext {
   normalizedResults: Violation[]
 }
 
+function getAnalyzeResultWarnings(context: AnalyzeResponseNormalizationContext): string[] {
+  const warnings: string[] = []
+  if (!context.data) warnings.push('missing `data` payload')
+  if (!Array.isArray(context.rawResults)) warnings.push('non-array `results`/`issues`')
+  if (
+    Array.isArray(context.rawResults) &&
+    context.normalizedResults.length !== context.rawResults.length
+  ) {
+    warnings.push('invalid entries in `results`/`issues`')
+  }
+  return warnings
+}
+
+function getAnalyzeDiagramTypeWarnings(context: AnalyzeResponseNormalizationContext): string[] {
+  return typeof context.rawDiagramType !== 'string' && !context.diagramTypeFromMetrics
+    ? ['missing/invalid `diagram_type`/`metrics.diagram-type`']
+    : []
+}
+
+function getAnalyzeHintWarnings(context: AnalyzeResponseNormalizationContext): string[] {
+  if (context.rawHints === undefined) return []
+  if (!Array.isArray(context.rawHints)) return ['non-array `hints`']
+  if (context.normalizedHints && context.normalizedHints.length !== context.rawHints.length) {
+    return ['invalid entries in `hints`']
+  }
+  return []
+}
+
 function warnForMalformedAnalyzeResponse({
   data,
   rawResults,
@@ -440,28 +486,25 @@ function warnForMalformedAnalyzeResponse({
 }: AnalyzeResponseNormalizationContext): void {
   if (process.env.NODE_ENV === 'production') return
 
-  const malformedReasons: string[] = []
-  if (!data) malformedReasons.push('missing `data` payload')
-  if (!Array.isArray(rawResults)) malformedReasons.push('non-array `results`/`issues`')
-  if (Array.isArray(rawResults) && normalizedResults.length !== rawResults.length) {
-    malformedReasons.push('invalid entries in `results`/`issues`')
+  const context = {
+    data,
+    rawResults,
+    rawDiagramType,
+    diagramTypeFromMetrics,
+    rawHints,
+    normalizedHints,
+    normalizedResults,
   }
-  if (typeof rawDiagramType !== 'string' && !diagramTypeFromMetrics) {
-    malformedReasons.push('missing/invalid `diagram_type`/`metrics.diagram-type`')
-  }
-  if (rawHints !== undefined) {
-    if (!Array.isArray(rawHints)) {
-      malformedReasons.push('non-array `hints`')
-    } else if (normalizedHints && normalizedHints.length !== rawHints.length) {
-      malformedReasons.push('invalid entries in `hints`')
-    }
-  }
+  const malformedReasons = [
+    ...getAnalyzeResultWarnings(context),
+    ...getAnalyzeDiagramTypeWarnings(context),
+    ...getAnalyzeHintWarnings(context),
+  ]
 
-  if (malformedReasons.length > 0) {
-    console.warn(
-      `[api.analyzeCode] Normalized malformed analyze response: ${malformedReasons.join(', ')}`
-    )
-  }
+  if (malformedReasons.length === 0) return
+  console.warn(
+    `[api.analyzeCode] Normalized malformed analyze response: ${malformedReasons.join(', ')}`
+  )
 }
 
 function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
@@ -534,70 +577,93 @@ interface NormalizedRulesResponse {
   status: RulesFetchStatus
 }
 
-function normalizeRulesResponse(rawData: unknown): NormalizedRulesResponse {
-  const data = rawData && typeof rawData === 'object' && !Array.isArray(rawData) ? rawData : null
-  const rawRules = data && 'rules' in data ? (data as { rules?: unknown }).rules : undefined
+interface RuleDropReasonCounts {
+  nonObject: number
+  missingId: number
+  missingDescription: number
+  invalidSeverity: number
+  planned: number
+}
 
-  if (Array.isArray(rawRules)) {
-    const reasonCounts = {
+function countInvalidRuleReasons(rawRule: unknown, counts: RuleDropReasonCounts): void {
+  if (!isRecord(rawRule)) {
+    counts.nonObject += 1
+    return
+  }
+
+  if (typeof rawRule.id !== 'string') counts.missingId += 1
+  if (typeof rawRule.description !== 'string') counts.missingDescription += 1
+  if (!isSeverity(rawRule.severity)) counts.invalidSeverity += 1
+}
+
+function normalizeRuleEntry(rawRule: unknown, counts: RuleDropReasonCounts): Rule | null {
+  const rule = normalizeRule(rawRule)
+  if (!rule) {
+    countInvalidRuleReasons(rawRule, counts)
+    return null
+  }
+
+  if (rule.state === 'planned') {
+    counts.planned += 1
+    return null
+  }
+
+  return rule
+}
+
+function summarizeRuleDropReasons(counts: RuleDropReasonCounts): string {
+  return Object.entries(counts)
+    .filter(([, count]) => count > 0)
+    .map(([reason, count]) => `${reason}=${count}`)
+    .join(', ')
+}
+
+function warnForDroppedRules(
+  rawRules: unknown[],
+  normalizedRules: Rule[],
+  reasonCounts: RuleDropReasonCounts
+): void {
+  if (process.env.NODE_ENV === 'production' || normalizedRules.length === rawRules.length) return
+
+  const droppedCount = rawRules.length - normalizedRules.length
+  const reasonSummary = summarizeRuleDropReasons(reasonCounts)
+  console.warn(
+    `[api.fetchRules] Dropped ${droppedCount} invalid rule entr${droppedCount === 1 ? 'y' : 'ies'} during normalization${reasonSummary ? ` (${reasonSummary})` : ''}`
+  )
+}
+
+function getRawRulesArray(rawData: unknown): { data: Record<string, unknown> | null; rules: unknown[] | null } {
+  const data = isRecord(rawData) ? rawData : null
+  const rawRules = data && 'rules' in data ? data.rules : undefined
+  return { data, rules: Array.isArray(rawRules) ? rawRules : null }
+}
+
+function warnForMalformedRules(data: Record<string, unknown> | null): void {
+  if (process.env.NODE_ENV === 'production') return
+
+  const reason = data ? 'non-array `rules`' : 'missing object `data` payload'
+  console.warn(`[api.fetchRules] Normalized malformed rules response: ${reason}`)
+}
+
+function normalizeRulesResponse(rawData: unknown): NormalizedRulesResponse {
+  const { data, rules: rawRules } = getRawRulesArray(rawData)
+  if (rawRules) {
+    const reasonCounts: RuleDropReasonCounts = {
       nonObject: 0,
       missingId: 0,
       missingDescription: 0,
       invalidSeverity: 0,
       planned: 0,
     }
-
     const normalizedRules = rawRules
-      .map((rawRule) => {
-        const normalizedRule = normalizeRule(rawRule)
-        if (!normalizedRule) {
-          if (!rawRule || typeof rawRule !== 'object' || Array.isArray(rawRule)) {
-            reasonCounts.nonObject += 1
-            return null
-          }
-
-          const rule = rawRule as Record<string, unknown>
-          if (typeof rule.id !== 'string') reasonCounts.missingId += 1
-          if (typeof rule.description !== 'string') reasonCounts.missingDescription += 1
-          if (!isSeverity(rule.severity)) {
-            reasonCounts.invalidSeverity += 1
-          }
-
-          return null
-        }
-
-        // Filter out planned rules — they are not yet available for linting
-        if (normalizedRule.state === 'planned') {
-          reasonCounts.planned += 1
-          return null
-        }
-
-        return normalizedRule
-      })
+      .map((rawRule) => normalizeRuleEntry(rawRule, reasonCounts))
       .filter((rule): rule is Rule => rule !== null)
 
-    if (process.env.NODE_ENV !== 'production' && normalizedRules.length !== rawRules.length) {
-      const droppedCount = rawRules.length - normalizedRules.length
-      const reasonSummary = Object.entries(reasonCounts)
-        .filter(([, count]) => count > 0)
-        .map(([reason, count]) => `${reason}=${count}`)
-        .join(', ')
-      console.warn(
-        `[api.fetchRules] Dropped ${droppedCount} invalid rule entr${droppedCount === 1 ? 'y' : 'ies'} during normalization${reasonSummary ? ` (${reasonSummary})` : ''}`
-      )
-    }
-
-    return {
-      rules: normalizedRules,
-      status: 'success',
-    }
+    warnForDroppedRules(rawRules, normalizedRules, reasonCounts)
+    return { rules: normalizedRules, status: 'success' }
   }
 
-  if (process.env.NODE_ENV !== 'production') {
-    const reason = !data ? 'missing object `data` payload' : 'non-array `rules`'
-    console.warn(`[api.fetchRules] Normalized malformed rules response: ${reason}`)
-  }
-
+  warnForMalformedRules(data)
   return {
     rules: [],
     status: 'malformed_payload',
@@ -618,46 +684,38 @@ function normalizeHost(hostname: string): string {
   return decoded.split('%')[0]
 }
 
-function parseIpv4(host: string): number[] | null {
-  const parts = host.split('.')
-  if (parts.length < 1 || parts.length > 4) return null
-  if (!parts.every((part) => /^\d+$/.test(part))) return null
+interface Ipv4PartFormat {
+  maxima: number[]
+  weights: number[]
+}
 
-  const values = parts.map((part) => Number(part))
+const IPV4_PART_FORMATS: Record<number, Ipv4PartFormat> = {
+  1: { maxima: [0xffff_ffff], weights: [1] },
+  2: { maxima: [0xff, 0xff_ff_ff], weights: [0x01_00_00_00, 1] },
+  3: { maxima: [0xff, 0xff, 0xff_ff], weights: [0x01_00_00_00, 0x01_00_00, 1] },
+  4: { maxima: [0xff, 0xff, 0xff, 0xff], weights: [0x01_00_00_00, 0x01_00_00, 0x01_00, 1] },
+}
 
-  const maxValuesByLength: Record<number, number[]> = {
-    1: [0xffff_ffff],
-    2: [0xff, 0xff_ff_ff],
-    3: [0xff, 0xff, 0xff_ff],
-    4: [0xff, 0xff, 0xff, 0xff],
-  }
+function parseIpv4Parts(parts: string[]): number[] | null {
+  const format = IPV4_PART_FORMATS[parts.length]
+  if (!format || parts.some((part) => !/^\d+$/.test(part))) return null
 
-  const maxValues = maxValuesByLength[parts.length]
-  if (!maxValues) return null
+  const values = parts.map(Number)
+  if (values.some((value, index) => value > format.maxima[index])) return null
 
-  if (values.some((value, index) => value < 0 || value > maxValues[index])) {
-    return null
-  }
+  const address = values.reduce((total, value, index) => total + value * format.weights[index], 0)
+  if (address > 0xffff_ffff) return null
 
-  const ipv4AsInt =
-    parts.length === 1
-      ? values[0]
-      : parts.length === 2
-        ? values[0] * 0x01_00_00_00 + values[1]
-        : parts.length === 3
-          ? values[0] * 0x01_00_00_00 + values[1] * 0x01_00_00 + values[2]
-          : values[0] * 0x01_00_00_00 + values[1] * 0x01_00_00 + values[2] * 0x01_00 + values[3]
-
-  if (ipv4AsInt < 0 || ipv4AsInt > 0xffff_ffff) return null
-
-  const octets = [
-    (ipv4AsInt >>> 24) & 0xff,
-    (ipv4AsInt >>> 16) & 0xff,
-    (ipv4AsInt >>> 8) & 0xff,
-    ipv4AsInt & 0xff,
+  return [
+    (address >>> 24) & 0xff,
+    (address >>> 16) & 0xff,
+    (address >>> 8) & 0xff,
+    address & 0xff,
   ]
+}
 
-  return octets
+function parseIpv4(host: string): number[] | null {
+  return parseIpv4Parts(host.split('.'))
 }
 
 function isPrivateOrLoopbackIpv4(host: string): boolean {
@@ -722,46 +780,72 @@ function isPrivateOrLoopbackIpv4Octets(octets: number[]): boolean {
   return NON_PUBLIC_IPV4_RANGES.some((range) => ipv4Int >= range.start && ipv4Int <= range.end)
 }
 
-function parseIpv6ToBigInt(host: string): bigint | null {
-  const IPV6_SEGMENT_BITS = BigInt(16)
-  const BIGINT_ZERO = BigInt(0)
-  let normalizedHost = host.toLowerCase()
+function expandEmbeddedIpv4(host: string): string | null {
+  if (!host.includes('.')) return host
 
-  if (normalizedHost.includes('.')) {
-    const lastColonIndex = normalizedHost.lastIndexOf(':')
-    if (lastColonIndex === -1) return null
+  const lastColonIndex = host.lastIndexOf(':')
+  if (lastColonIndex === -1) return null
 
-    const embeddedIpv4 = normalizedHost.slice(lastColonIndex + 1)
-    const octets = parseIpv4(embeddedIpv4)
-    if (!octets) return null
+  const octets = parseIpv4(host.slice(lastColonIndex + 1))
+  if (!octets) return null
 
-    const highWord = ((octets[0] << 8) | octets[1]).toString(16)
-    const lowWord = ((octets[2] << 8) | octets[3]).toString(16)
-    normalizedHost = `${normalizedHost.slice(0, lastColonIndex)}:${highWord}:${lowWord}`
+  const highWord = ((octets[0] << 8) | octets[1]).toString(16)
+  const lowWord = ((octets[2] << 8) | octets[3]).toString(16)
+  return `${host.slice(0, lastColonIndex)}:${highWord}:${lowWord}`
+}
+
+interface Ipv6Sections {
+  hasCompression: boolean
+  leftParts: string[]
+  rightParts: string[]
+}
+
+function splitIpv6Sections(host: string): Ipv6Sections | null {
+  if (!host.includes(':')) return null
+
+  const sections = host.split('::')
+  if (sections.length > 2) return null
+
+  return {
+    hasCompression: sections.length === 2,
+    leftParts: sections[0] ? sections[0].split(':').filter(Boolean) : [],
+    rightParts: sections[1] ? sections[1].split(':').filter(Boolean) : [],
   }
+}
 
-  if (!normalizedHost.includes(':')) return null
+function hasValidIpv6SegmentCount(hasCompression: boolean, totalParts: number): boolean {
+  return hasCompression ? totalParts < 8 : totalParts === 8
+}
 
-  const [left, right] = normalizedHost.split('::')
-  if (normalizedHost.split('::').length > 2) return null
+function isIpv6Segment(segment: string): boolean {
+  return /^[0-9a-f]{1,4}$/i.test(segment)
+}
 
-  const leftParts = left ? left.split(':').filter(Boolean) : []
-  const rightParts = right ? right.split(':').filter(Boolean) : []
+function expandIpv6Segments(host: string): string[] | null {
+  const sections = splitIpv6Sections(host)
+  if (!sections) return null
+
+  const { hasCompression, leftParts, rightParts } = sections
   const totalParts = leftParts.length + rightParts.length
+  if (!hasValidIpv6SegmentCount(hasCompression, totalParts)) return null
 
-  if (!normalizedHost.includes('::') && totalParts !== 8) return null
-  if (normalizedHost.includes('::') && totalParts >= 8) return null
+  const zeroParts = hasCompression ? Array(8 - totalParts).fill('0') : []
+  const expandedParts = [...leftParts, ...zeroParts, ...rightParts]
+  return expandedParts.length === 8 && expandedParts.every(isIpv6Segment)
+    ? expandedParts
+    : null
+}
 
-  const expandedParts = normalizedHost.includes('::')
-    ? [...leftParts, ...Array(8 - totalParts).fill('0'), ...rightParts]
-    : [...leftParts, ...rightParts]
+function parseIpv6ToBigInt(host: string): bigint | null {
+  const normalizedHost = expandEmbeddedIpv4(host.toLowerCase())
+  if (!normalizedHost) return null
 
-  if (expandedParts.length !== 8) return null
-  if (!expandedParts.every((part) => /^[0-9a-f]{1,4}$/i.test(part))) return null
+  const expandedParts = expandIpv6Segments(normalizedHost)
+  if (!expandedParts) return null
 
   return expandedParts.reduce(
-    (value, part) => (value << IPV6_SEGMENT_BITS) + BigInt(parseInt(part, 16)),
-    BIGINT_ZERO,
+    (value, part) => (value << BigInt(16)) + BigInt(parseInt(part, 16)),
+    BigInt(0),
   )
 }
 
@@ -816,34 +900,49 @@ export function safeSetLocalStorage(key: string, value: string): boolean {
  * Invalid query-param values are ignored (with a warning) and resolution continues
  * through the remaining fallbacks.
  */
-export function resolveApiEndpoint(): string {
-  if (typeof window !== 'undefined') {
-    const params = new URLSearchParams(window.location.search)
-    if (params.has('api')) {
-      const url = params.get('api') ?? ''
-      const validation = validateApiEndpoint(url)
-      if (!validation.valid) {
-        console.warn('Invalid API endpoint from URL parameter, using default')
-      } else {
-        return url
-      }
-    }
+function getValidatedEndpoint(value: string): string | null {
+  return value && validateApiEndpoint(value).valid ? value : null
+}
 
-    const stored = safeGetLocalStorage('merm8_api_endpoint')
-    if (stored && validateApiEndpoint(stored).valid) return stored
-  }
+function resolveUrlParameterEndpoint(params: URLSearchParams): string | null {
+  if (!params.has('api')) return null
 
+  const endpoint = params.get('api') ?? ''
+  const validatedEndpoint = getValidatedEndpoint(endpoint)
+  if (validatedEndpoint) return validatedEndpoint
+
+  console.warn('Invalid API endpoint from URL parameter, using default')
+  return null
+}
+
+function resolveStoredEndpoint(): string | null {
+  const stored = safeGetLocalStorage('merm8_api_endpoint')
+  return stored ? getValidatedEndpoint(stored) : null
+}
+
+function resolveBrowserEndpoint(): string | null {
+  if (typeof window === 'undefined') return null
+
+  const params = new URLSearchParams(window.location.search)
+  const parameterEndpoint = resolveUrlParameterEndpoint(params)
+  if (parameterEndpoint) return parameterEndpoint
+
+  return resolveStoredEndpoint()
+}
+
+function resolveEnvironmentEndpoint(): string | null {
   const envValue = process.env.NEXT_PUBLIC_MERM8_API_URL ?? ''
-  if (envValue) {
-    const validation = validateApiEndpoint(envValue)
-    if (!validation.valid) {
-      console.warn('Invalid API endpoint from NEXT_PUBLIC_MERM8_API_URL, using default')
-    } else {
-      return envValue
-    }
-  }
+  if (!envValue) return null
 
-  return DEFAULT_API_ENDPOINT
+  const validatedEndpoint = getValidatedEndpoint(envValue)
+  if (validatedEndpoint) return validatedEndpoint
+
+  console.warn('Invalid API endpoint from NEXT_PUBLIC_MERM8_API_URL, using default')
+  return null
+}
+
+export function resolveApiEndpoint(): string {
+  return resolveBrowserEndpoint() ?? resolveEnvironmentEndpoint() ?? DEFAULT_API_ENDPOINT
 }
 
 export function validateApiEndpoint(url: string): EndpointValidationResult {
