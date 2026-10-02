@@ -265,6 +265,34 @@ it('restarts the idle period after a second edit without submitting stale code',
   expect(calls).toEqual([{ endpoint, code: secondCode }])
 })
 
+it('adds adaptive delay while edits arrive inside the rapid-input window', async () => {
+  const calls = []
+  const endpoint = 'https://example.test'
+  const firstCode = 'graph TD\nA-->B'
+  const secondCode = 'graph TD\nA-->B\nB-->C'
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async (_endpoint, code) => {
+      calls.push(code)
+      return { diagram_type: 'flowchart', results: [] }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.triggerAnalysis(endpoint, firstCode, [], [])
+  expect(timerControls.getLastScheduledDelay()).toBe(250)
+
+  await timerControls.advanceBy(100)
+  hook.triggerAnalysis(endpoint, secondCode, [], [])
+  expect(timerControls.getLastScheduledDelay()).toBe(400)
+
+  await timerControls.advanceBy(399)
+  expect(calls).toEqual([])
+  await timerControls.advanceBy(1)
+  await new Promise((resolve) => setImmediate(resolve))
+  expect(calls).toEqual([secondCode])
+})
+
 it('forceAnalysis runs immediately and bypasses pending debounce', async () => {
   const calls = []
 

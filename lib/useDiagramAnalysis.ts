@@ -118,26 +118,18 @@ function isCancellationError(error: unknown): boolean {
   return error instanceof Error && (error.name === 'AbortError' || error.name === 'CanceledError')
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function hasRetryableParserTimeout(data: unknown): boolean {
+  if (!isRecord(data) || !isRecord(data.error)) return false
+  return data.error.code === 'parser_timeout'
+}
+
 function isRetryableError(err: unknown): boolean {
-  if (isApiRequestError(err)) {
-    const status = err.status
-    // Retry on 504 (Gateway Timeout) and 503 (Service Unavailable)
-    if (status === 504 || status === 503) {
-      return true
-    }
-    // Also check for parser_timeout error code in response
-    const data = err.data
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
-      const errorObj = (data as Record<string, unknown>).error
-      if (errorObj && typeof errorObj === 'object' && !Array.isArray(errorObj)) {
-        const code = (errorObj as Record<string, unknown>).code
-        if (code === 'parser_timeout') {
-          return true
-        }
-      }
-    }
-  }
-  return false
+  if (!isApiRequestError(err)) return false
+  return err.status === 504 || err.status === 503 || hasRetryableParserTimeout(err.data)
 }
 
 function delay(ms: number): Promise<void> {
@@ -205,18 +197,18 @@ function getAdaptiveDebounceMs(newCode: string): { debounceMs: number; minIdleMs
   }
 }
 
-function normalizeHintItem(item: unknown): string | null {
-  if (typeof item === 'string') return item.trim()
-  if (typeof item === 'object' && item !== null) {
-    const obj = item as Record<string, unknown>
-    const result =
-      (typeof obj.message === 'string' && obj.message.trim()) ||
-      (typeof obj.text === 'string' && obj.text.trim()) ||
-      (typeof obj.hint === 'string' && obj.hint.trim()) ||
-      (typeof obj.description === 'string' && obj.description.trim())
-    return result || null
+function firstNonEmptyString(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) return value.trim()
   }
   return null
+}
+
+function normalizeHintItem(item: unknown): string | null {
+  if (typeof item === 'string') return item.trim() || null
+  if (!isRecord(item)) return null
+  return firstNonEmptyString(item, ['message', 'text', 'hint', 'description'])
 }
 
 function normalizeHintsFromUnknown(value: unknown): string[] {
@@ -261,11 +253,13 @@ function summarizeFallbackErrorFields(data: Record<string, unknown>): string {
     .slice(0, MAX_FALLBACK_SUMMARY_LENGTH)
 }
 
+function getDirectApiErrorMessage(data: Record<string, unknown>): string | null {
+  const candidates = [data.message, data.detail, data.error, data.title]
+  return candidates.find((value): value is string => typeof value === 'string' && value.length > 0) ?? null
+}
+
 function summarizeApiError(data: Record<string, unknown>, fallbackMessage: string): string {
-  return (typeof data.message === 'string' && data.message) ||
-    (typeof data.detail === 'string' && data.detail) ||
-    (typeof data.error === 'string' && data.error) ||
-    (typeof data.title === 'string' && data.title) ||
+  return getDirectApiErrorMessage(data) ||
     summarizeFallbackErrorFields(data) ||
     fallbackMessage ||
     'Analysis failed'
@@ -278,18 +272,16 @@ function getApiErrorHints(data: Record<string, unknown>, requestIdHint: string |
     ...normalizeHintsFromUnknown(data.suggestions),
     ...(requestIdHint ? [requestIdHint] : []),
   ]
-  const error = data.error
-  if (!error || typeof error !== 'object' || Array.isArray(error)) return hints
-
-  const details = (error as Record<string, unknown>).details
-  if (!details || typeof details !== 'object' || Array.isArray(details)) return hints
-
-  const suggestion = (details as Record<string, unknown>).suggestion
-  if (typeof suggestion === 'string' && suggestion.trim()) {
-    hints.push(suggestion.trim())
-  }
+  const suggestion = getErrorSuggestion(data.error)
+  if (suggestion) hints.push(suggestion)
 
   return hints
+}
+
+function getErrorSuggestion(error: unknown): string | null {
+  if (!isRecord(error) || !isRecord(error.details)) return null
+  const suggestion = error.details.suggestion
+  return typeof suggestion === 'string' && suggestion.trim() ? suggestion.trim() : null
 }
 
 function parseAnalysisError(err: unknown): ParsedAnalysisError {
@@ -410,361 +402,426 @@ function pruneAnalysisCache(cache: Map<string, AnalysisCacheEntry>, now: number)
   }
 }
 
-export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
-  const [code, setCodeState] = useState<string>(DEFAULT_DIAGRAM)
-  const [violations, setViolations] = useState<Violation[]>([])
-  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
-  const [analysisHints, setAnalysisHints] = useState<string[]>([])
-  const [diagramType, setDiagramType] = useState<string | null>(null)
-  const [lintSupported, setLintSupported] = useState<boolean | null>(null)
-  const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null)
-  const [lastCompletedRun, setLastCompletedRun] = useState<AnalysisRunResult | null>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const requestSeqRef = useRef(0)
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const waiterAbortControllerRef = useRef<AbortController | null>(null)
-  const analysisCacheRef = useRef<Map<string, AnalysisCacheEntry>>(new Map())
-  const inFlightRequestsRef = useRef<Map<string, InFlightAnalysisRequest>>(new Map())
-  const lastInputAtRef = useRef(0)
-  const rapidInputStreakRef = useRef(0)
-  const runSeqRef = useRef(0)
+interface AnalysisStateActions {
+  setViolations: (violations: Violation[]) => void
+  setIsAnalyzing: (isAnalyzing: boolean) => void
+  setAnalyzeError: (error: string | null) => void
+  setAnalysisHints: (hints: string[]) => void
+  setDiagramType: (diagramType: string | null) => void
+  setLintSupported: (lintSupported: boolean | null) => void
+  setMetrics: (metrics: AnalysisMetrics | null) => void
+  setLastCompletedRun: (run: AnalysisRunResult) => void
+}
 
-  const abortTransportIfUnshared = useCallback((controller: AbortController | null) => {
-    if (!controller) {
-      return
-    }
+interface AnalysisRequestArgs {
+  endpoint: string
+  code: string
+  enabledRules: string[]
+  rulesMetadata: Rule[]
+  options: AnalyzeRequestOptions
+}
 
-    let matchingKey: string | null = null
-    let waiterCount = 0
+class AnalysisRequestCoordinator {
+  private requestSeq = 0
+  private runSeq = 0
+  private activeTransport: AbortController | null = null
+  private activeWaiter: AbortController | null = null
+  private readonly cache = new Map<string, AnalysisCacheEntry>()
+  private readonly inFlight = new Map<string, InFlightAnalysisRequest>()
 
-    for (const [key, request] of inFlightRequestsRef.current.entries()) {
-      if (request.abortController === controller) {
-        matchingKey = key
-        waiterCount = request.waiters
-        break
-      }
-    }
+  constructor(private readonly state: AnalysisStateActions) {}
 
-    if (!matchingKey || waiterCount > 1) {
-      return
-    }
+  private abortTransportIfUnshared(controller: AbortController | null): void {
+    if (!controller) return
+
+    const matchingRequest = Array.from(this.inFlight.entries()).find(
+      ([, request]) => request.abortController === controller
+    )
+    if (!matchingRequest || matchingRequest[1].waiters > 1) return
 
     controller.abort()
-    if (matchingKey) {
-      inFlightRequestsRef.current.delete(matchingKey)
-    }
-  }, [])
+    this.inFlight.delete(matchingRequest[0])
+  }
 
-  const stopActiveRequest = useCallback(() => {
-    waiterAbortControllerRef.current?.abort()
-    waiterAbortControllerRef.current = null
-    abortTransportIfUnshared(abortControllerRef.current)
-    abortControllerRef.current = null
-  }, [abortTransportIfUnshared])
+  private stopActiveRequest(): void {
+    this.activeWaiter?.abort()
+    this.activeWaiter = null
+    this.abortTransportIfUnshared(this.activeTransport)
+    this.activeTransport = null
+  }
 
-  const cancelAnalysis = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-      debounceRef.current = null
-    }
+  cancel(): void {
+    if (this.activeTransport || this.activeWaiter) this.requestSeq += 1
+    this.stopActiveRequest()
+    this.state.setViolations([])
+    this.state.setAnalyzeError(null)
+    this.state.setAnalysisHints([])
+    this.state.setDiagramType(null)
+    this.state.setLintSupported(null)
+    this.state.setMetrics(null)
+    this.state.setIsAnalyzing(false)
+  }
 
-    if (abortControllerRef.current || waiterAbortControllerRef.current) {
-      requestSeqRef.current += 1
-    }
-    stopActiveRequest()
-    setViolations([])
-    setAnalyzeError(null)
-    setAnalysisHints([])
-    setDiagramType(null)
-    setLintSupported(null)
-    setMetrics(null)
-    setIsAnalyzing(false)
-  }, [stopActiveRequest])
+  pruneCache(now: number): void {
+    pruneAnalysisCache(this.cache, now)
+  }
 
-  const applyAnalysisResult = useCallback((
-    result: AnalyzeResponse,
-    runId: number,
-    source: AnalysisRunSource
-  ) => {
-    const results = Array.isArray(result.results) ? result.results : []
-    setViolations(results)
-    setDiagramType(result.diagram_type)
-    setLintSupported(result.lintSupported ?? null)
-    setMetrics(result.metrics ?? null)
-    setAnalyzeError(null)
-    setAnalysisHints(normalizeHints(result.hints))
-    setLastCompletedRun({
+  dispose(): void {
+    this.activeWaiter?.abort()
+    this.activeTransport?.abort()
+  }
+
+  private applyResult(result: AnalyzeResponse, runId: number, source: AnalysisRunSource): void {
+    const violations = Array.isArray(result.results) ? result.results : []
+    this.state.setViolations(violations)
+    this.state.setDiagramType(result.diagram_type)
+    this.state.setLintSupported(result.lintSupported ?? null)
+    this.state.setMetrics(result.metrics ?? null)
+    this.state.setAnalyzeError(null)
+    this.state.setAnalysisHints(normalizeHints(result.hints))
+    this.state.setLastCompletedRun({
       id: runId,
       source,
       status: 'success',
-      violationsCount: results.length,
+      violationsCount: violations.length,
       error: null,
     })
-  }, [])
+  }
 
-  const applyAnalysisError = useCallback((
-    error: unknown,
-    runId: number,
-    source: AnalysisRunSource
-  ) => {
+  private applyError(error: unknown, runId: number, source: AnalysisRunSource): void {
     const parsedError = parseAnalysisError(error)
-    setAnalyzeError(parsedError.summary)
-    setAnalysisHints(parsedError.hints)
-    setViolations([])
-    setDiagramType(null)
-    setLintSupported(null)
-    setMetrics(null)
-    setLastCompletedRun({
+    this.state.setAnalyzeError(parsedError.summary)
+    this.state.setAnalysisHints(parsedError.hints)
+    this.state.setViolations([])
+    this.state.setDiagramType(null)
+    this.state.setLintSupported(null)
+    this.state.setMetrics(null)
+    this.state.setLastCompletedRun({
       id: runId,
       source,
       status: 'error',
       violationsCount: 0,
       error: parsedError.summary,
     })
-  }, [])
+  }
 
-  const completeAnalysisRequest = useCallback(async ({
-    requestKey,
-    requestPromise,
-    seq,
-    runId,
-    source,
-    waiterController,
-    transportController,
-    pruneCacheOnSuccess,
-  }: AnalysisWaitContext) => {
+  private async completeRequest(context: AnalysisWaitContext): Promise<void> {
+    const {
+      requestKey,
+      requestPromise,
+      seq,
+      runId,
+      source,
+      waiterController,
+      transportController,
+      pruneCacheOnSuccess,
+    } = context
+
     try {
       const result = await waitForPromiseWithSignal(requestPromise, waiterController.signal)
+      if (seq !== this.requestSeq) return
 
-      if (seq === requestSeqRef.current) {
-        analysisCacheRef.current.set(requestKey, { result, ts: Date.now() })
-        if (pruneCacheOnSuccess) {
-          pruneAnalysisCache(analysisCacheRef.current, Date.now())
-        }
-        applyAnalysisResult(result, runId, source)
-      }
+      this.cache.set(requestKey, { result, ts: Date.now() })
+      if (pruneCacheOnSuccess) this.pruneCache(Date.now())
+      this.applyResult(result, runId, source)
     } catch (error) {
-      if (isCancellationError(error)) return
-
-      if (seq === requestSeqRef.current) {
-        applyAnalysisError(error, runId, source)
+      if (!isCancellationError(error) && seq === this.requestSeq) {
+        this.applyError(error, runId, source)
       }
     } finally {
-      const currentInFlight = inFlightRequestsRef.current.get(requestKey)
-      if (currentInFlight?.promise === requestPromise) {
-        currentInFlight.waiters -= 1
-        if (currentInFlight.waiters <= 0) {
-          inFlightRequestsRef.current.delete(requestKey)
-        }
-      }
+      this.releaseWaiter(requestKey, requestPromise)
+      this.clearActiveControllers(seq, transportController, waiterController)
+    }
+  }
 
-      if (seq === requestSeqRef.current) {
-        setIsAnalyzing(false)
-        if (abortControllerRef.current === transportController) {
-          abortControllerRef.current = null
-        }
-        if (waiterAbortControllerRef.current === waiterController) {
-          waiterAbortControllerRef.current = null
-        }
+  private releaseWaiter(requestKey: string, requestPromise: Promise<AnalyzeResponse>): void {
+    const request = this.inFlight.get(requestKey)
+    if (request?.promise !== requestPromise) return
+
+    request.waiters -= 1
+    if (request.waiters <= 0) this.inFlight.delete(requestKey)
+  }
+
+  private clearActiveControllers(
+    seq: number,
+    transportController: AbortController,
+    waiterController: AbortController
+  ): void {
+    if (seq !== this.requestSeq) return
+
+    this.state.setIsAnalyzing(false)
+    if (this.activeTransport === transportController) this.activeTransport = null
+    if (this.activeWaiter === waiterController) this.activeWaiter = null
+  }
+
+  private async requestWithRetry(
+    args: AnalysisRequestArgs,
+    signal: AbortSignal
+  ): Promise<AnalyzeResponse> {
+    for (let attempt = 0; attempt <= ANALYSIS_MAX_RETRIES; attempt += 1) {
+      if (attempt > 0) await delay(ANALYSIS_RETRY_DELAY_MS * attempt)
+
+      try {
+        return await analyzeCode(
+          args.endpoint,
+          args.code,
+          args.enabledRules,
+          args.rulesMetadata,
+          args.options,
+          signal
+        )
+      } catch (error) {
+        if (isCancellationError(error)) throw error
+        if (!isRetryableError(error) || attempt === ANALYSIS_MAX_RETRIES) throw error
       }
     }
-  }, [applyAnalysisError, applyAnalysisResult])
 
-  const runAnalysis = useCallback(
-    async (
-      endpoint: string,
-      newCode: string,
-      enabledRules: string[],
-      rulesMetadata: Rule[],
-      options: AnalyzeRequestOptions = {},
-      source: AnalysisRunSource
-    ) => {
-      if (!endpoint || !newCode.trim()) {
-        cancelAnalysis()
-        return
-      }
-      const seq = ++requestSeqRef.current
-      const requestKey = buildAnalysisRequestKey(
-        endpoint,
-        newCode,
-        enabledRules,
-        rulesMetadata,
-        options
-      )
-      const runId = ++runSeqRef.current
-      const cachedEntry = analysisCacheRef.current.get(requestKey)
-      const now = Date.now()
+    throw new Error('Analysis failed')
+  }
 
-      if (cachedEntry && now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS) {
-        stopActiveRequest()
-        applyAnalysisResult(cachedEntry.result, runId, source)
-        setIsAnalyzing(false)
-        return
-      }
+  async run(args: AnalysisRequestArgs, source: AnalysisRunSource): Promise<void> {
+    if (!args.endpoint || !args.code.trim()) {
+      this.cancel()
+      return
+    }
 
-      if (cachedEntry) {
-        analysisCacheRef.current.delete(requestKey)
-      }
+    const seq = ++this.requestSeq
+    const requestKey = buildAnalysisRequestKey(
+      args.endpoint,
+      args.code,
+      args.enabledRules,
+      args.rulesMetadata,
+      args.options
+    )
+    const runId = ++this.runSeq
+    const cachedEntry = this.cache.get(requestKey)
+    const now = Date.now()
 
-      const waiterController = new AbortController()
-      waiterAbortControllerRef.current?.abort()
-      waiterAbortControllerRef.current = waiterController
+    if (cachedEntry && now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS) {
+      this.stopActiveRequest()
+      this.applyResult(cachedEntry.result, runId, source)
+      this.state.setIsAnalyzing(false)
+      return
+    }
+    if (cachedEntry) this.cache.delete(requestKey)
 
-      const existingInFlight = inFlightRequestsRef.current.get(requestKey)
+    const waiterController = new AbortController()
+    this.activeWaiter?.abort()
+    this.activeWaiter = waiterController
 
-      if (existingInFlight) {
-        existingInFlight.waiters += 1
-        abortControllerRef.current = existingInFlight.abortController
-        setIsAnalyzing(true)
-        setAnalyzeError(null)
-        setAnalysisHints([])
-        await completeAnalysisRequest({
-          requestKey,
-          requestPromise: existingInFlight.promise,
-          seq,
-          runId,
-          source,
-          waiterController,
-          transportController: existingInFlight.abortController,
-          pruneCacheOnSuccess: false,
-        })
-        return
-      }
+    const existingRequest = this.inFlight.get(requestKey)
+    if (existingRequest) {
+      await this.joinExistingRequest(existingRequest, requestKey, seq, runId, source, waiterController)
+      return
+    }
 
-      const controller = new AbortController()
+    await this.startRequest(args, requestKey, seq, runId, source, waiterController)
+  }
 
-      abortTransportIfUnshared(abortControllerRef.current)
-      abortControllerRef.current = controller
+  private async joinExistingRequest(
+    request: InFlightAnalysisRequest,
+    requestKey: string,
+    seq: number,
+    runId: number,
+    source: AnalysisRunSource,
+    waiterController: AbortController
+  ): Promise<void> {
+    request.waiters += 1
+    this.activeTransport = request.abortController
+    this.setRequestPending()
+    await this.completeRequest({
+      requestKey,
+      requestPromise: request.promise,
+      seq,
+      runId,
+      source,
+      waiterController,
+      transportController: request.abortController,
+      pruneCacheOnSuccess: false,
+    })
+  }
 
-      setIsAnalyzing(true)
-      setAnalyzeError(null)
-      setAnalysisHints([])
+  private async startRequest(
+    args: AnalysisRequestArgs,
+    requestKey: string,
+    seq: number,
+    runId: number,
+    source: AnalysisRunSource,
+    waiterController: AbortController
+  ): Promise<void> {
+    const transportController = new AbortController()
+    this.abortTransportIfUnshared(this.activeTransport)
+    this.activeTransport = transportController
+    this.setRequestPending()
 
-      const requestPromise = (async (): Promise<AnalyzeResponse> => {
-        for (let attempt = 0; attempt <= ANALYSIS_MAX_RETRIES; attempt += 1) {
-          if (attempt > 0) {
-            await delay(ANALYSIS_RETRY_DELAY_MS * attempt)
-          }
+    const requestPromise = this.requestWithRetry(args, transportController.signal)
+    this.inFlight.set(requestKey, {
+      promise: requestPromise,
+      abortController: transportController,
+      waiters: 1,
+    })
+    await this.completeRequest({
+      requestKey,
+      requestPromise,
+      seq,
+      runId,
+      source,
+      waiterController,
+      transportController,
+      pruneCacheOnSuccess: true,
+    })
+  }
 
-          try {
-            return await analyzeCode(
-              endpoint,
-              newCode,
-              enabledRules,
-              rulesMetadata,
-              options,
-              controller.signal
-            )
-          } catch (err) {
-            if (isCancellationError(err)) {
-              throw err
-            }
+  private setRequestPending(): void {
+    this.state.setIsAnalyzing(true)
+    this.state.setAnalyzeError(null)
+    this.state.setAnalysisHints([])
+  }
+}
 
-            if (!isRetryableError(err) || attempt === ANALYSIS_MAX_RETRIES) {
-              throw err
-            }
-          }
-        }
+function useAnalysisViewState() {
+  const [violations, setViolations] = useState<Violation[]>([])
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [analysisHints, setAnalysisHints] = useState<string[]>([])
+  const [diagramType, setDiagramType] = useState<string | null>(null)
+  const [lintSupported, setLintSupported] = useState<boolean | null>(null)
+  const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null)
+  const [lastCompletedRun, setLastCompletedRun] = useState<AnalysisRunResult | null>(null)
 
-        throw new Error('Analysis failed')
-      })()
-
-      inFlightRequestsRef.current.set(requestKey, {
-        promise: requestPromise,
-        abortController: controller,
-        waiters: 1,
-      })
-
-      await completeAnalysisRequest({
-        requestKey,
-        requestPromise,
-        seq,
-        runId,
-        source,
-        waiterController,
-        transportController: controller,
-        pruneCacheOnSuccess: true,
-      })
+  return {
+    values: {
+      violations,
+      isAnalyzing,
+      analyzeError,
+      analysisHints,
+      diagramType,
+      lintSupported,
+      metrics,
+      lastCompletedRun,
     },
-    [
-      abortTransportIfUnshared,
-      applyAnalysisResult,
-      cancelAnalysis,
-      completeAnalysisRequest,
-      stopActiveRequest,
-    ]
+    actions: {
+      setViolations,
+      setIsAnalyzing,
+      setAnalyzeError,
+      setAnalysisHints,
+      setDiagramType,
+      setLintSupported,
+      setMetrics,
+      setLastCompletedRun,
+    },
+  }
+}
+
+function getScheduledDelay(
+  code: string,
+  source: AnalysisTriggerSource,
+  now: number,
+  lastInputAt: number,
+  rapidInputStreak: number
+): { delayMs: number; lastInputAt: number; rapidInputStreak: number } {
+  const { debounceMs, minIdleMs } = getAdaptiveDebounceMs(code)
+  const baseDelayMs = Math.max(debounceMs, minIdleMs)
+  if (source !== 'input') {
+    return { delayMs: baseDelayMs, lastInputAt, rapidInputStreak: 0 }
+  }
+
+  const elapsedSinceLastInput = now - lastInputAt
+  const isRapid = elapsedSinceLastInput > 0 && elapsedSinceLastInput <= RAPID_INPUT_WINDOW_MS
+  const nextRapidInputStreak = isRapid ? rapidInputStreak + 1 : 0
+  const rapidExtraMs = Math.min(
+    nextRapidInputStreak * RAPID_INPUT_EXTRA_MS,
+    RAPID_INPUT_EXTRA_MAX_MS
   )
 
-  const triggerAnalysis = useCallback(
-    (
-      endpoint: string,
-      newCode: string,
-      enabledRules: string[],
-      rulesMetadata: Rule[],
-      options: AnalyzeRequestOptions = {},
-      scheduling: AnalysisSchedulingOptions = {}
-    ) => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-      }
+  return {
+    delayMs: Math.max(baseDelayMs + rapidExtraMs, minIdleMs),
+    lastInputAt: now,
+    rapidInputStreak: nextRapidInputStreak,
+  }
+}
 
-      const source = scheduling.source ?? 'input'
-      const { debounceMs, minIdleMs } = getAdaptiveDebounceMs(newCode)
+export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
+  const [code, setCodeState] = useState<string>(DEFAULT_DIAGRAM)
+  const analysisState = useAnalysisViewState()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastInputAtRef = useRef(0)
+  const rapidInputStreakRef = useRef(0)
+  const coordinatorRef = useRef(new AnalysisRequestCoordinator(analysisState.actions))
 
-      let delayMs = Math.max(debounceMs, minIdleMs)
+  const runAnalysis = useCallback((
+    endpoint: string,
+    newCode: string,
+    enabledRules: string[],
+    rulesMetadata: Rule[],
+    options: AnalyzeRequestOptions,
+    source: AnalysisRunSource
+  ) => {
+    void coordinatorRef.current.run({
+      endpoint,
+      code: newCode,
+      enabledRules,
+      rulesMetadata,
+      options,
+    }, source)
+  }, [])
 
-      if (source === 'input') {
-        const now = Date.now()
-        const elapsedSinceLastInput = now - lastInputAtRef.current
-        const isRapid = elapsedSinceLastInput > 0 && elapsedSinceLastInput <= RAPID_INPUT_WINDOW_MS
+  const cancelAnalysis = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    coordinatorRef.current.cancel()
+  }, [])
 
-        rapidInputStreakRef.current = isRapid ? rapidInputStreakRef.current + 1 : 0
-        lastInputAtRef.current = now
+  const triggerAnalysis = useCallback((
+    endpoint: string,
+    newCode: string,
+    enabledRules: string[],
+    rulesMetadata: Rule[],
+    options: AnalyzeRequestOptions = {},
+    scheduling: AnalysisSchedulingOptions = {}
+  ) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
 
-        const rapidExtraMs = Math.min(
-          rapidInputStreakRef.current * RAPID_INPUT_EXTRA_MS,
-          RAPID_INPUT_EXTRA_MAX_MS
-        )
-        delayMs = Math.max(delayMs + rapidExtraMs, minIdleMs)
-      } else {
-        rapidInputStreakRef.current = 0
-      }
+    const source = scheduling.source ?? 'input'
+    const schedule = getScheduledDelay(
+      newCode,
+      source,
+      Date.now(),
+      lastInputAtRef.current,
+      rapidInputStreakRef.current
+    )
+    lastInputAtRef.current = schedule.lastInputAt
+    rapidInputStreakRef.current = schedule.rapidInputStreak
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null
+      runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options, source)
+    }, schedule.delayMs)
+  }, [runAnalysis])
 
-      debounceRef.current = setTimeout(() => {
-        runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options, source)
-      }, delayMs)
-    },
-    [runAnalysis]
-  )
-
-  const forceAnalysis = useCallback(
-    (
-      endpoint: string,
-      newCode: string,
-      enabledRules: string[],
-      rulesMetadata: Rule[],
-      options: AnalyzeRequestOptions = {}
-    ) => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
-        debounceRef.current = null
-      }
-
-      runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options, 'manual')
-    },
-    [runAnalysis]
-  )
+  const forceAnalysis = useCallback((
+    endpoint: string,
+    newCode: string,
+    enabledRules: string[],
+    rulesMetadata: Rule[],
+    options: AnalyzeRequestOptions = {}
+  ) => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    runAnalysis(endpoint, newCode, enabledRules, rulesMetadata, options, 'manual')
+  }, [runAnalysis])
 
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
-      pruneAnalysisCache(analysisCacheRef.current, Date.now())
+      coordinatorRef.current.pruneCache(Date.now())
     }, ANALYSIS_CACHE_CLEANUP_INTERVAL_MS)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
-      waiterAbortControllerRef.current?.abort()
-      abortControllerRef.current?.abort()
+      coordinatorRef.current.dispose()
       clearInterval(cleanupInterval)
     }
   }, [])
@@ -776,14 +833,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   return {
     code,
     setCode,
-    violations,
-    isAnalyzing,
-    analyzeError,
-    analysisHints,
-    diagramType,
-    lintSupported,
-    metrics,
-    lastCompletedRun,
+    ...analysisState.values,
     triggerAnalysis,
     forceAnalysis,
     cancelAnalysis,
