@@ -15,6 +15,8 @@ const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf
   scripts: Record<string, string>
 }
 const readme = readFileSync(join(repoRoot, 'README.md'), 'utf8')
+const envExample = readFileSync(join(repoRoot, '.env.example'), 'utf8').trim()
+const exampleApiEndpoint = envExample.match(/^NEXT_PUBLIC_MERM8_API_URL=(.+)$/m)?.[1]
 
 it('runs lint, tests, and the production build as part of every Vercel build', () => {
   expect(vercelConfig.buildCommand).toBe('npm run build:vercel')
@@ -23,6 +25,10 @@ it('runs lint, tests, and the production build as part of every Vercel build', (
 
 it('does not configure browser build variables as Vercel function environment variables', () => {
   expect(vercelConfig.env).toBeUndefined()
+})
+
+it('keeps the example API endpoint aligned with the app default', () => {
+  expect(exampleApiEndpoint).toBe('https://merm8.scheimann.workers.dev')
 })
 
 it('sets a Vercel CSP that supports the configurable HTTPS API endpoint', () => {
@@ -36,8 +42,9 @@ it('sets a Vercel CSP that supports the configurable HTTPS API endpoint', () => 
   expect(csp).toContain("frame-ancestors 'none'")
 })
 
-it('documents build-time API configuration and the Preview API CORS requirement', () => {
-  expect(readme).toContain('Production and Preview')
-  expect(readme).toContain('Preview deployments use separate origins')
+it('documents production API configuration and optional Preview CORS setup', () => {
+  expect(readme).toContain('set `NEXT_PUBLIC_MERM8_API_URL` for Production')
+  expect(readme).toContain('Configure Preview only if you start using Preview deployments')
+  expect(readme).toContain('https://merm8-splash.vercel.app')
   expect(readme).toContain('CORS allowlist')
 })
