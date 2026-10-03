@@ -160,9 +160,9 @@ Deploy directly to Vercel with Git integration:
 
 1. Push code to GitHub
 2. Import project in Vercel dashboard
-3. In Project Settings → Environment Variables, set `NEXT_PUBLIC_MERM8_API_URL` for both Production and Preview. This frontend is a static export, so Next.js embeds this public value in the files during each build; redeploy after changing it.
+3. In Project Settings → Environment Variables, set `NEXT_PUBLIC_MERM8_API_URL` for Production to `https://merm8.scheimann.workers.dev`. This frontend is a static export, so Next.js embeds this public value in the files during each build; redeploy after changing it. Configure Preview only if you start using Preview deployments.
 
-4. Make sure the API's CORS allowlist includes the Vercel origin that will load the app. Preview deployments use separate origins, so configure a preview API/allowed preview origin as needed. Avoid allowing every `*.vercel.app` origin.
+4. Make sure the API's CORS allowlist includes the production origin `https://merm8-splash.vercel.app`. If you start using Preview deployments, add their exact origins to the allowlist as needed. Avoid allowing every `*.vercel.app` origin.
 
 5. Deploy. Vercel runs lint, tests, and the production build through `npm run build:vercel` before publishing.
 
