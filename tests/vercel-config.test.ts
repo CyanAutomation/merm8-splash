@@ -20,7 +20,9 @@ const exampleApiEndpoint = envExample.match(/^NEXT_PUBLIC_MERM8_API_URL=(.+)$/m)
 
 it('runs lint, tests, and the production build as part of every Vercel build', () => {
   expect(vercelConfig.buildCommand).toBe('npm run build:vercel')
-  expect(packageJson.scripts['build:vercel']).toBe('npm run lint && npm test && npm run build')
+  expect(packageJson.scripts['build:vercel']).toBe(
+    'npm run lint && NODE_ENV=test npm test && npm run build',
+  )
 })
 
 it('does not configure browser build variables as Vercel function environment variables', () => {
