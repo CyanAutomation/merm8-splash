@@ -6,160 +6,102 @@ on:
   workflow_dispatch:
 
 run-name: >-
-  Docs sweep · ${{ github.repository }}@${{ github.event.repository.default_branch }}
+  Docs sweep · ${{ github.repository }}@${{ github.sha }}
 
 permissions: {}
 
 concurrency:
+  # GitHub keeps one running and one pending run per group; newer pending runs replace older ones.
   group: kaseki-${{ github.repository }}
   cancel-in-progress: false
 
 env:
   REPO_URL: ${{ github.server_url }}/${{ github.repository }}
-  REF: ${{ github.event.repository.default_branch }}
+  REF: ${{ github.sha }}
   TASK_DESCRIPTION: Keep README.md and docs/ accurate against the current implementation.
   ALLOWLIST: README.md,docs/**/*.md
   VALIDATION_COMMAND: npm run lint && npm test && npm run build
 
 jobs:
-  system_status:
-    name: Kaseki System Status
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+  docs_sweep:
+    name: Run Kaseki documentation sweep
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 2
-    environment: kaseki-agent
-    env:
-      # Do not add a public fallback URL.
-      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
-
-    steps:
-      - name: Verify controller health
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
-
-          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
-            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
-            exit 1
-          }
-
-          response_file="$(mktemp)"
-          trap 'rm -f "$response_file"' EXIT
-
-          curl --fail-with-body \
-            --silent \
-            --show-error \
-            --retry 3 \
-            --retry-all-errors \
-            --connect-timeout 10 \
-            --max-time 20 \
-            --output "$response_file" \
-            "$KASEKI_BASE_URL/health"
-
-          jq -e '.status == "healthy"' "$response_file" >/dev/null
-
-  readiness:
-    name: Kaseki System Readiness
-    needs: system_status
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    environment: kaseki-agent
-    env:
-      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
-
-    steps:
-      - name: Verify controller readiness
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
-
-          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
-            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
-            exit 1
-          }
-
-          response_file="$(mktemp)"
-          trap 'rm -f "$response_file"' EXIT
-
-          curl --fail-with-body \
-            --silent \
-            --show-error \
-            --retry 3 \
-            --retry-all-errors \
-            --connect-timeout 10 \
-            --max-time 20 \
-            --output "$response_file" \
-            "$KASEKI_BASE_URL/ready"
-
-          jq -e '.status == "ready"' "$response_file" >/dev/null
-
-  api_connection:
-    name: Kaseki API Status
-    needs: readiness
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    environment: kaseki-agent
-    env:
-      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
-      # Store this as an environment secret, rather than a repository secret.
-      KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
-
-    steps:
-      - name: Verify gateway connectivity and authentication
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
-          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
-
-          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
-            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
-            exit 1
-          }
-
-          response_file="$(mktemp)"
-          trap 'rm -f "$response_file"' EXIT
-
-          curl --fail-with-body \
-            --silent \
-            --show-error \
-            --retry 3 \
-            --retry-all-errors \
-            --connect-timeout 10 \
-            --max-time 60 \
-            --output "$response_file" \
-            --header "Authorization: Bearer $KASEKI_API_TOKEN" \
-            "$KASEKI_BASE_URL/api/gateway-test?stage=1"
-
-          jq -e '.status == "ok"' "$response_file" >/dev/null
-
-  dispatch:
-    name: Submit Kaseki documentation sweep
-    needs: api_connection
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-latest
-    # Kaseki runs for up to three hours; leave time for terminal polling.
     timeout-minutes: 200
     environment: kaseki-agent
     env:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
 
     steps:
-      - name: Check required tools
+      - name: Validate Kaseki configuration and required tools
         shell: bash
         run: |
           set -euo pipefail
 
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
+            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
+            exit 1
+          }
+
           command -v jq >/dev/null
+          command -v node >/dev/null
+          command -v timeout >/dev/null
           command -v uuidgen >/dev/null
           command -v curl >/dev/null
+
+      - name: Verify controller health
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors \
+            --connect-timeout 10 --max-time 20 \
+            --output "$response_file" \
+            "$KASEKI_BASE_URL/health"
+
+          jq -e '.status == "healthy"' "$response_file" >/dev/null
+
+      - name: Verify controller readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors \
+            --connect-timeout 10 --max-time 20 \
+            --output "$response_file" \
+            "$KASEKI_BASE_URL/ready"
+
+          jq -e '.status == "ready"' "$response_file" >/dev/null
+
+      - name: Verify gateway connectivity and authentication
+        shell: bash
+        env:
+          KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured as an environment secret}"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors \
+            --connect-timeout 10 --max-time 60 \
+            --output "$response_file" \
+            --header "Authorization: Bearer $KASEKI_API_TOKEN" \
+            "$KASEKI_BASE_URL/api/gateway-test?stage=1"
+
+          jq -e '.status == "ok"' "$response_file" >/dev/null
 
       - name: Check Kaseki availability
         shell: bash
@@ -197,8 +139,35 @@ jobs:
             exit 1
           }
 
-          # Kaseki deduplicates retries using this request-body UUID.
-          IDEMPOTENCY_KEY="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+          # Stable across GitHub reruns; a new workflow run gets a new key.
+          idempotency_key="$(
+            node <<'NODE'
+            const { createHash } = require('node:crypto');
+            const namespace = Buffer.from('6ba7b8119dad11d180b400c04fd430c8', 'hex');
+            const identity = [
+              process.env.GITHUB_REPOSITORY,
+              process.env.GITHUB_WORKFLOW,
+              process.env.GITHUB_RUN_ID,
+            ];
+
+            if (identity.some((value) => !value)) {
+              throw new Error('GitHub run identity is incomplete');
+            }
+
+            const digest = createHash('sha1')
+              .update(namespace)
+              .update(JSON.stringify(identity), 'utf8')
+              .digest()
+              .subarray(0, 16);
+            digest[6] = (digest[6] & 0x0f) | 0x50;
+            digest[8] = (digest[8] & 0x3f) | 0x80;
+
+            const hex = digest.toString('hex');
+            process.stdout.write(
+              `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}\n`,
+            );
+          NODE
+          )"
 
           payload="$(
             jq -n \
@@ -207,7 +176,7 @@ jobs:
               --arg taskDescription "$TASK_DESCRIPTION" \
               --arg validationCommand "$VALIDATION_COMMAND" \
               --arg allowlist "$ALLOWLIST" \
-              --arg idempotencyKey "$IDEMPOTENCY_KEY" \
+              --arg idempotencyKey "$idempotency_key" \
               '{
                 repoUrl: $repoUrl,
                 ref: $ref,
