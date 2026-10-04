@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseDiagramType } from '../lib/diagramTypes'
+import { filterRulesByDiagramType, parseDiagramType } from '../lib/diagramTypes'
 
 describe('parseDiagramType', () => {
   it.each([
@@ -30,5 +30,18 @@ describe('parseDiagramType', () => {
 
   it('ignores the remaining source when a directive block never closes', () => {
     expect(parseDiagramType('%%{init:\nflowchart TD')).toBeNull()
+  })
+})
+
+describe('filterRulesByDiagramType', () => {
+  it.each([
+    ['sequence', 'no-undefined-actors'],
+    ['class', 'no-duplicate-classes'],
+    ['er', 'no-self-referential'],
+    ['state', 'no-unreachable-state'],
+  ])('keeps %s rules that the Worker implements', (diagramType, ruleId) => {
+    const filtered = filterRulesByDiagramType([ruleId, 'no-cycles'], diagramType)
+    expect(filtered).toContain(ruleId)
+    expect(filtered).not.toContain('no-cycles')
   })
 })
