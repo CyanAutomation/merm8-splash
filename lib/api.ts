@@ -79,6 +79,8 @@ export interface AnalyzeResponse {
 
 const DEFAULT_API_ENDPOINT = 'https://merm8.scheimann.workers.dev'
 
+export const API_ENDPOINT_STORAGE_KEY = 'merm8_api_endpoint'
+
 const API_REQUEST_TIMEOUT_MS = 10_000
 
 class ApiRequestError extends Error {
@@ -904,23 +906,36 @@ function getValidatedEndpoint(value: string): string | null {
   return value && validateApiEndpoint(value).valid ? value : null
 }
 
-function resolveUrlParameterEndpoint(params: URLSearchParams): string | null {
+export type ApiEndpointSource = 'query-param' | 'stored' | 'environment' | 'default'
+
+export interface ApiEndpointInfo {
+  endpoint: string
+  source: ApiEndpointSource
+}
+
+interface ResolvedEndpoint {
+  endpoint: string
+  source: Exclude<ApiEndpointSource, 'default'>
+}
+
+function resolveUrlParameterEndpoint(params: URLSearchParams): ResolvedEndpoint | null {
   if (!params.has('api')) return null
 
   const endpoint = params.get('api') ?? ''
   const validatedEndpoint = getValidatedEndpoint(endpoint)
-  if (validatedEndpoint) return validatedEndpoint
+  if (validatedEndpoint) return { endpoint: validatedEndpoint, source: 'query-param' }
 
   console.warn('Invalid API endpoint from URL parameter, using default')
   return null
 }
 
-function resolveStoredEndpoint(): string | null {
-  const stored = safeGetLocalStorage('merm8_api_endpoint')
-  return stored ? getValidatedEndpoint(stored) : null
+function resolveStoredEndpoint(): ResolvedEndpoint | null {
+  const stored = safeGetLocalStorage(API_ENDPOINT_STORAGE_KEY)
+  const validatedEndpoint = stored ? getValidatedEndpoint(stored) : null
+  return validatedEndpoint ? { endpoint: validatedEndpoint, source: 'stored' } : null
 }
 
-function resolveBrowserEndpoint(): string | null {
+function resolveBrowserEndpoint(): ResolvedEndpoint | null {
   if (typeof window === 'undefined') return null
 
   const params = new URLSearchParams(window.location.search)
@@ -930,19 +945,34 @@ function resolveBrowserEndpoint(): string | null {
   return resolveStoredEndpoint()
 }
 
-function resolveEnvironmentEndpoint(): string | null {
+function resolveEnvironmentEndpoint(): ResolvedEndpoint | null {
   const envValue = process.env.NEXT_PUBLIC_MERM8_API_URL ?? ''
   if (!envValue) return null
 
   const validatedEndpoint = getValidatedEndpoint(envValue)
-  if (validatedEndpoint) return validatedEndpoint
+  if (validatedEndpoint) return { endpoint: validatedEndpoint, source: 'environment' }
 
   console.warn('Invalid API endpoint from NEXT_PUBLIC_MERM8_API_URL, using default')
   return null
 }
 
+/**
+ * Resolve the API endpoint and where it came from, following the precedence:
+ * 1) `?api=` query param when present and valid.
+ * 2) `localStorage.merm8_api_endpoint` when present and valid.
+ * 3) `NEXT_PUBLIC_MERM8_API_URL`.
+ * 4) The default endpoint.
+ */
+export function resolveApiEndpointInfo(): ApiEndpointInfo {
+  return (
+    resolveBrowserEndpoint() ??
+    resolveEnvironmentEndpoint() ??
+    { endpoint: DEFAULT_API_ENDPOINT, source: 'default' }
+  )
+}
+
 export function resolveApiEndpoint(): string {
-  return resolveBrowserEndpoint() ?? resolveEnvironmentEndpoint() ?? DEFAULT_API_ENDPOINT
+  return resolveApiEndpointInfo().endpoint
 }
 
 export function validateApiEndpoint(url: string): EndpointValidationResult {
