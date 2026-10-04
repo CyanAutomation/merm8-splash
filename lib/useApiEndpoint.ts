@@ -2,10 +2,11 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
-  resolveApiEndpoint,
-  safeGetLocalStorage,
+  API_ENDPOINT_STORAGE_KEY,
+  resolveApiEndpointInfo,
   safeSetLocalStorage,
   validateApiEndpoint,
+  type ApiEndpointSource,
 } from './api'
 
 export type ConnectionStatus = 'connected' | 'checking' | 'error' | 'disconnected'
@@ -18,6 +19,13 @@ export interface UseApiEndpointReturn {
   saveEndpoint: () => void
   configSource: string
   statusMessage: string
+}
+
+const CONFIG_SOURCE_LABELS: Record<ApiEndpointSource, string> = {
+  'query-param': 'URL parameter',
+  stored: 'localStorage',
+  environment: 'environment variable',
+  default: 'default',
 }
 
 export function useApiEndpoint(): UseApiEndpointReturn {
@@ -34,32 +42,10 @@ export function useApiEndpoint(): UseApiEndpointReturn {
   }, [endpoint])
 
   useEffect(() => {
-    const resolved = resolveApiEndpoint()
+    const { endpoint: resolved, source } = resolveApiEndpointInfo()
     endpointRef.current = resolved
     setEndpointState(resolved)
-
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const paramValue = params.get('api')
-      const validatedParam =
-        paramValue && validateApiEndpoint(paramValue).valid ? paramValue : undefined
-      const storedValue = safeGetLocalStorage('merm8_api_endpoint')
-      const validatedStored =
-        storedValue && validateApiEndpoint(storedValue).valid ? storedValue : undefined
-      const envValue = process.env.NEXT_PUBLIC_MERM8_API_URL
-      const validatedEnv =
-        envValue && validateApiEndpoint(envValue).valid ? envValue : undefined
-
-      if (validatedParam && resolved === validatedParam) {
-        setConfigSource('URL parameter')
-      } else if (validatedStored && resolved === validatedStored) {
-        setConfigSource('localStorage')
-      } else if (validatedEnv && resolved === validatedEnv) {
-        setConfigSource('environment variable')
-      } else {
-        setConfigSource('default')
-      }
-    }
+    setConfigSource(CONFIG_SOURCE_LABELS[source])
   }, [])
 
   const setEndpoint = useCallback((url: string) => {
@@ -132,7 +118,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
     }
 
     if (typeof window !== 'undefined') {
-      const didSave = safeSetLocalStorage('merm8_api_endpoint', endpoint)
+      const didSave = safeSetLocalStorage(API_ENDPOINT_STORAGE_KEY, endpoint)
       if (didSave) {
         setConfigSource('localStorage')
         setStatusMessage('Endpoint saved to localStorage.')
