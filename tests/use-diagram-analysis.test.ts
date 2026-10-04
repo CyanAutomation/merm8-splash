@@ -4,6 +4,7 @@ import path from 'node:path'
 import vm from 'node:vm'
 import ts from 'typescript'
 import { fileURLToPath } from 'node:url'
+import { getApiFailureMessage } from '../lib/api'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -161,6 +162,7 @@ function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isApiRequestErrorImpl }
 
   const apiMock = {
     analyzeCode: analyzeCodeImpl,
+    getApiFailureMessage,
     isApiRequestError: isApiRequestErrorImpl ?? (() => false),
   }
 
@@ -1014,4 +1016,22 @@ it('parseAnalysisError adds request id hint alongside API-provided hints', async
     'Fix syntax around line 2',
     'Request ID: req-400-with-hints',
   ])
+})
+
+it('shows a recovery message when an analysis request cannot reach the API', async () => {
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      throw new TypeError('Failed to fetch')
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const rerenderedHook = useDiagramAnalysis()
+  expect(rerenderedHook.analyzeError)
+    .toBe('Could not connect to the API endpoint. Check the URL, network connection, and server status.')
 })

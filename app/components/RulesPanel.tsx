@@ -196,7 +196,7 @@ function RulesContent({
   if (isLoading) {
     content = <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>⠋ Loading rules...</div>
   } else if (isUnavailable) {
-    content = <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>Rules metadata unavailable for this API endpoint.</div>
+    content = <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>Rules metadata could not be loaded. Analysis can continue using the API&apos;s server defaults.</div>
   } else if (displayedRules.length === 0) {
     const message = hasNoRulesForDiagramType
       ? `No lint rules are available for ${diagramType} diagrams on this API.`

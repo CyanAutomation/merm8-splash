@@ -21,7 +21,7 @@ export interface ApiConfigPanelRef {
 const STATUS_LABELS: Record<ConnectionStatus, string> = {
   connected: 'Connected',
   checking: 'Checking...',
-  error: 'Unreachable',
+  error: 'Error',
   disconnected: 'Not tested',
 }
 
