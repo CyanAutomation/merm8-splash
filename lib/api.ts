@@ -77,6 +77,20 @@ export interface AnalyzeResponse {
   timestamp?: number
 }
 
+export interface SemanticReview {
+  purpose: { value: string; confidence: number }
+  'label-clarity': { value: boolean; probability: number }
+  'branch-clarity': { value: boolean; probability: number }
+  'abstraction-consistency': { value: boolean; probability: number }
+  ambiguity: { value: boolean; probability: number }
+  'review-priority': { value: string; confidence: number }
+}
+
+export interface SemanticReviewResponse extends AnalyzeResponse {
+  'semantic-review': SemanticReview
+  meta: { source: 'jev'; model: string }
+}
+
 const DEFAULT_API_ENDPOINT = 'https://merm8.scheimann.workers.dev'
 
 export const API_ENDPOINT_STORAGE_KEY = 'merm8_api_endpoint'
@@ -119,10 +133,10 @@ function resolveApiUrl(endpoint: string, path: string): string {
 async function requestApi<T>(
   endpoint: string,
   path: string,
-  options: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal } = {}
+  options: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal; headers?: Record<string, string> } = {}
 ): Promise<T> {
   const controller = new AbortController()
-  const { method = 'GET', body, signal } = options
+  const { method = 'GET', body, signal, headers = {} } = options
   let didTimeout = false
 
   const forwardAbort = () => controller.abort(signal?.reason)
@@ -142,7 +156,7 @@ async function requestApi<T>(
   try {
     const response = await fetch(resolveApiUrl(endpoint, path), {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...headers },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: controller.signal,
     })
@@ -1089,4 +1103,19 @@ export async function analyzeCodeSarif(
 ): Promise<unknown> {
   const request = buildAnalyzeRequest(code, enabledRules, rulesMetadata)
   return requestApi(endpoint, '/v1/analyze/sarif', { method: 'POST', body: request })
+}
+
+/** Sends one diagram for an authenticated, provider-backed semantic review. */
+export async function reviewCodeSemantics(
+  endpoint: string,
+  code: string,
+  apiKey: string,
+  signal?: AbortSignal
+): Promise<SemanticReviewResponse> {
+  return requestApi(endpoint, '/v1/semantic-review', {
+    method: 'POST',
+    body: { code },
+    signal,
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
 }

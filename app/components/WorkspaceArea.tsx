@@ -35,6 +35,7 @@ interface WorkspaceAreaProps {
   canRecheck: boolean
   onToggleMetrics: () => void
   onOpenRules: () => void
+  onOpenSemanticReview: () => void
   onRecheck: () => void
 }
 
@@ -83,6 +84,7 @@ export default function WorkspaceArea({
   canRecheck,
   onToggleMetrics,
   onOpenRules,
+  onOpenSemanticReview,
   onRecheck,
 }: WorkspaceAreaProps) {
   const hasErrors = violations.some((violation) => violation.severity === 'error')
@@ -182,6 +184,9 @@ export default function WorkspaceArea({
                   disabled={!metrics}
                 >
                   📊 Metrics
+                </button>
+                <button className="btn" style={{ fontSize: '12px', padding: '4px 12px' }} onClick={onOpenSemanticReview} disabled={!code.trim() || isAnalyzing} title="Ask the configured API to review diagram clarity">
+                  ✦ Semantic review
                 </button>
                 <button className="btn" style={{ fontSize: '12px', padding: '4px 12px' }} onClick={onOpenRules} title="Configure rules">
                   ⊞ Rules
