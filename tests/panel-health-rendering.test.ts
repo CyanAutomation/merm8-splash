@@ -75,6 +75,21 @@ describe('health hotspot panel rendering', () => {
     expect(markup).toContain('Localhost 3000')
   })
 
+  it('shows an API error when a health check receives a response but access fails', () => {
+    const markup = renderToStaticMarkup(createElement(StatusBar, {
+      connectionStatus: 'error',
+      parseStatus: 'valid',
+      ruleCount: 0,
+      violationCount: 0,
+      apiEndpoint: 'https://api.example.test',
+      onTestConnection: vi.fn(),
+      statusMessage: 'The endpoint responded, but denied access to its health check (HTTP 403). Check its access settings.',
+    }))
+
+    expect(markup).toContain('API Error')
+    expect(markup).toContain('The endpoint responded, but denied access to its health check')
+  })
+
   it('explains semantic review data handling and accepts an API key', () => {
     const markup = renderToStaticMarkup(createElement(SemanticReviewDialog, {
       endpoint: 'https://api.example.test',
@@ -83,7 +98,27 @@ describe('health hotspot panel rendering', () => {
     }))
 
     expect(markup).toContain('This sends the current diagram to the configured API')
-    expect(markup).toContain('Your API key stays in this dialog and is not saved.')
+    expect(markup).toContain('An API key is required; it is sent with this request and is not saved.')
+    expect(markup).toContain('Enter an API key to enable semantic review.')
     expect(markup).toContain('type="password"')
+    expect(markup).toContain('aria-describedby="semantic-review-api-key-help"')
+    expect(markup).toContain('disabled=""')
+  })
+
+  it('explains that analysis falls back to server defaults when rules metadata is unavailable', () => {
+    const markup = renderToStaticMarkup(createElement(RulesPanel, {
+      rules: [],
+      enabledRules: [],
+      onToggleRule: vi.fn(),
+      onEnableAll: vi.fn(),
+      onDisableAll: vi.fn(),
+      isLoading: false,
+      isUnavailable: true,
+      diagramType: 'flowchart',
+    }))
+
+    expect(markup).toContain('Rules metadata could not be loaded.')
+    expect(markup).toContain('Analysis can continue using the API')
+    expect(markup).toContain('server defaults.')
   })
 })

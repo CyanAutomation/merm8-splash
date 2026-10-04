@@ -22,7 +22,7 @@ function truncateEndpoint(url: string, max = 40): string {
 function getConnectionLabel(status: ConnectionStatus): string {
   const labels: Record<ConnectionStatus, string> = {
     connected: 'API Connected',
-    error: 'API Unreachable',
+    error: 'API Error',
     checking: 'Checking...',
     disconnected: 'API Not Tested',
   }
