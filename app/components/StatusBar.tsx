@@ -38,7 +38,7 @@ function getConnectionColor(status: ConnectionStatus): string {
 
 function ConnectionSummary({ status }: { status: ConnectionStatus }) {
   return (
-    <span>
+    <span className="status-bar-connection">
       <span className={`status-dot status-dot-${status}`} />
       {getConnectionLabel(status)}
     </span>
@@ -52,17 +52,17 @@ function ParseSummary({ status }: { status: ParseStatus }) {
       ? 'var(--color-error)'
       : 'var(--color-text-secondary)'
 
-  return <span style={{ color }}>{getParseStatusLabel(status)}</span>
+  return <span className="status-bar-parse" style={{ color }}>{getParseStatusLabel(status)}</span>
 }
 
 function DiagramTypeSummary({ diagramType }: { diagramType?: string | null }) {
   if (!diagramType) return null
-  return <span style={{ color: 'var(--color-accent-secondary)' }}>Type: {diagramType}</span>
+  return <span className="status-bar-diagram-type" style={{ color: 'var(--color-accent-secondary)' }}>Type: {diagramType}</span>
 }
 
 function LintSupportSummary({ lintSupported }: { lintSupported?: boolean | null }) {
   if (lintSupported !== false) return null
-  return <span style={{ color: 'var(--color-info)' }}>Syntax checked only</span>
+  return <span className="status-bar-lint-support" style={{ color: 'var(--color-info)' }}>Syntax checked only</span>
 }
 
 function RuleSummary({ ruleCount, violationCount, parseStatus }: {
@@ -73,7 +73,7 @@ function RuleSummary({ ruleCount, violationCount, parseStatus }: {
   const clean = parseStatus !== 'error' && violationCount === 0 && ruleCount > 0
 
   return (
-    <span>
+    <span className="status-bar-rules">
       {ruleCount} rule{ruleCount !== 1 ? 's' : ''} enabled
       {violationCount > 0 && (
         <span style={{ color: 'var(--color-error)', marginLeft: '4px' }}>
@@ -87,7 +87,7 @@ function RuleSummary({ ruleCount, violationCount, parseStatus }: {
 
 function StatusMessage({ status, message }: { status: ConnectionStatus; message?: string }) {
   if (!message) return null
-  return <span style={{ color: getConnectionColor(status) }}>{message}</span>
+  return <span className="status-bar-message" style={{ color: getConnectionColor(status) }}>{message}</span>
 }
 
 function ConnectionActions({ status, endpoint, onTestConnection }: {
@@ -96,7 +96,7 @@ function ConnectionActions({ status, endpoint, onTestConnection }: {
   onTestConnection?: () => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+    <div className="status-bar-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
       {onTestConnection && (
         <button
           className="btn"
@@ -107,7 +107,7 @@ function ConnectionActions({ status, endpoint, onTestConnection }: {
           Test
         </button>
       )}
-      <div style={{ color: 'var(--color-text-secondary)' }}>{truncateEndpoint(endpoint)}</div>
+      <div className="status-bar-endpoint" aria-label={`API endpoint ${endpoint}`} style={{ color: 'var(--color-text-secondary)' }}>{truncateEndpoint(endpoint)}</div>
     </div>
   )
 }
@@ -125,6 +125,7 @@ export default function StatusBar({
 }: StatusBarProps) {
   return (
     <div
+      className="status-bar"
       style={{
         background: 'var(--color-bg-secondary)',
         borderTop: '1px solid var(--color-border)',
@@ -138,7 +139,7 @@ export default function StatusBar({
         gap: '8px',
       }}
     >
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <div className="status-bar-summary" style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
         <ConnectionSummary status={connectionStatus} />
         <ParseSummary status={parseStatus} />
         <DiagramTypeSummary diagramType={diagramType} />
@@ -150,7 +151,7 @@ export default function StatusBar({
         />
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      <div className="status-bar-details" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
         <StatusMessage status={connectionStatus} message={statusMessage} />
         <ConnectionActions
           status={connectionStatus}

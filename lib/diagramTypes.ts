@@ -102,16 +102,15 @@ function isFlowchartDeclaration(normalized: string): boolean {
  */
 const diagramTypeRuleMap: Record<string, Set<string>> = {
   flowchart: new Set([
-    'max-depth',
     'max-fanout',
     'no-cycles',
     'no-disconnected-nodes',
     'no-duplicate-node-ids',
   ]),
-  sequence: new Set(['sequence-max-participants']),
-  class: new Set(['class-no-orphan-classes']),
-  er: new Set(['er-no-isolated-entities']),
-  state: new Set(['state-no-unreachable-states']),
+  sequence: new Set(['no-undefined-actors']),
+  class: new Set(['no-duplicate-classes']),
+  er: new Set(['no-self-referential']),
+  state: new Set(['no-unreachable-state']),
 }
 
 /**
