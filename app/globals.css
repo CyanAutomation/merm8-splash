@@ -221,3 +221,45 @@ a {
       display: none;
     }
   }
+
+  @media (max-width: 520px) {
+    .status-bar {
+      flex-wrap: nowrap !important;
+      gap: 6px !important;
+      padding: 4px 8px !important;
+      font-size: 11px !important;
+    }
+
+    .status-bar-summary {
+      flex: 1 1 auto;
+      min-width: 0;
+      flex-wrap: nowrap !important;
+      gap: 8px !important;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .status-bar-details,
+    .status-bar-actions {
+      flex: 0 0 auto;
+      gap: 4px !important;
+    }
+
+    .status-bar-endpoint,
+    .status-bar-message,
+    .status-bar-diagram-type,
+    .status-bar-lint-support {
+      display: none;
+    }
+
+    .status-bar-rules {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .status-bar-parse {
+      display: none;
+    }
+  }

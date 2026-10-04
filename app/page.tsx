@@ -17,6 +17,7 @@ import { useApiEndpoint } from '@/lib/useApiEndpoint'
 import { useDiagramAnalysis } from '@/lib/useDiagramAnalysis'
 import { useLayoutPreferences } from '@/lib/useLayoutPreferences'
 import { useRulesConfiguration } from '@/lib/useRulesConfiguration'
+import { filterRulesByDiagramType } from '@/lib/diagramTypes'
 
 function HomeContent() {
   const apiConfigRef = useRef<ApiConfigPanelRef>(null)
@@ -70,6 +71,7 @@ function HomeContent() {
   const [showApiConfigModal, setShowApiConfigModal] = useState(false)
   const [showFullscreenDiagram, setShowFullscreenDiagram] = useState(false)
   const [showMetrics, setShowMetrics] = useState(false)
+  const [showSemanticReview, setShowSemanticReview] = useState(false)
 
   useScheduledAnalysis({
     code,
@@ -136,6 +138,7 @@ function HomeContent() {
   const diagramPreviewResetKey = code
 
   const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+  const applicableEnabledRuleCount = filterRulesByDiagramType(enabledRules, diagramType).length
 
   return (
       <div
@@ -177,6 +180,7 @@ function HomeContent() {
         canRecheck={canRecheck}
         onToggleMetrics={() => setShowMetrics((shown) => !shown)}
         onOpenRules={() => setShowRulesModal(true)}
+        onOpenSemanticReview={() => setShowSemanticReview(true)}
         onRecheck={handleRecheck}
       />
 
@@ -186,7 +190,7 @@ function HomeContent() {
         <StatusBar
           connectionStatus={connectionStatus}
           parseStatus={parseStatus}
-          ruleCount={enabledRules.length}
+          ruleCount={applicableEnabledRuleCount}
           violationCount={Array.isArray(violations) ? violations.length : 0}
           apiEndpoint={endpoint}
           diagramType={diagramType}
@@ -236,6 +240,12 @@ function HomeContent() {
           code,
           parseErrorDetail,
           preferences: prefs,
+        }}
+        semanticReview={{
+          isOpen: showSemanticReview,
+          onClose: () => setShowSemanticReview(false),
+          endpoint,
+          code,
         }}
       />
       </div>

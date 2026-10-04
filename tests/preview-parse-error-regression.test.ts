@@ -140,7 +140,10 @@ vi.mock('@/lib/useManualRecheck', () => ({
   useManualRecheck: () => ({ canRecheck: false, handleRecheck: vi.fn() }),
 }))
 vi.mock('@/lib/api', () => ({ fetchRules: vi.fn() }))
-vi.mock('@/lib/diagramTypes', () => ({ getApplicableRules: () => new Set<string>() }))
+vi.mock('@/lib/diagramTypes', () => ({
+  getApplicableRules: () => new Set<string>(),
+  filterRulesByDiagramType: (ruleIds: string[]) => ruleIds,
+}))
 vi.mock('@/lib/rulesState', () => ({
   resolveRulesAvailabilityState: () => ({ isAvailable: false, isUnavailable: false }),
   shouldTreatRulesPayloadAsUnavailable: () => false,

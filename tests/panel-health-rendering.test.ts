@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import ApiConfigPanel from '../app/components/ApiConfigPanel'
 import RulesPanel from '../app/components/RulesPanel'
 import StatusBar from '../app/components/StatusBar'
+import SemanticReviewDialog from '../app/components/SemanticReviewDialog'
 
 describe('health hotspot panel rendering', () => {
   it('renders status summaries and disables connection testing while checking', () => {
@@ -18,6 +19,8 @@ describe('health hotspot panel rendering', () => {
       onTestConnection: vi.fn(),
       statusMessage: 'Checking endpoint',
     }))
+    expect(markup).toContain('class="status-bar"')
+    expect(markup).toContain('class="status-bar-actions"')
 
     expect(markup).toContain('Checking...')
     expect(markup).toContain('Syntax valid')
@@ -70,5 +73,17 @@ describe('health hotspot panel rendering', () => {
     expect(markup).toContain('Official API')
     expect(markup).toContain('Localhost 8080')
     expect(markup).toContain('Localhost 3000')
+  })
+
+  it('explains semantic review data handling and accepts an API key', () => {
+    const markup = renderToStaticMarkup(createElement(SemanticReviewDialog, {
+      endpoint: 'https://api.example.test',
+      code: 'flowchart TD\\nA --> B',
+      onClose: vi.fn(),
+    }))
+
+    expect(markup).toContain('This sends the current diagram to the configured API')
+    expect(markup).toContain('Your API key stays in this dialog and is not saved.')
+    expect(markup).toContain('type="password"')
   })
 })

@@ -281,16 +281,16 @@ it('buildAnalyzeRequest includes explicit rule config when metadata is available
 it('buildAnalyzeRequest keeps universal rules enabled for known diagram types', () => {
   const request = buildAnalyzeRequest(
     'graph TD\nA-->B',
-    ['max-depth', 'no-empty-label', 'sequence-max-participants'],
+    ['no-cycles', 'no-empty-label', 'no-undefined-actors'],
     [
       {
-        id: 'max-depth',
-        description: 'Limit depth',
+        id: 'no-cycles',
+        description: 'Disallow cycles',
         severity: 'warning',
       },
       {
-        id: 'sequence-max-participants',
-        description: 'Limit participants',
+        id: 'no-undefined-actors',
+        description: 'Require declared participants',
         severity: 'warning',
       },
       {
@@ -301,25 +301,25 @@ it('buildAnalyzeRequest keeps universal rules enabled for known diagram types', 
     ]
   )
 
-  expect(request.config.rules['max-depth'].enabled).toBe(true)
+  expect(request.config.rules['no-cycles'].enabled).toBe(true)
   expect(request.config.rules['no-empty-label'].enabled).toBe(true)
-  expect(request.config.rules['sequence-max-participants'].enabled).toBe(false)
+  expect(request.config.rules['no-undefined-actors'].enabled).toBe(false)
 })
 
 
 it('buildAnalyzeRequest detects diagram type after leading Mermaid comments and init block', () => {
   const request = buildAnalyzeRequest(
     '%% this is a leading comment\n%%{init: {\"theme\": \"dark\"}}%%\nflowchart LR\nA-->B',
-    ['max-depth', 'sequence-max-participants', 'no-empty-label'],
+    ['no-cycles', 'no-undefined-actors', 'no-empty-label'],
     [
       {
-        id: 'max-depth',
-        description: 'Limit depth',
+        id: 'no-cycles',
+        description: 'Disallow cycles',
         severity: 'warning',
       },
       {
-        id: 'sequence-max-participants',
-        description: 'Limit participants',
+        id: 'no-undefined-actors',
+        description: 'Require declared participants',
         severity: 'warning',
       },
       {
@@ -330,24 +330,24 @@ it('buildAnalyzeRequest detects diagram type after leading Mermaid comments and 
     ]
   )
 
-  expect(request.config.rules['max-depth'].enabled).toBe(true)
-  expect(request.config.rules['sequence-max-participants'].enabled).toBe(false)
+  expect(request.config.rules['no-cycles'].enabled).toBe(true)
+  expect(request.config.rules['no-undefined-actors'].enabled).toBe(false)
   expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
 
 it('buildAnalyzeRequest detects diagram type after multi-line Mermaid init block', () => {
   const request = buildAnalyzeRequest(
     '%%{\ninit: {\"theme\": \"neutral\"}\n}%%\nsequenceDiagram\nAlice->>Bob: Hello',
-    ['sequence-max-participants', 'max-depth', 'no-empty-label'],
+    ['no-undefined-actors', 'no-cycles', 'no-empty-label'],
     [
       {
-        id: 'sequence-max-participants',
-        description: 'Limit participants',
+        id: 'no-undefined-actors',
+        description: 'Require declared participants',
         severity: 'warning',
       },
       {
-        id: 'max-depth',
-        description: 'Limit depth',
+        id: 'no-cycles',
+        description: 'Disallow cycles',
         severity: 'warning',
       },
       {
@@ -358,8 +358,8 @@ it('buildAnalyzeRequest detects diagram type after multi-line Mermaid init block
     ]
   )
 
-  expect(request.config.rules['sequence-max-participants'].enabled).toBe(true)
-  expect(request.config.rules['max-depth'].enabled).toBe(false)
+  expect(request.config.rules['no-undefined-actors'].enabled).toBe(true)
+  expect(request.config.rules['no-cycles'].enabled).toBe(false)
   expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
 
@@ -368,16 +368,16 @@ it('buildAnalyzeRequest detects diagram type after multi-line Mermaid init block
 it('buildAnalyzeRequest detects flowchart declarations with tab whitespace', () => {
   const request = buildAnalyzeRequest(
     'graph\tTD\nA-->B',
-    ['max-depth', 'sequence-max-participants', 'no-empty-label'],
+    ['no-cycles', 'no-undefined-actors', 'no-empty-label'],
     [
       {
-        id: 'max-depth',
-        description: 'Limit depth',
+        id: 'no-cycles',
+        description: 'Disallow cycles',
         severity: 'warning',
       },
       {
-        id: 'sequence-max-participants',
-        description: 'Limit participants',
+        id: 'no-undefined-actors',
+        description: 'Require declared participants',
         severity: 'warning',
       },
       {
@@ -388,23 +388,23 @@ it('buildAnalyzeRequest detects flowchart declarations with tab whitespace', () 
     ]
   )
 
-  expect(request.config.rules['max-depth'].enabled).toBe(true)
-  expect(request.config.rules['sequence-max-participants'].enabled).toBe(false)
+  expect(request.config.rules['no-cycles'].enabled).toBe(true)
+  expect(request.config.rules['no-undefined-actors'].enabled).toBe(false)
   expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
 it('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filtering', () => {
   const request = buildAnalyzeRequest(
     '%%{init: {"theme": "dark"}}%% stateDiagram-v2\n[*] --> Idle\nIdle --> Active',
-    ['state-no-unreachable-states', 'max-depth', 'no-empty-label'],
+    ['no-unreachable-state', 'no-cycles', 'no-empty-label'],
     [
       {
-        id: 'state-no-unreachable-states',
+        id: 'no-unreachable-state',
         description: 'No unreachable states',
         severity: 'warning',
       },
       {
-        id: 'max-depth',
-        description: 'Limit depth',
+        id: 'no-cycles',
+        description: 'Disallow cycles',
         severity: 'warning',
       },
       {
@@ -415,8 +415,8 @@ it('buildAnalyzeRequest treats stateDiagram-v2 as a state diagram for rule filte
     ]
   )
 
-  expect(request.config.rules['state-no-unreachable-states'].enabled).toBe(true)
-  expect(request.config.rules['max-depth'].enabled).toBe(false)
+  expect(request.config.rules['no-unreachable-state'].enabled).toBe(true)
+  expect(request.config.rules['no-cycles'].enabled).toBe(false)
   expect(request.config.rules['no-empty-label'].enabled).toBe(true)
 })
 
@@ -591,6 +591,48 @@ it('analyzeCode defaults malformed issue-count maps to empty objects', async () 
 
   expect(JSON.stringify(response.metrics.issueCounts.bySeverity)).toBe(JSON.stringify({}))
   expect(JSON.stringify(response.metrics.issueCounts.byRule)).toBe(JSON.stringify({}))
+})
+
+it('reviewCodeSemantics sends Mermaid source with the API key only in the authorization header', async () => {
+  const { fetchImpl, calls } = mockJsonFetch({
+    valid: true,
+    'diagram-type': 'flowchart',
+    'lint-supported': true,
+    issues: [],
+    'semantic-review': {
+      purpose: { value: 'process', confidence: 0.91 },
+      'label-clarity': { value: true, probability: 0.88 },
+      'branch-clarity': { value: true, probability: 0.76 },
+      'abstraction-consistency': { value: false, probability: 0.23 },
+      ambiguity: { value: false, probability: 0.12 },
+      'review-priority': { value: 'low', confidence: 0.84 },
+    },
+    meta: { source: 'jev', model: 'test-model' },
+  })
+  const { reviewCodeSemantics } = loadApiModule({ fetchImpl })
+
+  const response = await reviewCodeSemantics('https://api.example.com', 'flowchart TD\nA --> B', 'secret-key')
+
+  expect(calls[0].url).toBe('https://api.example.com/v1/semantic-review')
+  expect(calls[0].init.method).toBe('POST')
+  expect(calls[0].init.headers.Authorization).toBe('Bearer secret-key')
+  expect(calls[0].init.body).toBe(JSON.stringify({ code: 'flowchart TD\nA --> B' }))
+  expect(response['semantic-review'].purpose.value).toBe('process')
+  expect(JSON.stringify(calls[0].init.body)).not.toContain('secret-key')
+})
+
+it('analyzeCodeSarif requests the API SARIF endpoint with the configured rule selection', async () => {
+  const { fetchImpl, calls } = mockJsonFetch({ version: '2.1.0', runs: [] })
+  const { analyzeCodeSarif } = loadApiModule({ fetchImpl })
+
+  const report = await analyzeCodeSarif('https://api.example.com', 'flowchart TD\nA --> B', ['no-cycles'], [
+    { id: 'no-cycles', description: 'Disallow cycles', severity: 'error' },
+  ])
+
+  expect(report.version).toBe('2.1.0')
+  expect(calls[0].url).toBe('https://api.example.com/v1/analyze/sarif')
+  expect(calls[0].init.method).toBe('POST')
+  expect(JSON.parse(calls[0].init.body).config.rules['no-cycles'].enabled).toBe(true)
 })
 
 it('fetchRules normalizes malformed payloads to an empty rules list with malformed status', async () => {
