@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { isApiRequestError, reviewCodeSemantics, type SemanticReviewResponse } from '@/lib/api'
+import { getApiFailureMessage, isApiRequestError, reviewCodeSemantics, type SemanticReviewResponse } from '@/lib/api'
 import Modal from './Modal'
 
 interface SemanticReviewDialogProps {
@@ -11,13 +11,15 @@ interface SemanticReviewDialogProps {
 }
 
 function readErrorMessage(error: unknown): string {
+  const apiFailureMessage = getApiFailureMessage(error, 'semantic-review')
+  if (apiFailureMessage) return apiFailureMessage
+
   if (isApiRequestError(error)) {
     const body = error.data
     if (body && typeof body === 'object' && 'error' in body) {
       const apiError = (body as { error?: { message?: unknown } }).error
       if (apiError && typeof apiError.message === 'string') return apiError.message
     }
-    if (error.status === 401) return 'The API key was rejected.'
   }
   return error instanceof Error ? error.message : 'Semantic review could not be completed.'
 }
@@ -83,7 +85,7 @@ export default function SemanticReviewDialog({ endpoint, code, onClose }: Semant
     <Modal isOpen onClose={onClose} title="Semantic Review" maxHeight="85vh">
       <form onSubmit={handleSubmit}>
         <p style={{ marginBottom: '16px', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-          This sends the current diagram to the configured API for an AI review. Your API key stays in this dialog and is not saved.
+          This sends the current diagram to the configured API for an AI review. An API key is required; it is sent with this request and is not saved.
         </p>
         {!result && (
           <>
@@ -93,12 +95,17 @@ export default function SemanticReviewDialog({ endpoint, code, onClose }: Semant
             <input
               id="semantic-review-api-key"
               type="password"
+              required
+              aria-describedby="semantic-review-api-key-help"
               autoComplete="off"
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
-              placeholder="Enter the configured API key"
-              style={{ width: '100%', padding: '9px 10px', background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '5px', marginBottom: '12px' }}
+              placeholder="Enter an API key"
+              style={{ width: '100%', padding: '9px 10px', background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '5px' }}
             />
+            <p id="semantic-review-api-key-help" style={{ color: 'var(--color-text-secondary)', fontSize: '12px', margin: '6px 0 12px' }}>
+              Enter an API key to enable semantic review.
+            </p>
           </>
         )}
         {error && <p role="alert" style={{ color: 'var(--color-error)', marginBottom: '12px' }}>{error}</p>}

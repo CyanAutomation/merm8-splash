@@ -114,6 +114,90 @@ export function isApiRequestError(
   return error instanceof ApiRequestError
 }
 
+export type ApiFailureContext = 'analysis' | 'connection' | 'semantic-review'
+
+/** Returns a recovery-focused message for common API transport and authorization failures. */
+export function getApiFailureMessage(error: unknown, context: ApiFailureContext = 'analysis'): string | null {
+  const errorRecord = isRecord(error) ? error : null
+  const name = typeof errorRecord?.name === 'string' ? errorRecord.name : ''
+  const message = typeof errorRecord?.message === 'string' ? errorRecord.message : ''
+  const status = typeof errorRecord?.status === 'number' ? errorRecord.status : null
+
+  if (name === 'MissingApiKeyError') {
+    return 'Enter an API key to run semantic review.'
+  }
+
+  if (context === 'semantic-review' && status === 401) {
+    return 'The API key is missing, expired, or invalid. Check the key and try again.'
+  }
+
+  if (context === 'semantic-review' && status === 403) {
+    return 'This API key is not authorized to use semantic review. Check its permissions.'
+  }
+
+  if (status === 401 || status === 403) {
+    return context === 'connection'
+      ? `The endpoint responded, but denied access to its health check (HTTP ${status}). Check its access settings.`
+      : `The API denied this request (HTTP ${status}). Check API access settings.`
+  }
+
+  if (status === 429) {
+    if (context === 'connection') {
+      return 'The endpoint is rate-limiting health checks. Wait a moment and try again.'
+    }
+    if (context === 'semantic-review') {
+      return 'Semantic review is temporarily rate-limited. Wait a moment and try again.'
+    }
+    return 'The API is rate-limiting requests. Wait a moment and try again.'
+  }
+
+  if (status !== null && status >= 500) {
+    if (context === 'connection') {
+      return `The endpoint returned a server error (HTTP ${status}). Try again later.`
+    }
+    if (context === 'semantic-review') {
+      return `The semantic review service is temporarily unavailable (HTTP ${status}). Try again later.`
+    }
+    return `The API is temporarily unavailable (HTTP ${status}). Try again later.`
+  }
+
+  if (context === 'connection' && status === 404) {
+    return 'The endpoint responded, but its health check route was not found (HTTP 404). Check that the URL points to a compatible merm8 API.'
+  }
+
+  if (context === 'semantic-review' && status === 404) {
+    return 'This endpoint does not provide semantic review (HTTP 404). Check that the URL points to a compatible API.'
+  }
+
+  if (context === 'connection' && status !== null && status >= 400) {
+    return `The endpoint responded with HTTP ${status} during its health check. Check the endpoint and its access settings.`
+  }
+
+  if (context === 'connection' && message.startsWith('API health check failed:')) {
+    return 'The endpoint responded, but returned an unexpected health check response. Check that the URL points to a compatible merm8 API.'
+  }
+
+  if (name === 'TimeoutError' || /\btime(?:d\s*out|out)\b/i.test(message)) {
+    if (context === 'connection') {
+      return 'The API endpoint did not respond within 10 seconds. Check its URL and server status.'
+    }
+    if (context === 'semantic-review') {
+      return 'Semantic review timed out while waiting for the API. Check the endpoint and try again.'
+    }
+    return 'Analysis timed out while waiting for the API. Check the endpoint and try again.'
+  }
+
+  const isNetworkFailure = name === 'TypeError' || /failed to fetch|network request failed|networkerror|load failed|econn(?:refused|reset)|connection (?:refused|reset)/i.test(message)
+  if (isNetworkFailure) {
+    if (context === 'semantic-review') {
+      return 'Could not connect to the API for semantic review. Check your network connection and API endpoint, then try again.'
+    }
+    return 'Could not connect to the API endpoint. Check the URL, network connection, and server status.'
+  }
+
+  return null
+}
+
 async function readResponseData(response: Response): Promise<unknown> {
   const text = await response.text()
   if (!text) return undefined
@@ -1112,10 +1196,17 @@ export async function reviewCodeSemantics(
   apiKey: string,
   signal?: AbortSignal
 ): Promise<SemanticReviewResponse> {
+  const normalizedApiKey = apiKey.trim()
+  if (!normalizedApiKey) {
+    const error = new Error('Enter an API key to run semantic review.')
+    error.name = 'MissingApiKeyError'
+    throw error
+  }
+
   return requestApi(endpoint, '/v1/semantic-review', {
     method: 'POST',
     body: { code },
     signal,
-    headers: { Authorization: `Bearer ${apiKey}` },
+    headers: { Authorization: `Bearer ${normalizedApiKey}` },
   })
 }

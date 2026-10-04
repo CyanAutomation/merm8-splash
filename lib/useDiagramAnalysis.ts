@@ -9,6 +9,7 @@ import {
   Rule,
   AnalyzeHint,
   AnalysisMetrics,
+  getApiFailureMessage,
   isApiRequestError,
 } from './api'
 import { DEFAULT_DIAGRAM } from './constants'
@@ -285,14 +286,20 @@ function getErrorSuggestion(error: unknown): string | null {
 }
 
 function parseAnalysisError(err: unknown): ParsedAnalysisError {
+  const apiFailureMessage = getApiFailureMessage(err, 'analysis')
+
   if (!isApiRequestError(err)) {
     return {
-      summary: err instanceof Error ? err.message : 'Analysis failed',
+      summary: apiFailureMessage ?? (err instanceof Error ? err.message : 'Analysis failed'),
       hints: [],
     }
   }
 
   const requestIdHint = getRequestIdHint(err.headers)
+  if (apiFailureMessage) {
+    return { summary: apiFailureMessage, hints: requestIdHint ? [requestIdHint] : [] }
+  }
+
   const responseData = err.data
   if (typeof responseData === 'string' && responseData.trim()) {
     return { summary: responseData, hints: requestIdHint ? [requestIdHint] : [] }
