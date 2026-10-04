@@ -6,11 +6,12 @@ on:
   workflow_dispatch:
 
 run-name: >-
-  DRY sweep · ${{ github.repository }}@${{ github.event.repository.default_branch }}
+  DRY sweep · ${{ github.repository }}@${{ github.sha }}
 
 permissions: {}
 
 # Protect the complete external Kaseki run from overlapping sweeps.
+# GitHub retains one pending run per group; a newer pending run replaces it.
 concurrency:
   group: kaseki-${{ github.repository }}
   cancel-in-progress: false
@@ -18,7 +19,7 @@ concurrency:
 jobs:
   dry_sweep:
     name: Run Kaseki DRY sweep
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     # Kaseki allows a run to last three hours; leave time for
@@ -33,7 +34,7 @@ jobs:
       KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
 
       REPO_URL: ${{ github.server_url }}/${{ github.repository }}
-      REF: ${{ github.event.repository.default_branch }}
+      REF: ${{ github.sha }}
 
       TASK_DESCRIPTION: >-
         Perform a conservative DRY-principle review of this repository.
@@ -61,6 +62,8 @@ jobs:
           set -euo pipefail
 
           command -v jq >/dev/null
+          command -v node >/dev/null
+          command -v timeout >/dev/null
           command -v uuidgen >/dev/null
           command -v curl >/dev/null
 
@@ -133,8 +136,34 @@ jobs:
 
           : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured as an environment secret}"
 
+          # Stable across GitHub reruns; a new workflow run gets a new key.
           idempotency_key="$(
-            tr '[:upper:]' '[:lower:]' < /proc/sys/kernel/random/uuid
+            node <<'NODE'
+            const { createHash } = require('node:crypto');
+            const namespace = Buffer.from('6ba7b8119dad11d180b400c04fd430c8', 'hex');
+            const identity = [
+              process.env.GITHUB_REPOSITORY,
+              process.env.GITHUB_WORKFLOW,
+              process.env.GITHUB_RUN_ID,
+            ];
+
+            if (identity.some((value) => !value)) {
+              throw new Error('GitHub run identity is incomplete');
+            }
+
+            const digest = createHash('sha1')
+              .update(namespace)
+              .update(JSON.stringify(identity), 'utf8')
+              .digest()
+              .subarray(0, 16);
+            digest[6] = (digest[6] & 0x0f) | 0x50;
+            digest[8] = (digest[8] & 0x3f) | 0x80;
+
+            const hex = digest.toString('hex');
+            process.stdout.write(
+              `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}\n`,
+            );
+          NODE
           )"
           output_delimiter="$(uuidgen)"
 
@@ -218,19 +247,11 @@ jobs:
             exit 1
           fi
 
-          run_id="$(jq -er '.id' "$response_file")"
-
-          if [[ ${#run_id} -gt 128 || ${#run_id} -lt 1 ]]; then
-            echo "::error title=Invalid Kaseki run ID::Controller returned an invalid run ID (invalid length)"
-            exit 1
-          fi
-
-          case "$run_id" in
-            *[!A-Za-z0-9_-]*)
-              echo "::error title=Invalid Kaseki run ID::Controller returned an invalid run ID (invalid characters)"
-              exit 1
-              ;;
-          esac
+          run_id="$(
+            jq -er \
+              '.id | strings | select(test("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"))' \
+              "$response_file"
+          )"
 
           {
             echo "run_id<<$output_delimiter"
