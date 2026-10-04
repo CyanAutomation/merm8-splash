@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   API_ENDPOINT_STORAGE_KEY,
+  getApiFailureMessage,
   resolveApiEndpointInfo,
   safeSetLocalStorage,
   validateApiEndpoint,
@@ -90,7 +91,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
 
       setConnectionStatus('connected')
       setStatusMessage('Connection successful.')
-    } catch {
+    } catch (error) {
       if (controller.signal.aborted) {
         return
       }
@@ -99,7 +100,7 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       }
 
       setConnectionStatus('error')
-      setStatusMessage('Could not reach endpoint. Check URL and server status.')
+      setStatusMessage(getApiFailureMessage(error, 'connection') ?? 'Could not connect to the API endpoint. Check the URL, network connection, and server status.')
     }
   }, [])
 

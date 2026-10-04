@@ -25,7 +25,7 @@ export function getConnectionNotice(
   return {
     message: isInvalidEndpoint
       ? 'Invalid endpoint. Check URL format and try again.'
-      : 'Endpoint unreachable. Verify server status and URL.',
+      : currentMessage || 'Could not connect to the API endpoint. Check the URL, network connection, and server status.',
     tone: 'error',
   }
 }

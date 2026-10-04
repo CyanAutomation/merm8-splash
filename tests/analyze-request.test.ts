@@ -621,6 +621,45 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
   expect(JSON.stringify(calls[0].init.body)).not.toContain('secret-key')
 })
 
+it('does not send a semantic review request when the API key is missing', async () => {
+  const { fetchImpl, calls } = mockJsonFetch({})
+  const api = loadApiModule({ fetchImpl })
+  const error = await api.reviewCodeSemantics('https://api.example.com', 'flowchart TD\nA --> B', '  ')
+    .catch((caughtError) => caughtError)
+
+  expect(error).toMatchObject({ name: 'MissingApiKeyError' })
+  expect(api.getApiFailureMessage(error, 'semantic-review'))
+    .toBe('Enter an API key to run semantic review.')
+  expect(calls).toEqual([])
+})
+
+it('explains that a 401 semantic review response can mean the API key expired', async () => {
+  const fetchImpl = async () => new Response(JSON.stringify({ error: { message: 'Token expired' } }), {
+    status: 401,
+    headers: { 'content-type': 'application/json' },
+  })
+  const api = loadApiModule({ fetchImpl })
+  const error = await api.reviewCodeSemantics('https://api.example.com', 'flowchart TD\nA --> B', 'expired-key')
+    .catch((caughtError) => caughtError)
+
+  expect(error).toMatchObject({ name: 'ApiRequestError', status: 401 })
+  expect(api.getApiFailureMessage(error, 'semantic-review'))
+    .toBe('The API key is missing, expired, or invalid. Check the key and try again.')
+})
+
+it('explains when an API key lacks semantic review permission', async () => {
+  const fetchImpl = async () => new Response(JSON.stringify({ error: { message: 'Forbidden' } }), {
+    status: 403,
+    headers: { 'content-type': 'application/json' },
+  })
+  const api = loadApiModule({ fetchImpl })
+  const error = await api.reviewCodeSemantics('https://api.example.com', 'flowchart TD\nA --> B', 'limited-key')
+    .catch((caughtError) => caughtError)
+
+  expect(api.getApiFailureMessage(error, 'semantic-review'))
+    .toBe('This API key is not authorized to use semantic review. Check its permissions.')
+})
+
 it('analyzeCodeSarif requests the API SARIF endpoint with the configured rule selection', async () => {
   const { fetchImpl, calls } = mockJsonFetch({ version: '2.1.0', runs: [] })
   const { analyzeCodeSarif } = loadApiModule({ fetchImpl })
@@ -784,6 +823,12 @@ it('validateApiEndpoint accepts endpoint without credentials', () => {
 
   expect(result.valid).toBe(true)
   expect(result.message).toBe(undefined)
+})
+
+it('explains when the configured API endpoint is empty', () => {
+  const { validateApiEndpoint } = loadApiModule()
+
+  expect(validateApiEndpoint('')).toEqual({ valid: false, message: 'Endpoint is required.' })
 })
 
 it('validateApiEndpoint rejects endpoint with username/password credentials', () => {
@@ -1108,6 +1153,17 @@ describe('native fetch API transport', () => {
       data: { error: { code: 'parser_timeout' } },
       headers: expect.objectContaining({ get: expect.any(Function) }),
     })
+  })
+
+  it('turns endpoint disconnectivity into a useful health-check message', async () => {
+    const fetchImpl = async () => {
+      throw new TypeError('Failed to fetch')
+    }
+    const api = loadApiModule({ fetchImpl })
+    const error = await api.fetchHealthz('https://api.example.com').catch((caughtError) => caughtError)
+
+    expect(api.getApiFailureMessage(error, 'connection'))
+      .toBe('Could not connect to the API endpoint. Check the URL, network connection, and server status.')
   })
 
   it('aborts a request after the existing ten-second timeout', async () => {

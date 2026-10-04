@@ -15,8 +15,9 @@ it('maps connection state transitions to concise feedback', () => {
     message: 'Invalid endpoint. Check URL format and try again.',
     tone: 'error',
   })
-  expect(getConnectionNotice('checking', 'error', '', 'Connection refused')).toEqual({
-    message: 'Endpoint unreachable. Verify server status and URL.',
+  const connectionFailure = 'Could not connect to the API endpoint. Check the URL, network connection, and server status.'
+  expect(getConnectionNotice('checking', 'error', '', connectionFailure)).toEqual({
+    message: connectionFailure,
     tone: 'error',
   })
   expect(getConnectionNotice('error', 'error', 'Old error', 'Old error')).toBeNull()
