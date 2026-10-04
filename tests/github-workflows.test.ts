@@ -38,7 +38,11 @@ function yamlBlock(source: string, header: string): string {
 }
 
 function stepBlock(name: string): string {
-  return yamlBlock(dryWorkflow, `- name: ${name}`)
+  return workflowStepBlock(dryWorkflow, name)
+}
+
+function workflowStepBlock(source: string, name: string): string {
+  return yamlBlock(source, `- name: ${name}`)
 }
 
 function docsJobBlock(name: string): string {
@@ -156,4 +160,54 @@ it('serializes Kaseki workflows for the same repository', () => {
   expect(docsConcurrency).toContain(expectedGroup)
   expect(dryConcurrency).toContain('cancel-in-progress: false')
   expect(docsConcurrency).toContain('cancel-in-progress: false')
+})
+
+it('requests full pull requests with a bounded diff for both Kaseki sweeps', () => {
+  for (const workflow of [dryWorkflow, docsWorkflow]) {
+    expect(workflow).toContain('publishMode: "pr"')
+    expect(workflow).not.toContain('publishMode: "draft_pr"')
+    expect(workflow).toContain('maxDiffBytes: 102400')
+    expect(workflow).toContain('full PR (not draft)')
+  }
+})
+
+it('does not grant the Kaseki workflows an unused GitHub token scope', () => {
+  for (const workflow of [dryWorkflow, docsWorkflow]) {
+    expect(yamlBlock(workflow, 'permissions:').trim()).toBe('permissions: {}')
+  }
+})
+
+it('fails clearly when a Kaseki DRY authenticated step has no API token', () => {
+  for (const stepName of [
+    'Verify gateway connectivity and authentication',
+    'Submit DRY sweep',
+    'Wait for Kaseki completion',
+  ]) {
+    expect(stepBlock(stepName)).toContain(': "${KASEKI_API_TOKEN:?')
+  }
+})
+
+it('bounds Kaseki completion polling by elapsed time in both workflows', () => {
+  const dryWait = stepBlock('Wait for Kaseki completion')
+  const docsWait = workflowStepBlock(docsWorkflow, 'Wait for Kaseki completion')
+
+  for (const waitStep of [dryWait, docsWait]) {
+    expect(waitStep).toContain('poll_deadline=$((SECONDS + 11100))')
+    expect(waitStep).toContain('timeout --foreground')
+    expect(waitStep).not.toContain('seq 1 185')
+    expect(waitStep).toContain(': "${KASEKI_API_TOKEN:?')
+  }
+})
+
+it('waits for the Kaseki Docs run to finish before reporting workflow success', () => {
+  const dispatchJob = docsJobBlock('dispatch')
+  const submissionSummary = workflowStepBlock(docsWorkflow, 'Publish submission details')
+  const waitStep = workflowStepBlock(docsWorkflow, 'Wait for Kaseki completion')
+  const resultSummary = workflowStepBlock(docsWorkflow, 'Publish run details')
+
+  expect(dispatchJob).toContain('timeout-minutes: 200')
+  expect(dispatchJob.indexOf(submissionSummary)).toBeLessThan(dispatchJob.indexOf(waitStep))
+  expect(waitStep).toContain('echo "status=$status" >> "$GITHUB_OUTPUT"')
+  expect(waitStep).toContain('Kaseki status: failed')
+  expect(resultSummary).toContain('FINAL_STATUS: ${{ steps.wait.outputs.status || \'not completed\' }}')
 })

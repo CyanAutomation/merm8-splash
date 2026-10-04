@@ -8,8 +8,7 @@ on:
 run-name: >-
   DRY sweep · ${{ github.repository }}@${{ github.event.repository.default_branch }}
 
-permissions:
-  contents: read
+permissions: {}
 
 # Protect the complete external Kaseki run from overlapping sweeps.
 concurrency:
@@ -108,6 +107,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured as an environment secret}"
+
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
@@ -130,6 +131,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured as an environment secret}"
+
           idempotency_key="$(
             tr '[:upper:]' '[:lower:]' < /proc/sys/kernel/random/uuid
           )"
@@ -147,7 +150,9 @@ jobs:
                 repoUrl: $repoUrl,
                 ref: $ref,
                 taskMode: "patch",
+                publishMode: "pr",
                 timeoutSeconds: 10800,
+                maxDiffBytes: 102400,
                 idempotencyKey: $idempotencyKey,
 
                 changedFilesAllowlist: (
@@ -246,18 +251,36 @@ jobs:
         run: |
           set -euo pipefail
 
+          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured as an environment secret}"
+
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
 
-          # Kaseki can run for up to three hours. Poll a little longer so a
-          # terminal result created near that limit is still observed.
-          for attempt in $(seq 1 185); do
-            curl --fail-with-body --silent --show-error \
+          # Kaseki allows three hours; leave five minutes for final polling.
+          poll_deadline=$((SECONDS + 11100))
+          while (( SECONDS < poll_deadline )); do
+            remaining_seconds=$((poll_deadline - SECONDS))
+            request_timeout=60
+            if (( remaining_seconds < request_timeout )); then
+              request_timeout=$remaining_seconds
+            fi
+            if (( request_timeout <= 0 )); then
+              break
+            fi
+
+            if ! timeout --foreground "${request_timeout}s" curl \
+              --fail-with-body --silent --show-error \
               --retry 3 --retry-all-errors \
-              --connect-timeout 10 --max-time 60 \
+              --connect-timeout 10 --max-time "$request_timeout" \
               --output "$response_file" \
               --header "Authorization: Bearer $KASEKI_API_TOKEN" \
-              "$KASEKI_BASE_URL/api/runs/$RUN_ID/status"
+              "$KASEKI_BASE_URL/api/runs/$RUN_ID/status"; then
+              if (( SECONDS >= poll_deadline )); then
+                break
+              fi
+              echo "::error title=Kaseki status poll failed::Unable to query the Kaseki run status."
+              exit 1
+            fi
 
             status="$(jq -er '.status' "$response_file")"
 
@@ -276,7 +299,14 @@ jobs:
 
               queued|running)
                 echo "Kaseki status: $status"
-                sleep 60
+                sleep_seconds=60
+                remaining_seconds=$((poll_deadline - SECONDS))
+                if (( remaining_seconds < sleep_seconds )); then
+                  sleep_seconds=$remaining_seconds
+                fi
+                if (( sleep_seconds > 0 )); then
+                  sleep "$sleep_seconds"
+                fi
                 ;;
 
               *)
@@ -305,6 +335,7 @@ jobs:
             echo "| Ref | \`$REF\` |"
             echo "| Allowed paths | \`$ALLOWLIST\` |"
             echo "| Validation | \`$VALIDATION_COMMAND\` |"
+            echo "| Mode | \`patch\` → full PR (not draft) |"
             echo "| Maximum refactorings | \`1\` |"
             echo "| Kaseki run | \`$RUN_ID\` |"
             echo "| Final status | \`$FINAL_STATUS\` |"
