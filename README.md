@@ -78,9 +78,12 @@ npm test
 
 # Run tests in watch mode (re-runs on file changes)
 npm run test:watch
+
+# Run tests and generate a coverage report
+npm run test:coverage
 ```
 
-The project uses [Vitest](https://vitest.dev/) as the test runner. Test files are located in the `tests/` directory and follow the pattern `*.test.ts`.
+The project uses [Vitest](https://vitest.dev/) as the test runner. Test files are located in the `tests/` directory and follow the pattern `*.test.ts`. Coverage reports are written to `coverage/`.
 
 **Test Coverage:**
 
