@@ -2,7 +2,7 @@
 
 import { useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
 import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
-import { copyTextWithFallback } from '@/lib/clipboard'
+import { copyTextWithMountedCompletion } from '@/lib/clipboard'
 import { useSnackbar } from '@/app/components/Snackbar'
 
 interface DiagramEditorProps {
@@ -57,31 +57,30 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     }
 
     const handleCopyClick = async () => {
-      const copyResult = await copyTextWithFallback(value, () => mountedRef.current)
-      if (!mountedRef.current) return
+      await copyTextWithMountedCompletion(value, () => mountedRef.current, (copyResult) => {
+        if (copyStatusTimeoutRef.current) {
+          clearTimeout(copyStatusTimeoutRef.current)
+        }
 
-      if (copyStatusTimeoutRef.current) {
-        clearTimeout(copyStatusTimeoutRef.current)
-      }
+        if (copyResult.copied) {
+          setCopyStatus('success')
+          snackbar.show('Diagram code copied.')
+          copyStatusTimeoutRef.current = setTimeout(() => {
+            if (!mountedRef.current) return
+            setCopyStatus('idle')
+            copyStatusTimeoutRef.current = null
+          }, 1300)
+          return
+        }
 
-      if (copyResult.copied) {
-        setCopyStatus('success')
-        snackbar.show('Diagram code copied.')
+        setCopyStatus('error')
+        snackbar.show('Copy failed.', 'error')
         copyStatusTimeoutRef.current = setTimeout(() => {
           if (!mountedRef.current) return
           setCopyStatus('idle')
           copyStatusTimeoutRef.current = null
-        }, 1300)
-        return
-      }
-
-      setCopyStatus('error')
-      snackbar.show('Copy failed.', 'error')
-      copyStatusTimeoutRef.current = setTimeout(() => {
-        if (!mountedRef.current) return
-        setCopyStatus('idle')
-        copyStatusTimeoutRef.current = null
-      }, 1700)
+        }, 1700)
+      })
     }
 
     const handleLineNumberClick = (lineNum: number) => {

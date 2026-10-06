@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { copyTextWithFallback } from '../lib/clipboard'
+import { copyTextWithFallback, copyTextWithMountedCompletion } from '../lib/clipboard'
 
 interface TestTextarea {
   value: string
@@ -37,7 +37,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('copyTextWithFallback', () => {
+describe('clipboard helpers', () => {
   it('uses the clipboard API when it succeeds', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     const { document } = stubDocument(true)
@@ -107,5 +107,38 @@ describe('copyTextWithFallback', () => {
     })
 
     expect(document.createElement).not.toHaveBeenCalled()
+  })
+
+  it('delivers a completed copy only while the caller remains mounted', async () => {
+    let resolveClipboard!: () => void
+    const writeText = vi.fn(() => new Promise<void>((resolve) => {
+      resolveClipboard = resolve
+    }))
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+
+    let isMounted = true
+    const onComplete = vi.fn()
+    const copy = copyTextWithMountedCompletion('diagram', () => isMounted, onComplete)
+
+    expect(writeText).toHaveBeenCalledWith('diagram')
+    isMounted = false
+    resolveClipboard()
+    await copy
+
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+
+  it('delivers a completed copy result while the caller remains mounted', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    const onComplete = vi.fn()
+
+    await copyTextWithMountedCompletion('diagram', () => true, onComplete)
+
+    expect(onComplete).toHaveBeenCalledWith({
+      copied: true,
+      clipboardAvailable: true,
+      method: 'clipboard',
+    })
   })
 })

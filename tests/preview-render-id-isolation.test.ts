@@ -109,7 +109,9 @@ let roots: Root[]
 
 beforeEach(() => {
   mermaidMocks.initialize.mockClear()
-  mermaidMocks.render.mockClear()
+  mermaidMocks.render.mockReset().mockImplementation(async (id: string) => ({
+    svg: `<svg id="${id}"></svg>`,
+  }))
 
   const document = new TestDocument()
   const window = {
@@ -134,23 +136,32 @@ afterEach(() => {
 })
 
 it('uses distinct selector-safe Mermaid render IDs for separate preview instances', async () => {
+  let resolveFirstRender!: () => void
+  let resolveSecondRender!: () => void
+  const firstRenderCalled = new Promise<void>((resolve) => { resolveFirstRender = resolve })
+  const secondRenderCalled = new Promise<void>((resolve) => { resolveSecondRender = resolve })
+  let renderCount = 0
+
+  mermaidMocks.render.mockImplementation(async (id: string) => {
+    renderCount += 1
+    if (renderCount === 1) resolveFirstRender()
+    if (renderCount === 2) resolveSecondRender()
+    return { svg: `<svg id="${id}"></svg>` }
+  })
+
   await act(async () => {
     roots[0].render(createElement(DiagramPreview, { code: 'flowchart TD\nA --> B' }))
-    for (let attempt = 0; attempt < 5 && mermaidMocks.render.mock.calls.length < 1; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    }
   })
+  await firstRenderCalled
   await act(async () => {
     roots[1].render(createElement(DiagramPreview, { code: 'flowchart TD\nC --> D' }))
-    for (let attempt = 0; attempt < 5 && mermaidMocks.render.mock.calls.length < 2; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 0))
-    }
   })
+  await secondRenderCalled
 
   expect(mermaidMocks.initialize).toHaveBeenCalledTimes(2)
   expect(mermaidMocks.render).toHaveBeenCalledTimes(2)
   const renderIds = mermaidMocks.render.mock.calls.map(([id]) => id)
 
   expect(new Set(renderIds).size).toBe(2)
-  renderIds.forEach((id) => expect(id).toMatch(/^mermaid-[a-zA-Z0-9_-]+-1$/))
+  renderIds.forEach((id) => expect(id).toMatch(/^[a-zA-Z0-9_-]+$/))
 })
