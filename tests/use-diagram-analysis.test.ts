@@ -1,16 +1,79 @@
-import { it, expect } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
-import vm from 'node:vm'
-import ts from 'typescript'
-import { fileURLToPath } from 'node:url'
+import { afterEach, it, expect, vi } from 'vitest'
 import { getApiFailureMessage } from '../lib/api'
+import { useDiagramAnalysis } from '../lib/useDiagramAnalysis'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const hookHarness = vi.hoisted(() => ({
+  hookValues: [] as unknown[],
+  hookIndex: 0,
+  analyzeCodeImpl: null as unknown,
+  isApiRequestErrorImpl: null as unknown,
+}))
+
+vi.mock('react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react')>()
+  const nextSlot = () => hookHarness.hookIndex++
+
+  return {
+    ...actual,
+    useState<T>(initial: T | (() => T)) {
+      const slot = nextSlot()
+      if (!(slot in hookHarness.hookValues)) {
+        hookHarness.hookValues[slot] = typeof initial === 'function' ? (initial as () => T)() : initial
+      }
+
+      return [
+        hookHarness.hookValues[slot] as T,
+        (value: T | ((previous: T) => T)) => {
+          const previous = hookHarness.hookValues[slot] as T
+          hookHarness.hookValues[slot] = typeof value === 'function'
+            ? (value as (previous: T) => T)(previous)
+            : value
+        },
+      ]
+    },
+    useCallback<T extends (...args: never[]) => unknown>(callback: T) {
+      nextSlot()
+      return callback
+    },
+    useRef<T>(initial: T) {
+      const slot = nextSlot()
+      if (!(slot in hookHarness.hookValues)) hookHarness.hookValues[slot] = { current: initial }
+      return hookHarness.hookValues[slot] as { current: T }
+    },
+    useEffect() {
+      nextSlot()
+    },
+  }
+})
+
+vi.mock('../lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/api')>()
+
+  return {
+    ...actual,
+    analyzeCode: (...args: Parameters<typeof actual.analyzeCode>) => {
+      const implementation = hookHarness.analyzeCodeImpl as typeof actual.analyzeCode
+      return implementation(...args)
+    },
+    isApiRequestError: (error: unknown) => {
+      const implementation = hookHarness.isApiRequestErrorImpl as typeof actual.isApiRequestError
+      return implementation(error)
+    },
+  }
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.useRealTimers()
+  hookHarness.hookValues = []
+  hookHarness.hookIndex = 0
+  hookHarness.analyzeCodeImpl = null
+  hookHarness.isApiRequestErrorImpl = null
+})
 
 function createDeferred() {
-  let resolve
-  let reject
+  let resolve!: (value: unknown) => void
+  let reject!: (reason?: unknown) => void
   const promise = new Promise((res, rej) => {
     resolve = res
     reject = rej
@@ -18,195 +81,33 @@ function createDeferred() {
   return { promise, resolve, reject }
 }
 
-function createReactMock() {
-  const hookValues = []
-  let hookIndex = 0
-
-  return {
-    useState(initialValue) {
-      const index = hookIndex++
-      if (!(index in hookValues)) {
-        hookValues[index] = initialValue
-      }
-
-      const setState = (value) => {
-        hookValues[index] = typeof value === 'function' ? value(hookValues[index]) : value
-      }
-
-      return [hookValues[index], setState]
-    },
-    useCallback(fn) {
-      hookIndex += 1
-      return fn
-    },
-    useRef(initialValue) {
-      const index = hookIndex++
-      if (!(index in hookValues)) {
-        hookValues[index] = { current: initialValue }
-      }
-
-      return hookValues[index]
-    },
-    useEffect() {
-      hookIndex += 1
-    },
-    __prepareRender() {
-      hookIndex = 0
-    },
-  }
-}
-
-function createTimerControls() {
-  const pendingTimers = new Map()
-  const pendingIntervals = new Map()
-  let nextTimerId = 1
-  let nowMs = 0
-  const scheduledDelays = []
-
-  async function runDueTimers() {
-    while (true) {
-      const dueTimeouts = Array.from(pendingTimers.entries()).map(([id, timer]) => ({
-        id,
-        type: 'timeout',
-        dueAt: timer.dueAt,
-      }))
-      const dueIntervals = Array.from(pendingIntervals.entries()).map(([id, timer]) => ({
-        id,
-        type: 'interval',
-        dueAt: timer.dueAt,
-      }))
-      const dueTimers = [...dueTimeouts, ...dueIntervals]
-        .filter((timer) => timer.dueAt <= nowMs)
-        .sort((a, b) => a.dueAt - b.dueAt)
-
-      if (dueTimers.length === 0) break
-
-      for (const timer of dueTimers) {
-        if (timer.type === 'timeout') {
-          const timeout = pendingTimers.get(timer.id)
-          if (!timeout) continue
-          pendingTimers.delete(timer.id)
-          await timeout.callback()
-          continue
-        }
-
-        const interval = pendingIntervals.get(timer.id)
-        if (!interval) continue
-        interval.dueAt += interval.intervalMs
-        await interval.callback()
-      }
-    }
-  }
-
-  return {
-    setTimeout(callback, delay, ...args) {
-      const timerId = nextTimerId++
-      const normalizedDelay = Number(delay) || 0
-      pendingTimers.set(timerId, {
-        dueAt: nowMs + normalizedDelay,
-        callback: () => callback(...args),
-      })
-      scheduledDelays.push(normalizedDelay)
-      return timerId
-    },
-    clearTimeout(timerId) {
-      pendingTimers.delete(timerId)
-    },
-    setInterval(callback, delay, ...args) {
-      const timerId = nextTimerId++
-      const normalizedDelay = Number(delay) || 0
-      pendingIntervals.set(timerId, {
-        dueAt: nowMs + normalizedDelay,
-        intervalMs: normalizedDelay,
-        callback: () => callback(...args),
-      })
-      return timerId
-    },
-    clearInterval(timerId) {
-      pendingIntervals.delete(timerId)
-    },
-    now() {
-      return nowMs
-    },
-    getLastScheduledDelay() {
-      return scheduledDelays.at(-1)
-    },
-    async advanceBy(ms) {
-      nowMs += ms
-      await runDueTimers()
-    },
-    async runAllTimers() {
-      while (pendingTimers.size > 0) {
-        const nextDueAt = Math.min(...Array.from(pendingTimers.values()).map((timer) => timer.dueAt))
-        nowMs = nextDueAt
-        await runDueTimers()
-      }
-    },
-  }
-}
-
 function loadUseDiagramAnalysisModule({ analyzeCodeImpl, isApiRequestErrorImpl }) {
-  const sourcePath = path.join(__dirname, '..', 'lib', 'useDiagramAnalysis.ts')
-  const source = fs.readFileSync(sourcePath, 'utf8')
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2019,
-      esModuleInterop: true,
-    },
-    fileName: sourcePath,
+  hookHarness.hookValues = []
+  hookHarness.hookIndex = 0
+  hookHarness.analyzeCodeImpl = analyzeCodeImpl
+  hookHarness.isApiRequestErrorImpl = isApiRequestErrorImpl ?? (() => false)
+
+  vi.useFakeTimers({
+    toFake: ['Date', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'],
   })
+  vi.setSystemTime(0)
+  const timeoutSpy = vi.spyOn(globalThis, 'setTimeout')
 
-  const reactMock = createReactMock()
-  const timerControls = createTimerControls()
-
-  const apiMock = {
-    analyzeCode: analyzeCodeImpl,
-    getApiFailureMessage,
-    isApiRequestError: isApiRequestErrorImpl ?? (() => false),
-  }
-
-  const constantsMock = {
-    DEFAULT_DIAGRAM: 'graph TD\nA-->B',
-  }
-
-  class FakeDate extends Date {
-    static now() {
-      return timerControls.now()
-    }
-  }
-
-  const transpiledModule = { exports: {} }
-  const localRequire = (specifier) => {
-    if (specifier === 'react') return reactMock
-    if (specifier === './api') return apiMock
-    if (specifier === './constants') return constantsMock
-    return require(specifier)
-  }
-
-  const script = new vm.Script(outputText, { filename: 'useDiagramAnalysis.transpiled.cjs' })
-  const context = vm.createContext({
-    module: transpiledModule,
-    exports: transpiledModule.exports,
-    require: localRequire,
-    __dirname: path.dirname(sourcePath),
-    __filename: sourcePath,
-    process,
-    console,
-    setTimeout: timerControls.setTimeout,
-    clearTimeout: timerControls.clearTimeout,
-    setInterval: timerControls.setInterval,
-    clearInterval: timerControls.clearInterval,
-    AbortController,
-    URL,
-    Date: FakeDate,
-  })
-
-  script.runInContext(context)
   return {
-    useDiagramAnalysis: transpiledModule.exports.useDiagramAnalysis,
-    reactMock,
-    timerControls,
+    useDiagramAnalysis,
+    reactMock: {
+      __prepareRender() {
+        hookHarness.hookIndex = 0
+      },
+    },
+    timerControls: {
+      getLastScheduledDelay() {
+        return Number(timeoutSpy.mock.calls.at(-1)?.[1]) || 0
+      },
+      async advanceBy(ms: number) {
+        await vi.advanceTimersByTimeAsync(ms)
+      },
+    },
   }
 }
 
@@ -426,18 +327,19 @@ it('different concurrent forceAnalysis calls do not coalesce when code differs',
 })
 
 
-it('hash-colliding legacy code strings never share in-flight entries', async () => {
+it('keeps results for the latest diagram when an older analysis finishes later', async () => {
   const first = createDeferred()
   const second = createDeferred()
   const calls = []
 
-  const legacyCollisionA = '>EDBBE>-DC>D-EC-ADB'
-  const legacyCollisionB = 'BEAE>A- E ->BB\n'
+  // These inputs collided under the legacy request fingerprint.
+  const earlierCode = '>EDBBE>-DC>D-EC-ADB'
+  const latestCode = 'BEAE>A- E ->BB\n'
 
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async (_endpoint, code) => {
       calls.push(code)
-      if (code === legacyCollisionA) {
+      if (code === earlierCode) {
         return first.promise
       }
       return second.promise
@@ -447,10 +349,10 @@ it('hash-colliding legacy code strings never share in-flight entries', async () 
   reactMock.__prepareRender()
   const hook = useDiagramAnalysis()
 
-  hook.forceAnalysis('https://example.test', legacyCollisionA, ['r1'], [])
-  hook.forceAnalysis('https://example.test', legacyCollisionB, ['r1'], [])
+  hook.forceAnalysis('https://example.test', earlierCode, ['r1'], [])
+  hook.forceAnalysis('https://example.test', latestCode, ['r1'], [])
 
-  expect(calls).toEqual([legacyCollisionA, legacyCollisionB])
+  expect(calls).toEqual([earlierCode, latestCode])
 
   second.resolve({
     diagram_type: 'flowchart',

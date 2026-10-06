@@ -1,76 +1,22 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
-import vm from 'node:vm'
-import ts from 'typescript'
-import { fileURLToPath } from 'node:url'
+import * as apiModule from '../lib/api'
+import * as rulesStateModule from '../lib/rulesState'
 import { buildAnalyzeRequest } from '../lib/api'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 
 function loadApiModule({
   fetchImpl = globalThis.fetch,
   windowImpl,
   localStorageImpl,
 } = {}) {
-  const tsModuleCache = new Map()
-
-  function loadTranspiledTsModule(sourcePath) {
-    if (tsModuleCache.has(sourcePath)) {
-      return tsModuleCache.get(sourcePath)
-    }
-
-    const source = fs.readFileSync(sourcePath, 'utf8')
-    const { outputText } = ts.transpileModule(source, {
-      compilerOptions: {
-        module: ts.ModuleKind.CommonJS,
-        target: ts.ScriptTarget.ES2019,
-        esModuleInterop: true,
-      },
-      fileName: sourcePath,
-    })
-
-    const transpiledModule = { exports: {} }
-    tsModuleCache.set(sourcePath, transpiledModule.exports)
-
-    const dirname = path.dirname(sourcePath)
-    const localRequire = (specifier) => {
-      if (specifier.startsWith('./') || specifier.startsWith('../')) {
-        const tsPath = path.resolve(dirname, `${specifier}.ts`)
-        if (fs.existsSync(tsPath)) {
-          return loadTranspiledTsModule(tsPath)
-        }
-      }
-
-      return require(require.resolve(specifier, { paths: [dirname] }))
-    }
-
-    const script = new vm.Script(outputText, { filename: `${path.basename(sourcePath)}.transpiled.cjs` })
-    const context = vm.createContext({
-      module: transpiledModule,
-      exports: transpiledModule.exports,
-      require: localRequire,
-      __dirname: dirname,
-      __filename: sourcePath,
-      process,
-      console,
-      AbortController,
-      fetch: (...args) => fetchImpl(...args),
-      setTimeout,
-      clearTimeout,
-      URL,
-      URLSearchParams,
-      window: windowImpl,
-      localStorage: localStorageImpl,
-    })
-
-    script.runInContext(context)
-    tsModuleCache.set(sourcePath, transpiledModule.exports)
-    return transpiledModule.exports
-  }
-
-  const sourcePath = path.join(__dirname, '..', 'lib', 'api.ts')
-  return loadTranspiledTsModule(sourcePath)
+  vi.stubGlobal('fetch', fetchImpl)
+  vi.stubGlobal('window', windowImpl)
+  vi.stubGlobal('localStorage', localStorageImpl)
+  return apiModule
 }
 
 function mockJsonFetch(responses) {
@@ -91,31 +37,7 @@ function mockJsonFetch(responses) {
 
 
 function loadRulesStateModule() {
-  const sourcePath = path.join(__dirname, '..', 'lib', 'rulesState.ts')
-  const source = fs.readFileSync(sourcePath, 'utf8')
-  const { outputText } = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2019,
-      esModuleInterop: true,
-    },
-    fileName: sourcePath,
-  })
-
-  const transpiledModule = { exports: {} }
-  const script = new vm.Script(outputText, { filename: `${path.basename(sourcePath)}.transpiled.cjs` })
-  const context = vm.createContext({
-    module: transpiledModule,
-    exports: transpiledModule.exports,
-    require,
-    __dirname: path.dirname(sourcePath),
-    __filename: sourcePath,
-    process,
-    console,
-  })
-
-  script.runInContext(context)
-  return transpiledModule.exports
+  return rulesStateModule
 }
 
 it('uses the hosted Worker as the fallback API endpoint', () => {
@@ -677,27 +599,16 @@ it('analyzeCodeSarif requests the API SARIF endpoint with the configured rule se
 it('fetchRules normalizes malformed payloads to an empty rules list with malformed status', async () => {
   const { fetchImpl } = mockJsonFetch([null, { rules: 'not-an-array' }])
   const api = loadApiModule({ fetchImpl })
-  const originalWarn = console.warn
-  const warnings = []
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-  console.warn = (message) => {
-    warnings.push(String(message))
-  }
+  const first = await api.fetchRules('https://api.example.com')
+  const second = await api.fetchRules('https://api.example.com')
 
-  try {
-    const first = await api.fetchRules('https://api.example.com')
-    const second = await api.fetchRules('https://api.example.com')
-
-    expect(Array.isArray(first.rules)).toBeTruthy()
-    expect(Array.isArray(second.rules)).toBeTruthy()
-    expect(first.rules.length).toBe(0)
-    expect(second.rules.length).toBe(0)
-    expect(first.status).toBe('malformed_payload')
-    expect(second.status).toBe('malformed_payload')
-    expect(warnings.some((message) => message.includes('[api.fetchRules] Normalized malformed rules response'))).toBe(true) // 'expected a warning for malformed rules payloads'
-  } finally {
-    console.warn = originalWarn
-  }
+  expect(first.rules).toEqual([])
+  expect(second.rules).toEqual([])
+  expect(first.status).toBe('malformed_payload')
+  expect(second.status).toBe('malformed_payload')
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining('Normalized malformed rules response'))
 })
 
 it('fetchRules filters malformed rule entries and warns with drop summary', async () => {
@@ -727,27 +638,19 @@ it('fetchRules filters malformed rule entries and warns with drop summary', asyn
     ],
   })
   const api = loadApiModule({ fetchImpl })
-  const originalWarn = console.warn
-  const warnings = []
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-  console.warn = (message) => {
-    warnings.push(String(message))
-  }
+  const result = await api.fetchRules('https://api.example.com')
 
-  try {
-    const result = await api.fetchRules('https://api.example.com')
-
-    expect(result.status).toBe('success')
-    expect(result.rules.length).toBe(1)
-    expect(JSON.stringify(result.rules[0])).toBe(JSON.stringify({
-        id: 'valid-rule',
-        description: 'A valid rule description',
-        severity: 'warning',
-      }))
-    expect(warnings.some((message) => message.includes('Dropped 4 invalid rule entries during normalization'))).toBe(true) // 'expected warning that malformed rule entries were dropped'
-  } finally {
-    console.warn = originalWarn
-  }
+  expect(result.status).toBe('success')
+  expect(result.rules).toEqual([{
+    id: 'valid-rule',
+    description: 'A valid rule description',
+    severity: 'warning',
+  }])
+  expect(warn).toHaveBeenCalledWith(
+    expect.stringContaining('Dropped 4 invalid rule entries during normalization'),
+  )
 })
 
 it('fetchRules normalizes optional rule metadata and drops malformed options', async () => {
@@ -851,26 +754,31 @@ describe('analyzeCode hint normalization', () => {
       name: 'a non-array payload',
       hints: { message: 'Prefer explicit labels' },
       expected: [],
+      warning: 'non-array `hints`',
     },
     {
       name: 'mixed valid and invalid top-level entries',
       hints: ['Keep naming consistent', null, 7, { code: 'prefer-short-labels' }],
       expected: ['Keep naming consistent', { code: 'prefer-short-labels' }],
+      warning: 'invalid entries in `hints`',
     },
     {
       name: 'a nested array',
       hints: ['Keep swimlanes balanced', ['nested array should be removed'], { message: 'Check line ordering' }],
       expected: ['Keep swimlanes balanced', { message: 'Check line ordering' }],
+      warning: 'invalid entries in `hints`',
     },
     {
       name: 'unsupported primitives',
       hints: [null, 42, true],
       expected: [],
+      warning: 'invalid entries in `hints`',
     },
     {
       name: 'valid string and object hints',
       hints: validHints,
       expected: validHints,
+      warning: null,
     },
   ]
 
@@ -878,33 +786,21 @@ describe('analyzeCode hint normalization', () => {
     return mockJsonFetch({ diagram_type: 'flowchart', results: [], hints })
   }
 
-  afterEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it.each(normalizationCases)('normalizes $name', async ({ hints, expected }) => {
+  it.each(normalizationCases)('normalizes $name and warns only when malformed', async ({ hints, expected, warning }) => {
     const { fetchImpl } = mockAnalyzeResponse(hints)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const { analyzeCode } = loadApiModule({ fetchImpl })
 
     const response = await analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
     expect(response.diagram_type).toBe('flowchart')
     expect(response.hints).toEqual(expected)
-  })
 
-  it.each([
-    { name: 'a non-array payload', hints: normalizationCases[0].hints, warning: 'non-array `hints`' },
-    { name: 'mixed entries', hints: normalizationCases[1].hints, warning: 'invalid entries in `hints`' },
-    { name: 'a nested array', hints: normalizationCases[2].hints, warning: 'invalid entries in `hints`' },
-    { name: 'unsupported primitives', hints: normalizationCases[3].hints, warning: 'invalid entries in `hints`' },
-  ])('warns in development for $name', async ({ hints, warning }) => {
-    const { fetchImpl } = mockAnalyzeResponse(hints)
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const { analyzeCode } = loadApiModule({ fetchImpl })
-
-    await analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
-
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining(warning))
+    if (warning) {
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(warning))
+    } else {
+      expect(warn).not.toHaveBeenCalled()
+    }
   })
 })
 
@@ -931,27 +827,17 @@ it('analyzeCode filters malformed violations and keeps only safe entries', async
     ],
   })
   const api = loadApiModule({ fetchImpl })
-  const originalWarn = console.warn
-  const warnings = []
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-  console.warn = (message) => {
-    warnings.push(String(message))
-  }
+  const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
 
-  try {
-    const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
-
-    expect(response.results.length).toBe(1)
-    expect(JSON.stringify(response.results[0])).toBe(JSON.stringify({
-        rule_id: 'valid-rule',
-        severity: 'warning',
-        message: 'Keep labels short',
-        line: 12,
-      }))
-    expect(warnings.some((message) => message.includes('invalid entries in `results`'))).toBe(true) // 'expected a warning for malformed results'
-  } finally {
-    console.warn = originalWarn
-  }
+  expect(response.results).toEqual([{
+    rule_id: 'valid-rule',
+    severity: 'warning',
+    message: 'Keep labels short',
+    line: 12,
+  }])
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining('invalid entries in `results`'))
 })
 
 it('analyzeCode ignores non-numeric line values on violations', async () => {
