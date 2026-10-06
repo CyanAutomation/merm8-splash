@@ -68,6 +68,10 @@ function docsJobBlock(name: string): string {
   return yamlBlock(docsWorkflow, `${name}:`)
 }
 
+function runIdFilter(source: string, submitStepName: string): string | null {
+  return workflowStepBlock(source, submitStepName).match(/\bjq -er\s*\\\s*'([^']+)'/)?.[1] ?? null
+}
+
 it('limits the secret-bearing Kaseki DRY job to main', () => {
   const job = yamlBlock(dryWorkflow, 'dry_sweep:')
   const jobConfiguration = job.split(/^ {4}steps:/m)[0]
@@ -235,13 +239,27 @@ it('keeps both Kaseki submit scripts valid after YAML block indentation is remov
   }
 })
 
-it('validates the Kaseki DRY run ID with the same strict shape as Docs', () => {
-  const drySubmit = stepBlock('Submit DRY sweep')
+it('accepts only valid Kaseki run IDs in both workflows', () => {
+  const filters = [
+    runIdFilter(dryWorkflow, 'Submit DRY sweep'),
+    runIdFilter(docsWorkflow, 'Submit documentation sweep'),
+  ]
 
-  expect(drySubmit).toContain(
-    '.id | strings | select(test("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"))',
-  )
-  expect(drySubmit).not.toContain('invalid characters')
+  expect(filters[0]).not.toBeNull()
+  expect(filters[1]).toBe(filters[0])
+
+  const validation = filters[0]?.match(/^\.id \| strings \| select\(test\("([^"]+)"\)\)$/)
+  if (!validation) {
+    throw new Error('Expected both workflows to validate the response run ID as a string.')
+  }
+
+  const runIdPattern = new RegExp(validation[1])
+  for (const runId of ['1', 'a', 'Run_123', 'A-1']) {
+    expect(runIdPattern.test(runId)).toBe(true)
+  }
+  for (const runId of ['', '-starts-with-punctuation', 'contains/slash', 'a'.repeat(129)]) {
+    expect(runIdPattern.test(runId)).toBe(false)
+  }
 })
 
 it('checks DRY runner tools before contacting Kaseki and creates the output delimiter before submission', () => {

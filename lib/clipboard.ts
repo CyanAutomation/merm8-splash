@@ -34,6 +34,16 @@ export async function copyTextWithFallback(
   }
 }
 
+export async function copyTextWithMountedCompletion(
+  text: string,
+  isMounted: () => boolean,
+  onComplete: (result: CopyTextResult) => void
+): Promise<void> {
+  const result = await copyTextWithFallback(text, isMounted)
+  if (!isMounted()) return
+  onComplete(result)
+}
+
 function fallbackCopyWithTextarea(text: string): boolean {
   if (typeof document === 'undefined') {
     return false
