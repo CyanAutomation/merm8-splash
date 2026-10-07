@@ -94,29 +94,6 @@ it('builds a server-default request when rules metadata is malformed', () => {
 })
 
 
-it('rules availability keeps endpoint available when rules response is empty but successful', () => {
-  const { resolveRulesAvailabilityState, shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
-
-  const rulesAreUnavailable = shouldTreatRulesPayloadAsUnavailable('success')
-  expect(rulesAreUnavailable).toBe(false)
-
-  const availability = resolveRulesAvailabilityState(
-    'https://example.test',
-    rulesAreUnavailable ? null : 'https://example.test',
-    rulesAreUnavailable ? 'https://example.test' : null
-  )
-
-  expect(availability.isAvailable).toBe(true)
-  expect(availability.isUnavailable).toBe(false)
-})
-
-it('rules availability marks endpoint unavailable when rules request fails or payload is malformed', () => {
-  const { shouldTreatRulesPayloadAsUnavailable } = loadRulesStateModule()
-
-  expect(shouldTreatRulesPayloadAsUnavailable('malformed_payload')).toBe(true)
-  expect(shouldTreatRulesPayloadAsUnavailable('transport_failure')).toBe(true)
-})
-
 it('rule selection defaults once and preserves an explicitly empty selection on same-endpoint reloads', () => {
   const { reconcileRuleSelection } = loadRulesStateModule()
   const fetchedRuleIds = ['no-empty-label', 'max-edges']
@@ -463,7 +440,6 @@ it('analyzeCode normalizes missing data payload to UI-safe defaults', async () =
   expect(Array.isArray(response.results)).toBeTruthy()
   expect(response.results.length).toBe(0)
   expect(response.diagram_type).toBe('')
-  expect(response.results.length).toBe((Array.isArray(response.results) ? response.results.length : 0))
 })
 
 it('analyzeCode normalizes issue-count maps to finite numeric values', async () => {

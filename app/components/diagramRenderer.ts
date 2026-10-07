@@ -1,5 +1,6 @@
 import { parseDiagramType } from '@/lib/diagramTypes'
 import { detectMermaidErrorInSvg, isMermaidErrorHtml } from './diagramPreviewUtils'
+import { createMermaidRenderId } from './diagramRenderIds'
 
 export type DiagramColorMode = 'dark' | 'light'
 
@@ -112,7 +113,7 @@ async function renderWithMermaid(options: RenderDiagramOptions): Promise<Rendere
     logLevel: 'error',
   })
 
-  const renderId = `mermaid-${options.stableId}-${options.nextRenderNumber()}`
+  const renderId = createMermaidRenderId(options.stableId, options.nextRenderNumber())
   options.beforeMermaidRender()
   options.onMermaidRenderStart(renderId)
   const result = await mermaid.render(renderId, options.code, options.container)
