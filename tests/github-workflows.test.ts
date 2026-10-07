@@ -279,13 +279,16 @@ it('checks DRY runner tools before contacting Kaseki and creates the output deli
   expect(delimiterPosition).toBeLessThan(postPosition)
 })
 
-it('serializes Kaseki workflows for the same repository', () => {
+it('serializes each Kaseki workflow independently for the same repository', () => {
   const dryConcurrency = yamlBlock(dryWorkflow, 'concurrency:')
   const docsConcurrency = yamlBlock(docsWorkflow, 'concurrency:')
-  const expectedGroup = 'group: kaseki-${{ github.repository }}'
+  const expectedGroup = 'group: kaseki-${{ github.workflow }}-${{ github.repository }}'
+  const dryWorkflowName = dryWorkflow.match(/^name: (.+)$/m)?.[1]
+  const docsWorkflowName = docsWorkflow.match(/^name: (.+)$/m)?.[1]
 
   expect(dryConcurrency).toContain(expectedGroup)
   expect(docsConcurrency).toContain(expectedGroup)
+  expect(dryWorkflowName).not.toBe(docsWorkflowName)
   expect(dryConcurrency).toContain('cancel-in-progress: false')
   expect(docsConcurrency).toContain('cancel-in-progress: false')
 })
