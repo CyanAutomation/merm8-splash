@@ -4,6 +4,20 @@ import { expect, it } from 'vitest'
 
 const nginxConfig = readFileSync(join(process.cwd(), 'nginx.conf'), 'utf8')
 
+function parseContentSecurityPolicy(policy: string): Record<string, string[]> {
+  const directives: Record<string, string[]> = {}
+
+  for (const section of policy.split(';').filter((part) => part.trim())) {
+    const [name, ...sources] = section.trim().split(/\s+/)
+    if (!name || sources.length === 0 || name in directives) {
+      throw new Error(`Invalid or duplicate Content-Security-Policy directive: ${section}`)
+    }
+    directives[name] = sources
+  }
+
+  return directives
+}
+
 it('caches fingerprinted Next.js static files as immutable', () => {
   expect(nginxConfig).toMatch(
     /~\^\/_next\/static\/\s+"public, max-age=31536000, immutable";/,
@@ -20,13 +34,19 @@ it('requires HTML and SPA fallback responses to be revalidated', () => {
   )
 })
 
-it('separates every Content-Security-Policy directive with a semicolon', () => {
+it('preserves the required container Content-Security-Policy directives', () => {
   const contentSecurityPolicyMatch = nginxConfig.match(
     /add_header Content-Security-Policy "([^"]+)" always;/,
   )
 
-  expect(contentSecurityPolicyMatch).toBeDefined()
-  expect(contentSecurityPolicyMatch?.[1]).toBe(
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self';",
-  )
+  if (!contentSecurityPolicyMatch) {
+    throw new Error('Expected an always-on Content-Security-Policy header in nginx.conf.')
+  }
+
+  const directives = parseContentSecurityPolicy(contentSecurityPolicyMatch[1])
+  expect(directives['default-src']).toEqual(["'self'"])
+  expect(directives['script-src']).toEqual(["'self'", "'unsafe-inline'", "'unsafe-eval'"])
+  expect(directives['style-src']).toEqual(["'self'", "'unsafe-inline'"])
+  expect(directives['img-src']).toEqual(["'self'"])
+  expect(directives['connect-src']).toEqual(["'self'"])
 })
