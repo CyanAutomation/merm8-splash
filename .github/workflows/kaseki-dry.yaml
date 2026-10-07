@@ -10,10 +10,11 @@ run-name: >-
 
 permissions: {}
 
-# Protect the complete external Kaseki run from overlapping sweeps.
+# Keep runs of this workflow serialized.
 # GitHub retains one pending run per group; a newer pending run replaces it.
 concurrency:
-  group: kaseki-${{ github.repository }}
+  # Workflow-specific groups keep one sweep from replacing the other's pending run.
+  group: kaseki-${{ github.workflow }}-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
