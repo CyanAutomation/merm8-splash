@@ -1,101 +1,68 @@
-import React, { type ReactElement, type ReactNode } from 'react'
-import { beforeEach, expect, it, vi } from 'vitest'
+// @vitest-environment jsdom
+import { act, createElement } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const testState = vi.hoisted(() => ({
-  code: 'flowchart TD\n  A -->',
-  hookCursor: 0,
-  hookSlots: [] as unknown[],
-  previewProps: [] as Array<Record<string, unknown>>,
-  editorProps: null as Record<string, unknown> | null,
-  resultsProps: null as Record<string, unknown> | null,
+  initialCode: 'flowchart TD\n  A -->',
 }))
 
-vi.mock('react', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react')>()
-  const nextSlot = () => testState.hookCursor++
+vi.mock('../app/components/HomeHeader', () => ({ default: () => null }))
+vi.mock('../app/components/StatusBar', () => ({ default: () => null }))
+vi.mock('../app/components/HomeDialogs', () => ({ default: () => null }))
+vi.mock('../app/components/ExportDropdown', () => ({ default: () => null }))
+vi.mock('../app/components/WorkspaceDivider', () => ({ default: () => null }))
+vi.mock('../app/components/ErrorBoundary', () => ({
+  default: ({ children }: { children: unknown }) => children,
+}))
 
+vi.mock('../app/components/DiagramEditor', async () => {
+  const React = await vi.importActual<typeof import('react')>('react')
   return {
-    ...actual,
-    useState<T>(initial: T | (() => T)) {
-      const slot = nextSlot()
-      if (!(slot in testState.hookSlots)) {
-        testState.hookSlots[slot] = typeof initial === 'function' ? (initial as () => T)() : initial
-      }
-      return [
-        testState.hookSlots[slot] as T,
-        (value: T | ((previous: T) => T)) => {
-          const previous = testState.hookSlots[slot] as T
-          testState.hookSlots[slot] = typeof value === 'function'
-            ? (value as (previous: T) => T)(previous)
-            : value
-        },
-      ]
-    },
-    useRef<T>(initial: T) {
-      const slot = nextSlot()
-      if (!(slot in testState.hookSlots)) testState.hookSlots[slot] = { current: initial }
-      return testState.hookSlots[slot] as { current: T }
-    },
-    useCallback<T extends (...args: never[]) => unknown>(callback: T) {
-      nextSlot()
-      return callback
-    },
-    useEffect() {
-      nextSlot()
-    },
+    default: ({ value, onChange }: { value: string; onChange: (code: string) => void }) =>
+      React.createElement('textarea', {
+        'data-testid': 'diagram-editor',
+        value,
+        onChange: (event: { currentTarget: { value: string } }) => onChange(event.currentTarget.value),
+      }),
   }
 })
 
-vi.mock('next/image', () => ({ default: () => null }))
-// fallow-ignore-next-line unresolved-import
-vi.mock('@/design/rem-avatar.png', () => ({ default: '' }))
-vi.mock('../app/components/ApiConfigPanel', () => ({ default: () => null }))
-vi.mock('../app/components/RulesPanel', () => ({ default: () => null }))
-vi.mock('../app/components/StatusBar', () => ({ default: () => null }))
-vi.mock('../app/components/ExportDropdown', () => ({ default: () => null }))
-vi.mock('../app/components/ErrorBoundary', () => ({
-  default: ({ children }: { children: ReactNode }) => children,
-}))
-vi.mock('../app/components/Modal', () => ({
-  default: ({ children }: { children: ReactNode }) => children,
-}))
+vi.mock('../app/components/DiagramPreview', async () => {
+  const React = await vi.importActual<typeof import('react')>('react')
+  return {
+    default: ({
+      code,
+      onParseStateChange,
+      parseErrorMessage,
+    }: {
+      code: string
+      onParseStateChange?: (state: { hasParseError: boolean; message: string }) => void
+      parseErrorMessage?: string | null
+    }) => React.createElement('section', null,
+      React.createElement('pre', {
+        'data-testid': 'preview-code',
+        'data-parse-error-message': parseErrorMessage ?? '',
+      }, code),
+      React.createElement('button', {
+        'data-testid': 'report-parse-error',
+        onClick: () => onParseStateChange?.({ hasParseError: true, message: 'Parse error on line 2' }),
+      }, 'Report parse error'),
+    ),
+  }
+})
+
+vi.mock('../app/components/ResultsPanel', async () => {
+  const React = await vi.importActual<typeof import('react')>('react')
+  return {
+    default: ({ parseError }: { parseError: string | null }) =>
+      React.createElement('div', { 'data-testid': 'parse-error-feedback', role: 'status' }, parseError ?? ''),
+  }
+})
+
 vi.mock('../app/components/Snackbar', () => ({
-  SnackbarProvider: ({ children }: { children: ReactNode }) => children,
+  SnackbarProvider: ({ children }: { children: unknown }) => children,
   useSnackbar: () => ({ show: vi.fn() }),
-}))
-vi.mock('../app/components/DiagramEditor', () => ({
-  default: (props: Record<string, unknown>) => {
-    testState.editorProps = props
-    return null
-  },
-}))
-vi.mock('../app/components/DiagramPreview', () => ({
-  default: (props: Record<string, unknown>) => {
-    testState.previewProps.push(props)
-    return null
-  },
-}))
-vi.mock('../app/components/ResultsPanel', () => ({
-  default: (props: Record<string, unknown>) => {
-    testState.resultsProps = props
-    return null
-  },
-}))
-vi.mock('@/lib/useDiagramAnalysis', () => ({
-  useDiagramAnalysis: () => ({
-    code: testState.code,
-    setCode: (code: string) => { testState.code = code },
-    violations: [],
-    isAnalyzing: false,
-    analyzeError: null,
-    analysisHints: [],
-    diagramType: 'flowchart',
-    metrics: null,
-    lastCompletedRun: null,
-    triggerAnalysis: vi.fn(),
-    forceAnalysis: vi.fn(),
-    cancelAnalysis: vi.fn(),
-  }),
 }))
 vi.mock('@/lib/useApiEndpoint', () => ({
   useApiEndpoint: () => ({
@@ -139,84 +106,69 @@ vi.mock('@/lib/useEndpointFeedback', () => ({
 vi.mock('@/lib/useManualRecheck', () => ({
   useManualRecheck: () => ({ canRecheck: false, handleRecheck: vi.fn() }),
 }))
-vi.mock('@/lib/api', () => ({ fetchRules: vi.fn() }))
-vi.mock('@/lib/diagramTypes', () => ({
-  getApplicableRules: () => new Set<string>(),
-  filterRulesByDiagramType: (ruleIds: string[]) => ruleIds,
-}))
-vi.mock('@/lib/rulesState', () => ({
-  resolveRulesAvailabilityState: () => ({ isAvailable: false, isUnavailable: false }),
-  shouldTreatRulesPayloadAsUnavailable: () => false,
-}))
-
-import Home from '../app/page'
-import WorkspaceArea from '../app/components/WorkspaceArea'
-import DiagramEditor from '../app/components/DiagramEditor'
-import DiagramPreview from '../app/components/DiagramPreview'
-import ResultsPanel from '../app/components/ResultsPanel'
-
-function visit(node: ReactNode): void {
-  if (Array.isArray(node)) {
-    node.forEach(visit)
-    return
+vi.mock('@/lib/useDiagramAnalysis', async () => {
+  const React = await vi.importActual<typeof import('react')>('react')
+  return {
+    useDiagramAnalysis: () => {
+      const [code, setCode] = React.useState(testState.initialCode)
+      return {
+        code,
+        setCode,
+        violations: [],
+        isAnalyzing: false,
+        analyzeError: null,
+        analysisHints: [],
+        diagramType: 'flowchart',
+        lintSupported: true,
+        metrics: null,
+        lastCompletedRun: null,
+        triggerAnalysis: vi.fn(),
+        forceAnalysis: vi.fn(),
+        cancelAnalysis: vi.fn(),
+      }
+    },
   }
-  if (!React.isValidElement(node)) return
-
-  const element = node as ReactElement<Record<string, unknown>>
-  if (element.type === WorkspaceArea) {
-    visit((WorkspaceArea as (props: Record<string, unknown>) => ReactNode)(element.props))
-  }
-  if (element.type === DiagramEditor || element.type === DiagramPreview || element.type === ResultsPanel) {
-    ;(element.type as (props: Record<string, unknown>) => ReactNode)(element.props)
-  }
-  const children = element.props.children as ReactNode | undefined
-  if (children !== undefined && children !== null) {
-    visit(children)
-  }
-}
-
-function renderPage(): void {
-  testState.hookCursor = 0
-  const home = Home() as ReactElement<{ children: ReactElement }>
-  const homeContent = home.props.children.type as () => ReactElement
-  visit(homeContent())
-}
-
-beforeEach(() => {
-  testState.code = 'flowchart TD\n  A -->'
-  testState.hookCursor = 0
-  testState.hookSlots = []
-  testState.previewProps = []
-  testState.editorProps = null
-  testState.resultsProps = null
 })
 
-it('preview-parse-error-feedback-loop regression: corrected Mermaid reaches the preview while the prior error remains feedback only', () => {
-  renderPage()
+import Home from '../app/page'
 
-  const firstPreview = testState.previewProps.find((props) => 'onParseStateChange' in props)
-  expect(firstPreview).toBeDefined()
-  if (!firstPreview) throw new Error('Expected DiagramPreview props after the initial render')
+let root: Root | null = null
+let container: HTMLDivElement
 
-  expect(firstPreview.code).toBe('flowchart TD\n  A -->')
-  ;(firstPreview.onParseStateChange as (state: { hasParseError: boolean; message: string }) => void)({
-    hasParseError: true,
-    message: 'Parse error on line 2',
-  })
+beforeEach(() => {
+  container = document.createElement('div')
+  document.body.appendChild(container)
+  root = createRoot(container)
+})
 
-  renderPage()
-  expect(testState.resultsProps?.parseError).toBe('Parse error on line 2')
-  expect(testState.previewProps.findLast((props) => 'onParseStateChange' in props)).not.toHaveProperty('parseErrorMessage')
+afterEach(() => {
+  if (root) act(() => root?.unmount())
+  root = null
+  container.remove()
+})
+
+it('shows a parse error as feedback while sending corrected Mermaid to the preview', () => {
+  act(() => root?.render(createElement(Home)))
+
+  expect(container.querySelector('[data-testid="preview-code"]')?.textContent).toBe(testState.initialCode)
+
+  const reportParseError = container.querySelector('[data-testid="report-parse-error"]') as HTMLButtonElement
+  act(() => reportParseError.click())
+
+  expect(container.querySelector('[data-testid="parse-error-feedback"]')?.textContent)
+    .toBe('Parse error on line 2')
+  expect(container.querySelector('[data-testid="preview-code"]')?.getAttribute('data-parse-error-message')).toBe('')
 
   const correctedCode = 'flowchart TD\n  A --> B'
-  ;(testState.editorProps?.onChange as (code: string) => void)(correctedCode)
-  renderPage()
+  const editor = container.querySelector('[data-testid="diagram-editor"]') as HTMLTextAreaElement
+  act(() => {
+    const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
+    setValue?.call(editor, correctedCode)
+    editor.dispatchEvent(new Event('input', { bubbles: true }))
+  })
 
-  const correctedPreview = testState.previewProps.findLast((props) => 'onParseStateChange' in props)
-  expect(correctedPreview).toBeDefined()
-  if (!correctedPreview) throw new Error('Expected DiagramPreview props after correcting the source')
-
-  expect(correctedPreview).toMatchObject({ code: correctedCode })
-  expect(correctedPreview).not.toHaveProperty('parseErrorMessage')
-  expect(testState.resultsProps?.parseError).toBe('Parse error on line 2')
+  expect(container.querySelector('[data-testid="preview-code"]')?.textContent).toBe(correctedCode)
+  expect(container.querySelector('[data-testid="parse-error-feedback"]')?.textContent)
+    .toBe('Parse error on line 2')
+  expect(container.querySelector('[data-testid="preview-code"]')?.getAttribute('data-parse-error-message')).toBe('')
 })

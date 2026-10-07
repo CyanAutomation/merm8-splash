@@ -1,167 +1,58 @@
+// @vitest-environment jsdom
+// @vitest-environment-options {"pretendToBeVisual":true}
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-const mermaidMocks = vi.hoisted(() => ({
-  initialize: vi.fn(),
-  render: vi.fn(async (id: string) => ({
-    svg: `<svg id="${id}"></svg>`,
-  })),
+const rendererMocks = vi.hoisted(() => ({
+  renderDiagramSvg: vi.fn(),
 }))
 
-vi.mock('mermaid', () => ({ default: mermaidMocks }))
+vi.mock('../app/components/diagramRenderer', () => ({
+  renderDiagramSvg: rendererMocks.renderDiagramSvg,
+}))
 vi.mock('@/lib/diagramTypes', () => ({ parseDiagramType: () => 'flowchart' }))
 vi.mock('@/lib/errorUtils', () => ({ extractLineNumber: () => null }))
 
+import { createMermaidRenderId } from '../app/components/diagramRenderIds'
 import DiagramPreview from '../app/components/DiagramPreview'
 
-class TestNode {
-  nodeType: number
-  nodeName: string
-  ownerDocument: TestDocument
-  parentNode: TestNode | null = null
-  childNodes: TestNode[] = []
-
-  constructor(nodeType: number, nodeName: string, ownerDocument: TestDocument) {
-    this.nodeType = nodeType
-    this.nodeName = nodeName
-    this.ownerDocument = ownerDocument
-  }
-
-  appendChild(child: TestNode) {
-    child.parentNode = this
-    this.childNodes.push(child)
-    return child
-  }
-
-  insertBefore(child: TestNode, before: TestNode | null) {
-    child.parentNode = this
-    const index = before ? this.childNodes.indexOf(before) : -1
-    if (index === -1) this.childNodes.push(child)
-    else this.childNodes.splice(index, 0, child)
-    return child
-  }
-
-  removeChild(child: TestNode) {
-    const index = this.childNodes.indexOf(child)
-    if (index === -1) throw new Error('Child not found')
-    this.childNodes.splice(index, 1)
-    child.parentNode = null
-    return child
-  }
-
-  addEventListener() {}
-  removeEventListener() {}
-
-  get firstChild() { return this.childNodes[0] ?? null }
-  get lastChild() { return this.childNodes.at(-1) ?? null }
-  get nextSibling() {
-    if (!this.parentNode) return null
-    const index = this.parentNode.childNodes.indexOf(this)
-    return this.parentNode.childNodes[index + 1] ?? null
-  }
-}
-
-class TestText extends TestNode {
-  data: string
-
-  constructor(data: string, ownerDocument: TestDocument) {
-    super(3, '#text', ownerDocument)
-    this.data = data
-  }
-}
-
-class TestElement extends TestNode {
-  tagName: string
-  namespaceURI = 'http://www.w3.org/1999/xhtml'
-  style = { setProperty: vi.fn() }
-  innerHTML = ''
-  clientWidth = 0
-  clientHeight = 0
-
-  constructor(tagName: string, ownerDocument: TestDocument) {
-    super(1, tagName.toUpperCase(), ownerDocument)
-    this.tagName = tagName.toUpperCase()
-  }
-
-  setAttribute() {}
-  removeAttribute() {}
-  querySelector() { return null }
-  querySelectorAll() { return [] }
-}
-
-class TestDocument extends TestNode {
-  defaultView: Record<string, unknown> | null = null
-  documentElement: TestElement
-
-  constructor() {
-    super(9, '#document', null as unknown as TestDocument)
-    this.ownerDocument = this
-    this.documentElement = new TestElement('html', this)
-  }
-
-  createElement(tagName: string) { return new TestElement(tagName, this) }
-  createElementNS(_namespace: string, tagName: string) { return this.createElement(tagName) }
-  createTextNode(data: string) { return new TestText(data, this) }
-}
-
-let roots: Root[]
+let root: Root | null = null
+let container: HTMLDivElement
 
 beforeEach(() => {
-  mermaidMocks.initialize.mockClear()
-  mermaidMocks.render.mockReset().mockImplementation(async (id: string) => ({
-    svg: `<svg id="${id}"></svg>`,
-  }))
-
-  const document = new TestDocument()
-  const window = {
-    document,
-    HTMLIFrameElement: class {},
-  }
-  document.defaultView = window
-  vi.stubGlobal('document', document)
-  vi.stubGlobal('window', window)
-  vi.stubGlobal('HTMLElement', TestElement)
-  vi.stubGlobal('Node', TestNode)
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-  roots = [
-    createRoot(document.createElement('div') as unknown as Element, { identifierPrefix: 'first:' }),
-    createRoot(document.createElement('div') as unknown as Element, { identifierPrefix: 'second:' }),
-  ]
+  rendererMocks.renderDiagramSvg.mockReset().mockImplementation(async (options) => {
+    const renderId = createMermaidRenderId(options.stableId, 1)
+    return { svg: `<svg id="${renderId}"></svg>`, renderId }
+  })
+  container = document.createElement('div')
+  document.body.appendChild(container)
+  root = createRoot(container)
 })
 
 afterEach(() => {
-  act(() => roots.forEach((root) => root.unmount()))
+  if (root) act(() => root?.unmount())
+  root = null
+  container.remove()
   vi.unstubAllGlobals()
 })
 
 it('uses distinct selector-safe Mermaid render IDs for separate preview instances', async () => {
-  let resolveFirstRender!: () => void
-  let resolveSecondRender!: () => void
-  const firstRenderCalled = new Promise<void>((resolve) => { resolveFirstRender = resolve })
-  const secondRenderCalled = new Promise<void>((resolve) => { resolveSecondRender = resolve })
-  let renderCount = 0
-
-  mermaidMocks.render.mockImplementation(async (id: string) => {
-    renderCount += 1
-    if (renderCount === 1) resolveFirstRender()
-    if (renderCount === 2) resolveSecondRender()
-    return { svg: `<svg id="${id}"></svg>` }
-  })
-
   await act(async () => {
-    roots[0].render(createElement(DiagramPreview, { code: 'flowchart TD\nA --> B' }))
+    root?.render(createElement('div', null,
+      createElement(DiagramPreview, { code: 'flowchart TD\nA --> B' }),
+      createElement(DiagramPreview, { code: 'flowchart TD\nC --> D' }),
+    ))
   })
-  await firstRenderCalled
-  await act(async () => {
-    roots[1].render(createElement(DiagramPreview, { code: 'flowchart TD\nC --> D' }))
-  })
-  await secondRenderCalled
 
-  expect(mermaidMocks.initialize).toHaveBeenCalledTimes(2)
-  expect(mermaidMocks.render).toHaveBeenCalledTimes(2)
-  const renderIds = mermaidMocks.render.mock.calls.map(([id]) => id)
+  const renderCalls = rendererMocks.renderDiagramSvg.mock.calls
+  expect(renderCalls).toHaveLength(2)
+  const renderIds = renderCalls.map(([options]) => createMermaidRenderId(options.stableId, 1))
+  const previewIds = Array.from(container.querySelectorAll('[data-preview-id]'))
+    .map((element) => element.getAttribute('data-preview-id'))
 
   expect(new Set(renderIds).size).toBe(2)
   renderIds.forEach((id) => expect(id).toMatch(/^[a-zA-Z0-9_-]+$/))
+  expect(new Set(previewIds).size).toBe(2)
 })

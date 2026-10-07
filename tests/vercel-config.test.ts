@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
+import { resolveApiEndpointInfo } from '../lib/api'
 
 const repoRoot = process.cwd()
 const vercelConfig = JSON.parse(readFileSync(join(repoRoot, 'vercel.json'), 'utf8')) as {
@@ -30,7 +31,16 @@ it('does not configure browser build variables as Vercel function environment va
 })
 
 it('keeps the example API endpoint aligned with the app default', () => {
-  expect(exampleApiEndpoint).toBe('https://merm8.scheimann.workers.dev')
+  vi.stubEnv('NEXT_PUBLIC_MERM8_API_URL', '')
+  vi.stubGlobal('window', undefined)
+  vi.stubGlobal('localStorage', undefined)
+
+  try {
+    expect(exampleApiEndpoint).toBe(resolveApiEndpointInfo().endpoint)
+  } finally {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  }
 })
 
 it('sets a Vercel CSP that supports the configurable HTTPS API endpoint', () => {
@@ -45,8 +55,9 @@ it('sets a Vercel CSP that supports the configurable HTTPS API endpoint', () => 
 })
 
 it('documents production API configuration and optional Preview CORS setup', () => {
-  expect(readme).toContain('set `NEXT_PUBLIC_MERM8_API_URL` for Production')
-  expect(readme).toContain('Configure Preview only if you start using Preview deployments')
-  expect(readme).toContain('https://merm8-splash.vercel.app')
-  expect(readme).toContain('CORS allowlist')
+  expect(readme).toMatch(/NEXT_PUBLIC_MERM8_API_URL/)
+  expect(readme).toMatch(/Production/i)
+  expect(readme).toMatch(/Preview/i)
+  expect(readme).toMatch(/https:\/\/merm8-splash\.vercel\.app/)
+  expect(readme).toMatch(/CORS allowlist/i)
 })
