@@ -11,8 +11,9 @@ run-name: >-
 permissions: {}
 
 concurrency:
+  # Workflow-specific groups keep one sweep from replacing the other's pending run.
   # GitHub keeps one running and one pending run per group; newer pending runs replace older ones.
-  group: kaseki-${{ github.repository }}
+  group: kaseki-${{ github.workflow }}-${{ github.repository }}
   cancel-in-progress: false
 
 env:
@@ -261,6 +262,8 @@ jobs:
 
       - name: Publish submission details
         shell: bash
+        env:
+          KASEKI_RUN_ID: ${{ steps.submit.outputs.run_id }}
         run: |
           {
             echo "## Kaseki submission"
@@ -272,7 +275,7 @@ jobs:
             echo "| Mode | \`patch\` → full PR (not draft) |"
             echo "| Timeout | 3 hours |"
             echo "| Maximum diff | 100 KiB |"
-            echo "| Kaseki run | \`${{ steps.submit.outputs.run_id }}\` |"
+            echo "| Kaseki run | \`$KASEKI_RUN_ID\` |"
             echo
             echo "### Allowed paths"
             echo '```text'
