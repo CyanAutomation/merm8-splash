@@ -12,6 +12,7 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 - **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
 - **Multiple Diagram Types** — Renders Mermaid diagrams and adapts lint controls to the connected API's advertised capabilities
 - **Export Support** — Export analyzed diagrams in multiple formats
+- **Semantic Review** — Authenticated, provider-backed semantic review of diagram code via the Semantic Review dialog (`SemanticReviewDialog.tsx`, driven by `reviewCodeSemantics()` in `lib/api.ts`). Posts to `/v1/semantic-review` with a Bearer API key; missing, invalid, or unauthorized keys surface clear auth and rate-limit messages
 - **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
 - **Desktop-Optimized Design** — Clean UI styled with project CSS (optimized for desktop with responsive mobile stacking)
 
@@ -203,16 +204,21 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 │   │   ├── DiagramPreview.tsx    # Mermaid rendering
 │   │   ├── ErrorBoundary.tsx     # Error boundary wrapper
 │   │   ├── ExportDropdown.tsx    # Export analyzed diagrams
+│   │   ├── HomeDialogs.tsx        # Dialog orchestration (API config, semantic review)
+│   │   ├── HomeHeader.tsx         # App header
 │   │   ├── Modal.tsx             # Modal dialog wrapper
 │   │   ├── ResultsPanel.tsx      # Analysis results display
 │   │   ├── RulesPanel.tsx        # Rule configuration
+│   │   ├── SemanticReviewDialog.tsx # Semantic review dialog
 │   │   ├── Snackbar.tsx          # Toast notification system
 │   │   ├── StatusBar.tsx         # App status bar
-│   │   └── ToggleSlider.tsx      # Toggle slider component
+│   │   ├── ToggleSlider.tsx      # Toggle slider component
+│   │   └── WorkspaceArea.tsx       # Main workspace layout
 │   ├── layout.tsx                # Root layout
 │   ├── page.tsx                  # Main page
 │   └── globals.css               # Global styles
 ├── lib/                          # Shared utilities and hooks
+│   ├── analysisReadiness.ts        # Analysis readiness gate
 │   ├── api.ts                    # merm8 API client
 │   ├── constants.ts              # App constants
 │   ├── diagramTypes.ts           # Diagram type detection
@@ -222,7 +228,11 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 │   ├── theme.ts                  # Theme tokens
 │   ├── useApiEndpoint.ts         # API endpoint hook
 │   ├── useDiagramAnalysis.ts     # Analysis state hook
-│   └── useLayoutPreferences.ts   # Layout preferences hook
+│   ├── useEndpointFeedback.ts    # Endpoint test/save feedback hook
+│   ├── useLayoutPreferences.ts   # Layout preferences hook
+│   ├── useManualRecheck.ts      # Manual recheck gate logic
+│   ├── useRulesConfiguration.ts # Rules fetch/enable/disable state
+│   └── useScheduledAnalysis.ts  # Debounced/delayed analysis trigger
 ├── tests/                        # Unit tests
 ├── Dockerfile                    # Docker configuration
 ├── netlify.toml                  # Netlify configuration
