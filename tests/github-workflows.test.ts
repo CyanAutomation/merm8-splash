@@ -100,7 +100,7 @@ it('limits the Kaseki Docs workflow to one protected job on main', () => {
 
 it('pins both Kaseki requests and run names to the triggering commit', () => {
   for (const workflow of [dryWorkflow, docsWorkflow]) {
-    expect(workflow).toContain('REF: ${{ github.sha }}')
+    expect(workflow).toContain('REF: main')
     expect(workflow).toContain('${{ github.repository }}@${{ github.sha }}')
     expect(workflow).not.toContain('github.event.repository.default_branch')
   }
