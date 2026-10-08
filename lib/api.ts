@@ -97,6 +97,14 @@ export const API_ENDPOINT_STORAGE_KEY = 'merm8_api_endpoint'
 
 const API_REQUEST_TIMEOUT_MS = 10_000
 
+const API_TIMEOUT_MESSAGE = `API request timed out after ${API_REQUEST_TIMEOUT_MS / 1000} seconds.`
+
+function createApiTimeoutError(): Error {
+  const error = new Error(API_TIMEOUT_MESSAGE)
+  error.name = 'TimeoutError'
+  return error
+}
+
 class ApiRequestError extends Error {
   constructor(
     readonly status: number,
@@ -232,8 +240,7 @@ async function requestApi<T>(
 
   const timeoutId = setTimeout(() => {
     didTimeout = true
-    const timeoutError = new Error(`API request timed out after ${API_REQUEST_TIMEOUT_MS / 1000} seconds.`)
-    timeoutError.name = 'TimeoutError'
+    const timeoutError = createApiTimeoutError()
     controller.abort(timeoutError)
   }, API_REQUEST_TIMEOUT_MS)
 
@@ -253,7 +260,7 @@ async function requestApi<T>(
     return data as T
   } catch (error) {
     if (didTimeout) {
-      throw new Error(`API request timed out after ${API_REQUEST_TIMEOUT_MS / 1000} seconds.`)
+      throw new Error(API_TIMEOUT_MESSAGE)
     }
     throw error
   } finally {
