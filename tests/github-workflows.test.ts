@@ -79,23 +79,38 @@ it('limits the secret-bearing Kaseki DRY job to main', () => {
   expect(jobConfiguration).toContain("if: github.ref == 'refs/heads/main'")
 })
 
-it('limits the Kaseki Docs workflow to one protected job on main', () => {
+it('runs only the Docs sweep job on the main branch', () => {
   const jobs = yamlBlock(docsWorkflow, 'jobs:')
   const docsJob = docsJobBlock('docs_sweep')
 
   expect(jobs.match(/^ {2}[A-Za-z0-9_-]+:$/gm)).toEqual(['  docs_sweep:'])
   expect(docsJob).toContain("if: github.ref == 'refs/heads/main'")
+})
+
+it('protects the Docs sweep with its environment and a bounded job timeout', () => {
+  const docsJob = docsJobBlock('docs_sweep')
+
   expect(docsJob.match(/^\s+environment: kaseki-agent$/gm)).toHaveLength(1)
   expect(docsJob).toContain('timeout-minutes: 200')
-  for (const stepName of [
-    'Verify controller health',
-    'Verify controller readiness',
-    'Verify gateway connectivity and authentication',
-    'Submit documentation sweep',
-    'Wait for Kaseki completion',
-  ]) {
-    expect(workflowStepBlock(docsWorkflow, stepName)).not.toBe('')
-  }
+})
+
+it('verifies Docs controller readiness and authentication before submitting work', () => {
+  const healthStep = workflowStepBlock(docsWorkflow, 'Verify controller health')
+  const readinessStep = workflowStepBlock(docsWorkflow, 'Verify controller readiness')
+  const authenticationStep = workflowStepBlock(docsWorkflow, 'Verify gateway connectivity and authentication')
+  const submitStep = workflowStepBlock(docsWorkflow, 'Submit documentation sweep')
+  const readinessScript = runScript(docsWorkflow, 'Verify controller readiness')
+  const authenticationScript = runScript(docsWorkflow, 'Verify gateway connectivity and authentication')
+
+  expect(healthStep).toContain(
+    'uses: CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@30db5d15e117b8d8de13eb66766d48cf6b7d618b',
+  )
+  expect(readinessScript).toContain("jq -e '.status == \"ready\"'")
+  expect(authenticationScript).toContain('--header "Authorization: Bearer $KASEKI_API_TOKEN"')
+  expect(authenticationScript).toContain("jq -e '.status == \"ok\"'")
+  expect(docsWorkflow.indexOf(healthStep)).toBeLessThan(docsWorkflow.indexOf(readinessStep))
+  expect(docsWorkflow.indexOf(readinessStep)).toBeLessThan(docsWorkflow.indexOf(authenticationStep))
+  expect(docsWorkflow.indexOf(authenticationStep)).toBeLessThan(docsWorkflow.indexOf(submitStep))
 })
 
 it('pins both Kaseki requests and run names to the triggering commit', () => {
