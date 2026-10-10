@@ -17,11 +17,18 @@ vi.mock('../lib/api', async (importOriginal) => {
 })
 
 const endpoint = 'https://api.example.test'
+const nextEndpoint = 'https://next-api.example.test'
 let root: Root | null = null
 let currentState: ReturnType<typeof useRulesConfiguration> | null = null
 
-function Harness() {
-  currentState = useRulesConfiguration(endpoint, 'connected', 'flowchart')
+function Harness({
+  currentEndpoint = endpoint,
+  connectionStatus = 'connected',
+}: {
+  currentEndpoint?: string
+  connectionStatus?: 'connected' | 'disconnected' | 'checking' | 'error'
+} = {}) {
+  currentState = useRulesConfiguration(currentEndpoint, connectionStatus, 'flowchart')
   return null
 }
 
@@ -50,6 +57,70 @@ it('keeps an endpoint available after a successful response with no rules', asyn
     rulesLoadedEndpoint: endpoint,
     rulesUnavailableEndpoint: null,
   })
+})
+
+it('keeps a manually changed selection when rules are refreshed', async () => {
+  const firstRules = [
+    { id: 'first', description: 'First rule', severity: 'warning' as const },
+    { id: 'second', description: 'Second rule', severity: 'error' as const },
+  ]
+  const refreshedRules = [...firstRules, { id: 'third', description: 'Third rule', severity: 'info' as const }]
+  apiMocks.fetchRules
+    .mockResolvedValueOnce({ rules: firstRules, status: 'success' })
+    .mockResolvedValueOnce({ rules: refreshedRules, status: 'success' })
+
+  await act(async () => {
+    root?.render(createElement(Harness))
+  })
+
+  expect(currentState?.enabledRules).toEqual(['first', 'second'])
+  act(() => currentState?.toggleRule('first'))
+  expect(currentState?.enabledRules).toEqual(['second'])
+
+  await act(async () => {
+    root?.render(createElement(Harness, { connectionStatus: 'disconnected' }))
+  })
+  await act(async () => {
+    root?.render(createElement(Harness, { connectionStatus: 'connected' }))
+  })
+
+  expect(currentState?.rules.map((rule) => rule.id)).toEqual(['first', 'second', 'third'])
+  expect(currentState?.enabledRules).toEqual(['second'])
+})
+
+it('ignores a rules response from an endpoint that is no longer current', async () => {
+  let resolveFirstRequest: ((value: {
+    rules: { id: string; description: string; severity: 'warning' }[]
+    status: 'success'
+  }) => void) | undefined
+  apiMocks.fetchRules
+    .mockImplementationOnce(() => new Promise((resolve) => {
+      resolveFirstRequest = resolve
+    }))
+    .mockResolvedValueOnce({
+      rules: [{ id: 'current', description: 'Current rule', severity: 'warning' }],
+      status: 'success',
+    })
+
+  await act(async () => {
+    root?.render(createElement(Harness, { currentEndpoint: endpoint }))
+  })
+  await act(async () => {
+    root?.render(createElement(Harness, { currentEndpoint: nextEndpoint }))
+  })
+
+  expect(currentState?.rules.map((rule) => rule.id)).toEqual(['current'])
+  expect(currentState?.rulesLoadedEndpoint).toBe(nextEndpoint)
+
+  await act(async () => {
+    resolveFirstRequest?.({
+      rules: [{ id: 'stale', description: 'Stale rule', severity: 'warning' }],
+      status: 'success',
+    })
+  })
+
+  expect(currentState?.rules.map((rule) => rule.id)).toEqual(['current'])
+  expect(currentState?.rulesLoadedEndpoint).toBe(nextEndpoint)
 })
 
 it.each([
