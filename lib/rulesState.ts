@@ -5,6 +5,19 @@ export interface RulesAvailabilityState {
 
 export type RulesAvailabilitySignal = 'success' | 'malformed_payload' | 'transport_failure'
 
+export interface RulesSelectionState {
+  endpoint: string
+  hasInitializedOrModifiedSelection: boolean
+}
+
+export interface PreparedRulesResponse<T extends { id: string }> {
+  rules: T[]
+  ruleIds: string[]
+  isUnavailable: boolean
+  shouldUpdateSelection: boolean
+  preserveSelection: boolean
+}
+
 export function resolveRulesAvailabilityState(
   endpoint: string,
   rulesLoadedEndpoint: string | null,
@@ -18,6 +31,25 @@ export function resolveRulesAvailabilityState(
 
 export function shouldTreatRulesPayloadAsUnavailable(signal: RulesAvailabilitySignal): boolean {
   return signal === 'transport_failure' || signal === 'malformed_payload'
+}
+
+export function prepareRulesResponse<T extends { id: string }>(
+  fetched: { rules: unknown; status: RulesAvailabilitySignal },
+  selectionState: RulesSelectionState,
+  requestEndpoint: string
+): PreparedRulesResponse<T> {
+  const rules = Array.isArray(fetched.rules) ? fetched.rules as T[] : []
+  const isUnavailable = shouldTreatRulesPayloadAsUnavailable(fetched.status)
+
+  return {
+    rules,
+    ruleIds: rules.map((rule) => rule.id),
+    isUnavailable,
+    shouldUpdateSelection: !isUnavailable,
+    preserveSelection: !isUnavailable
+      && selectionState.endpoint === requestEndpoint
+      && selectionState.hasInitializedOrModifiedSelection,
+  }
 }
 
 export function isCurrentRulesRequest(

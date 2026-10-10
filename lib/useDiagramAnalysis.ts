@@ -285,36 +285,34 @@ function getErrorSuggestion(error: unknown): string | null {
   return typeof suggestion === 'string' && suggestion.trim() ? suggestion.trim() : null
 }
 
+function parseApiRequestError(
+  err: Error & { data: unknown; headers: Headers },
+  apiFailureMessage: string | null,
+): ParsedAnalysisError {
+  const requestIdHint = getRequestIdHint(err.headers)
+  const requestHints = requestIdHint ? [requestIdHint] : []
+  if (apiFailureMessage) return { summary: apiFailureMessage, hints: requestHints }
+
+  if (typeof err.data === 'string' && err.data.trim()) {
+    return { summary: err.data, hints: requestHints }
+  }
+
+  if (isRecord(err.data)) {
+    return {
+      summary: summarizeApiError(err.data, err.message),
+      hints: getApiErrorHints(err.data, requestIdHint),
+    }
+  }
+
+  return { summary: err.message, hints: [] }
+}
+
 function parseAnalysisError(err: unknown): ParsedAnalysisError {
   const apiFailureMessage = getApiFailureMessage(err, 'analysis')
-
-  if (!isApiRequestError(err)) {
-    return {
-      summary: apiFailureMessage ?? (err instanceof Error ? err.message : 'Analysis failed'),
-      hints: [],
-    }
-  }
-
-  const requestIdHint = getRequestIdHint(err.headers)
-  if (apiFailureMessage) {
-    return { summary: apiFailureMessage, hints: requestIdHint ? [requestIdHint] : [] }
-  }
-
-  const responseData = err.data
-  if (typeof responseData === 'string' && responseData.trim()) {
-    return { summary: responseData, hints: requestIdHint ? [requestIdHint] : [] }
-  }
-
-  if (responseData && typeof responseData === 'object') {
-    const data = responseData as Record<string, unknown>
-    return {
-      summary: summarizeApiError(data, err.message),
-      hints: getApiErrorHints(data, requestIdHint),
-    }
-  }
+  if (isApiRequestError(err)) return parseApiRequestError(err, apiFailureMessage)
 
   return {
-    summary: err instanceof Error ? err.message : 'Analysis failed',
+    summary: apiFailureMessage ?? (err instanceof Error ? err.message : 'Analysis failed'),
     hints: [],
   }
 }
