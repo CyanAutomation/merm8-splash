@@ -1,93 +1,36 @@
 'use client'
 
 import type { RefObject } from 'react'
-import type { AnalysisMetrics, Rule, Violation } from '@/lib/api'
 import type { LayoutPreferences } from '@/lib/useLayoutPreferences'
-import DiagramEditor, { type DiagramEditorRef } from './DiagramEditor'
+import type { DiagramEditorRef } from './DiagramEditor'
+import type { WorkspaceResultsProps } from './WorkspaceResults'
+import DiagramEditor from './DiagramEditor'
 import DiagramPreview from './DiagramPreview'
 import ErrorBoundary from './ErrorBoundary'
-import ExportDropdown from './ExportDropdown'
-import ResultsPanel, { type ResultsPanelRef } from './ResultsPanel'
 import WorkspaceDivider from './WorkspaceDivider'
+import WorkspaceResults from './WorkspaceResults'
 
-interface WorkspaceAreaProps {
-  prefs: Pick<LayoutPreferences, 'leftPanelSize' | 'editorSize' | 'useBeautifulRenderer' | 'diagramPreviewMode'>
-  savePrefs: (preferences: Partial<LayoutPreferences>) => void
-  code: string
-  onCodeChange: (code: string) => void
-  editorRef: RefObject<DiagramEditorRef | null>
-  resultsRef: RefObject<ResultsPanelRef | null>
-  previewResetKey: string
-  onParseStateChange: (state: { hasParseError: boolean; message: string | null }) => void
-  onJumpToLine: (line: number) => void
-  onExpandToFullscreen: () => void
-  violations: Violation[]
-  endpoint: string
-  enabledRules: string[]
-  rules: Rule[]
-  isAnalyzing: boolean
-  analyzeError: string | null
-  analysisHints: string[]
-  lintSupported: boolean | null
-  parseErrorDetail: string | null
-  metrics: AnalysisMetrics | null
-  showMetrics: boolean
-  canRecheck: boolean
-  onToggleMetrics: () => void
-  onOpenRules: () => void
-  onOpenSemanticReview: () => void
-  onRecheck: () => void
+export interface WorkspaceAreaProps {
+  layout: {
+    preferences: Pick<LayoutPreferences, 'leftPanelSize' | 'editorSize' | 'useBeautifulRenderer' | 'diagramPreviewMode'>
+    savePreferences: (preferences: Partial<LayoutPreferences>) => void
+  }
+  editor: {
+    code: string
+    onChange: (code: string) => void
+    ref: RefObject<DiagramEditorRef | null>
+  }
+  preview: {
+    resetKey: string
+    onParseStateChange: (state: { hasParseError: boolean; message: string | null }) => void
+    onJumpToLine: (line: number) => void
+    onExpandToFullscreen: () => void
+  }
+  results: WorkspaceResultsProps
 }
 
-function MetricItem({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '4px 8px',
-        background: 'var(--color-bg-primary)',
-        borderRadius: '4px',
-      }}
-    >
-      <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
-      <span style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontFamily: 'monospace' }}>
-        {value}
-      </span>
-    </div>
-  )
-}
-
-export default function WorkspaceArea({
-  prefs,
-  savePrefs,
-  code,
-  onCodeChange,
-  editorRef,
-  resultsRef,
-  previewResetKey,
-  onParseStateChange,
-  onJumpToLine,
-  onExpandToFullscreen,
-  violations,
-  endpoint,
-  enabledRules,
-  rules,
-  isAnalyzing,
-  analyzeError,
-  analysisHints,
-  lintSupported,
-  parseErrorDetail,
-  metrics,
-  showMetrics,
-  canRecheck,
-  onToggleMetrics,
-  onOpenRules,
-  onOpenSemanticReview,
-  onRecheck,
-}: WorkspaceAreaProps) {
-  const hasErrors = violations.some((violation) => violation.severity === 'error')
+export default function WorkspaceArea({ layout, editor, preview, results }: WorkspaceAreaProps) {
+  const { preferences, savePreferences } = layout
 
   return (
     <div className="app-main" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -95,8 +38,8 @@ export default function WorkspaceArea({
         className="workspace-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: `${prefs.leftPanelSize}% 4px 1fr`,
-          gridTemplateRows: `minmax(0, ${prefs.editorSize}%) 4px minmax(0, 1fr)`,
+          gridTemplateColumns: `${preferences.leftPanelSize}% 4px 1fr`,
+          gridTemplateRows: `minmax(0, ${preferences.editorSize}%) 4px minmax(0, 1fr)`,
           height: '100%',
           width: '100%',
           gap: 0,
@@ -105,144 +48,45 @@ export default function WorkspaceArea({
         <div className="workspace-pane" style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
           <div className="workspace-pane-content" style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
             <ErrorBoundary>
-              <DiagramEditor ref={editorRef} value={code} onChange={onCodeChange} />
+              <DiagramEditor ref={editor.ref} value={editor.code} onChange={editor.onChange} />
             </ErrorBoundary>
           </div>
         </div>
 
         <WorkspaceDivider
           direction="horizontal"
-          currentPercentage={prefs.editorSize}
+          currentPercentage={preferences.editorSize}
           minPercentage={30}
           maxPercentage={70}
-          onResize={(editorSize) => savePrefs({ editorSize })}
+          onResize={(editorSize) => savePreferences({ editorSize })}
         />
         <WorkspaceDivider
           direction="vertical"
-          currentPercentage={prefs.leftPanelSize}
+          currentPercentage={preferences.leftPanelSize}
           minPercentage={25}
           maxPercentage={75}
-          onResize={(leftPanelSize) => savePrefs({ leftPanelSize })}
+          onResize={(leftPanelSize) => savePreferences({ leftPanelSize })}
         />
 
         <div className="workspace-pane" style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
           <div className="workspace-pane-content" style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
-            <ErrorBoundary resetKey={previewResetKey}>
+            <ErrorBoundary resetKey={preview.resetKey}>
               <DiagramPreview
-                code={code}
-                onParseStateChange={onParseStateChange}
-                useBeautifulRenderer={prefs.useBeautifulRenderer}
-                onToggleBeautifulRenderer={(value) => savePrefs({ useBeautifulRenderer: value })}
-                diagramColorMode={prefs.diagramPreviewMode}
-                onToggleDiagramColorMode={(value) => savePrefs({ diagramPreviewMode: value })}
-                onJumpToLine={onJumpToLine}
-                onExpandToFullscreen={onExpandToFullscreen}
+                code={editor.code}
+                onParseStateChange={preview.onParseStateChange}
+                useBeautifulRenderer={preferences.useBeautifulRenderer}
+                onToggleBeautifulRenderer={(value) => savePreferences({ useBeautifulRenderer: value })}
+                diagramColorMode={preferences.diagramPreviewMode}
+                onToggleDiagramColorMode={(value) => savePreferences({ diagramPreviewMode: value })}
+                onJumpToLine={preview.onJumpToLine}
+                onExpandToFullscreen={preview.onExpandToFullscreen}
               />
             </ErrorBoundary>
           </div>
         </div>
 
         <div className="workspace-results" style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
-          <div className="workspace-results-content" style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
-              <div className="panel-heading" style={{ marginBottom: 0 }}>
-                ▦ Results{' '}
-                {violations.length > 0 && (
-                  <span
-                    style={{
-                      background: hasErrors ? 'var(--color-error)' : 'var(--color-warning)',
-                      color: 'var(--color-bg-primary)',
-                      padding: '0 6px',
-                      fontSize: '12px',
-                      borderRadius: '8px',
-                      marginLeft: '4px',
-                    }}
-                  >
-                    {violations.length}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <ErrorBoundary>
-                  <ExportDropdown
-                    results={violations}
-                    code={code}
-                    endpoint={endpoint}
-                    enabledRules={enabledRules}
-                    rulesMetadata={rules}
-                  />
-                </ErrorBoundary>
-                <button
-                  className="btn"
-                  style={{
-                    fontSize: '12px',
-                    padding: '4px 12px',
-                    ...(showMetrics ? { background: 'var(--color-accent-primary)', color: '#000' } : {}),
-                  }}
-                  onClick={onToggleMetrics}
-                  title="Toggle diagram metrics"
-                  disabled={!metrics}
-                >
-                  📊 Metrics
-                </button>
-                <button className="btn" style={{ fontSize: '12px', padding: '4px 12px' }} onClick={onOpenSemanticReview} disabled={!code.trim() || isAnalyzing} title="Ask the configured API to review diagram clarity">
-                  ✦ Semantic review
-                </button>
-                <button className="btn" style={{ fontSize: '12px', padding: '4px 12px' }} onClick={onOpenRules} title="Configure rules">
-                  ⊞ Rules
-                </button>
-                <button
-                  className="btn"
-                  style={{ fontSize: '12px', padding: '4px 12px' }}
-                  onClick={onRecheck}
-                  disabled={!canRecheck}
-                  title="Re-run analysis"
-                >
-                  ↺ Check
-                </button>
-              </div>
-            </div>
-            <div style={{ flex: 1, overflow: 'auto' }}>
-              <ErrorBoundary>
-                <ResultsPanel
-                  ref={resultsRef}
-                  results={violations}
-                  isAnalyzing={isAnalyzing}
-                  analyzeError={analyzeError}
-                  analysisHints={analysisHints}
-                  lintSupported={lintSupported}
-                  parseError={parseErrorDetail}
-                  onJumpToLine={onJumpToLine}
-                  showInternalHeader={false}
-                />
-              </ErrorBoundary>
-            </div>
-            {showMetrics && metrics && (
-              <div
-                style={{
-                  marginTop: '8px',
-                  padding: '12px',
-                  background: 'var(--color-bg-secondary)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                }}
-              >
-                <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '8px' }}>
-                  Diagram Metrics
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
-                  <MetricItem label="Diagram Type" value={metrics.diagramType} />
-                  <MetricItem label="Nodes" value={metrics.nodeCount} />
-                  <MetricItem label="Edges" value={metrics.edgeCount} />
-                  <MetricItem label="Disconnected" value={metrics.disconnectedNodeCount} />
-                  <MetricItem label="Duplicates" value={metrics.duplicateNodeCount} />
-                  <MetricItem label="Max Fan-in" value={metrics.maxFanin} />
-                  <MetricItem label="Max Fan-out" value={metrics.maxFanout} />
-                </div>
-              </div>
-            )}
-          </div>
+          <WorkspaceResults {...results} />
         </div>
       </div>
     </div>

@@ -40,6 +40,43 @@ function ErrorActionButton({ children, onClick }: ErrorActionButtonProps) {
   )
 }
 
+interface ErrorPanelActionsProps {
+  line: number | null
+  hasMoreDetails: boolean
+  expanded: boolean
+  onToggleExpanded: () => void
+  onJumpToLine?: (line: number) => void
+}
+
+function ErrorPanelActions({ line, hasMoreDetails, expanded, onToggleExpanded, onJumpToLine }: ErrorPanelActionsProps) {
+  return (
+    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      {line != null && onJumpToLine && (
+        <ErrorActionButton onClick={() => onJumpToLine(line)}>Show me where</ErrorActionButton>
+      )}
+      {hasMoreDetails && (
+        <ErrorActionButton onClick={onToggleExpanded}>
+          {expanded ? 'Hide details' : 'Show details'}
+        </ErrorActionButton>
+      )}
+    </div>
+  )
+}
+
+function ExpandedErrorDetails({
+  fullMessage,
+  expanded,
+  hasMoreDetails,
+}: Pick<DiagramPreviewErrorPanelProps, 'fullMessage' | 'expanded'> & { hasMoreDetails: boolean }) {
+  if (!expanded || !fullMessage || !hasMoreDetails) return null
+
+  return (
+    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '10px', marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px' }}>
+      {fullMessage}
+    </pre>
+  )
+}
+
 export default function DiagramPreviewErrorPanel({
   message,
   fullMessage,
@@ -65,23 +102,16 @@ export default function DiagramPreviewErrorPanel({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
         <div style={{ fontWeight: 600 }}>⚠ Syntax Error</div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {line != null && onJumpToLine && (
-            <ErrorActionButton onClick={() => onJumpToLine(line)}>Show me where</ErrorActionButton>
-          )}
-          {hasMoreDetails && (
-            <ErrorActionButton onClick={onToggleExpanded}>
-              {expanded ? 'Hide details' : 'Show details'}
-            </ErrorActionButton>
-          )}
-        </div>
+        <ErrorPanelActions
+          line={line}
+          hasMoreDetails={hasMoreDetails}
+          expanded={expanded}
+          onToggleExpanded={onToggleExpanded}
+          onJumpToLine={onJumpToLine}
+        />
       </div>
       <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{message}</pre>
-      {expanded && fullMessage && hasMoreDetails && (
-        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '10px', marginTop: '8px', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px' }}>
-          {fullMessage}
-        </pre>
-      )}
+      <ExpandedErrorDetails fullMessage={fullMessage} expanded={expanded} hasMoreDetails={hasMoreDetails} />
     </div>
   )
 }
