@@ -7,8 +7,10 @@ import ApiConfigPanel from '../app/components/ApiConfigPanel'
 import RulesPanel from '../app/components/RulesPanel'
 import StatusBar from '../app/components/StatusBar'
 import SemanticReviewDialog from '../app/components/SemanticReviewDialog'
+import ResultsPanel from '../app/components/ResultsPanel'
 
 function mount(element: ReactNode) {
+  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', { configurable: true, value: true })
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root: Root = createRoot(container)
@@ -24,6 +26,105 @@ function mount(element: ReactNode) {
 }
 
 describe('health hotspot panel rendering', () => {
+  it('renders analysis feedback, syntax errors, and jump-to-line actions', () => {
+    const onJumpToLine = vi.fn()
+    const view = mount(createElement(ResultsPanel, {
+      results: [{
+        rule_id: 'no-cycles',
+        severity: 'error',
+        message: 'Cycle found',
+        line: 4,
+      }],
+      isAnalyzing: false,
+      analyzeError: 'The API denied this request.',
+      analysisHints: ['Review the edge at line 4'],
+      lintSupported: false,
+      parseError: 'Unexpected token on line 4',
+      onJumpToLine,
+    }))
+
+    try {
+      expect(view.container.textContent).toContain('The API denied this request.')
+      expect(view.container.textContent).toContain('Hints')
+      expect(view.container.textContent).toContain('Syntax Error')
+      expect(view.container.textContent).toContain('Unexpected token on line 4')
+      expect(view.container.querySelector('tbody tr')?.textContent).toContain('no-cycles')
+
+      const hintAction = Array.from(view.container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Show me where')
+      const violationRow = view.container.querySelector('tbody tr')
+
+      if (!hintAction || !violationRow) throw new Error('Expected line navigation controls to render.')
+
+      act(() => hintAction.click())
+      act(() => violationRow.click())
+
+      expect(onJumpToLine).toHaveBeenNthCalledWith(1, 4)
+      expect(onJumpToLine).toHaveBeenNthCalledWith(2, 4)
+    } finally {
+      view.unmount()
+    }
+  })
+
+  it('shows the empty and analyzing states without rendering stale violations', () => {
+    const emptyMarkup = renderToStaticMarkup(createElement(ResultsPanel, {
+      results: [],
+      isAnalyzing: false,
+      analyzeError: null,
+      analysisHints: [],
+    }))
+    const loadingMarkup = renderToStaticMarkup(createElement(ResultsPanel, {
+      results: [{ rule_id: 'stale', severity: 'warning', message: 'Old result' }],
+      isAnalyzing: true,
+      analyzeError: null,
+      analysisHints: [],
+    }))
+
+    expect(emptyMarkup).toContain('No violations found')
+    expect(loadingMarkup).toContain('Analyzing...')
+    expect(loadingMarkup).not.toContain('Old result')
+  })
+
+  it('copies a formatted violation and shows temporary success feedback', async () => {
+    const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
+    const view = mount(createElement(ResultsPanel, {
+      results: [{
+        rule_id: 'no-cycles',
+        severity: 'warning',
+        message: 'Cycle found',
+        line: 4,
+      }],
+      isAnalyzing: false,
+      analyzeError: null,
+      analysisHints: [],
+    }))
+
+    try {
+      const copyButton = view.container.querySelector('tbody button')
+      if (!copyButton) throw new Error('Expected a copy action for the violation.')
+
+      await act(async () => {
+        copyButton.click()
+        await Promise.resolve()
+      })
+
+      expect(writeText).toHaveBeenCalledWith('[warning] no-cycles: Cycle found (line 4)')
+      expect(copyButton.textContent).toBe('✓')
+    } finally {
+      view.unmount()
+      if (originalClipboard) {
+        Object.defineProperty(navigator, 'clipboard', originalClipboard)
+      } else {
+        Reflect.deleteProperty(navigator, 'clipboard')
+      }
+    }
+  })
+
   it('renders status summaries and disables connection testing while checking', () => {
     const markup = renderToStaticMarkup(createElement(StatusBar, {
       connectionStatus: 'checking',

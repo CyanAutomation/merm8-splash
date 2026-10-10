@@ -118,6 +118,40 @@ it('rule selection removes unavailable rules without restoring defaults after in
   expect(Array.from(reloadedSelection)).toEqual(['no-empty-label'])
 })
 
+it('normalizes a successful rules response and reports selection state separately', () => {
+  const { prepareRulesResponse } = loadRulesStateModule()
+  const prepared = prepareRulesResponse(
+    { rules: [{ id: 'first' }, { id: 'second' }], status: 'success' },
+    { endpoint: 'https://api.example.test', hasInitializedOrModifiedSelection: true },
+    'https://api.example.test'
+  )
+
+  expect(prepared).toEqual({
+    rules: [{ id: 'first' }, { id: 'second' }],
+    ruleIds: ['first', 'second'],
+    isUnavailable: false,
+    shouldUpdateSelection: true,
+    preserveSelection: true,
+  })
+})
+
+it('does not update selected rules when the response payload is unavailable', () => {
+  const { prepareRulesResponse } = loadRulesStateModule()
+  const prepared = prepareRulesResponse(
+    { rules: null, status: 'malformed_payload' },
+    { endpoint: 'https://api.example.test', hasInitializedOrModifiedSelection: true },
+    'https://api.example.test'
+  )
+
+  expect(prepared).toEqual({
+    rules: [],
+    ruleIds: [],
+    isUnavailable: true,
+    shouldUpdateSelection: false,
+    preserveSelection: false,
+  })
+})
+
 it('only accepts the latest rules response for the current endpoint', () => {
   const { isCurrentRulesRequest } = loadRulesStateModule()
 
