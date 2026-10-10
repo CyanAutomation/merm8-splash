@@ -97,18 +97,21 @@ The project uses [Vitest](https://vitest.dev/) as the test runner. Test files ar
 
 ### API Endpoint
 
-The application needs to connect to a merm8 API instance. Configure it via:
+The application needs to connect to a merm8 API instance. The endpoint is resolved in this order:
 
-1. **Environment Variable** (at build time):
+1. **`?api=` URL Parameter** (at runtime, highest precedence):
+   - Any `?api=<url>` query parameter overrides all other configuration
+2. **Environment Variable** (at build time):
 
    ```bash
    NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev npm run build
    ```
 
-2. **UI Configuration** (at runtime):
+3. **UI Configuration** (at runtime):
    - Use the API Config panel
    - Enter any merm8 API endpoint URL
-   - The app saves your selection in browser storage
+   - The app saves your selection in browser storage (`localStorage.merm8_api_endpoint`)
+4. **Default** — the built-in default endpoint, used if none of the above resolve (or resolve to invalid values). Invalid values are ignored with a warning and resolution continues through the remaining fallbacks
 
 ### Local API Setup
 
@@ -213,7 +216,8 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 │   │   ├── Snackbar.tsx          # Toast notification system
 │   │   ├── StatusBar.tsx         # App status bar
 │   │   ├── ToggleSlider.tsx      # Toggle slider component
-│   │   └── WorkspaceArea.tsx       # Main workspace layout
+│   │   ├── WorkspaceArea.tsx       # Main workspace layout
+│   │   └── WorkspaceDivider.tsx    # Draggable workspace split divider
 │   ├── layout.tsx                # Root layout
 │   ├── page.tsx                  # Main page
 │   └── globals.css               # Global styles
@@ -223,6 +227,7 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 │   ├── constants.ts              # App constants
 │   ├── diagramTypes.ts           # Diagram type detection
 │   ├── errorUtils.ts             # Error handling utilities
+│   ├── homeFeedback.ts           # Endpoint test/save feedback notices
 │   ├── rulesState.ts             # Rules state management
 │   ├── status.ts                 # Parse status utilities
 │   ├── theme.ts                  # Theme tokens
@@ -233,8 +238,10 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 │   ├── useManualRecheck.ts      # Manual recheck gate logic
 │   ├── useRulesConfiguration.ts # Rules fetch/enable/disable state
 │   └── useScheduledAnalysis.ts  # Debounced/delayed analysis trigger
+├── design/                      # Frontend design guidance
 ├── tests/                        # Unit tests
 ├── Dockerfile                    # Docker configuration
+├── nginx.conf                    # Nginx static-serving/caching config
 ├── netlify.toml                  # Netlify configuration
 ├── next.config.ts                     # Next.js static-export config
 └── vercel.json                   # Vercel configuration
