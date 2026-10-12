@@ -92,6 +92,7 @@ jobs:
             echo "⚠️ Dependency tree validation failed."
             exit 1
           fi
+      - run: npm run check:readme
       - run: npm test
       - run: npm run lint
       - run: npm run build
