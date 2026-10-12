@@ -12,7 +12,7 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 - **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
 - **Multiple Diagram Types** — Renders Mermaid diagrams and adapts lint controls to the connected API's advertised capabilities
 - **Export Support** — Export analyzed diagrams in multiple formats
-- **Semantic Review** — Optional AI review of diagram code through the configured API. The diagram and entered API key are sent to that endpoint; the app does not save the key. Use an endpoint you trust, since its operator controls retention.
+- **Semantic Review** — Optional AI review through the configured API; requires an API key. See [API Endpoint](#api-endpoint) for data-handling details.
 - **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
 - **Desktop-Optimized Design** — Clean UI styled with project CSS (optimized for desktop with responsive mobile stacking)
 
@@ -32,15 +32,16 @@ Try the [hosted merm8-splash app](https://merm8-splash.vercel.app/). The built-i
        Check -- No --> Fix[Show error]
    ```
 
-3. The preview renders the diagram. After the API responds, the results panel shows analysis; available lint rules depend on the API and diagram type.
-4. Use the Rules panel to choose which available rules to apply.
+3. The preview renders the diagram. After the API responds, the Results panel lists findings by rule, severity, message, and line; available rules depend on the API and diagram type.
+4. Select a finding with a line number to jump to that line in the editor. Use **Rules** to choose which available checks to apply.
+5. Open **Export** to download SARIF JSON or JSON, or copy the results as Markdown or plain text.
 
 ## Development
 
 ### Prerequisites
 
 - **Node.js** 24.x
-- **npm** 9+ or **yarn** 4+
+- **npm** 9+ (the repository uses `package-lock.json`; npm is the verified package manager)
 
 ### Installation
 
@@ -49,8 +50,8 @@ Try the [hosted merm8-splash app](https://merm8-splash.vercel.app/). The built-i
 git clone https://github.com/CyanAutomation/merm8-splash.git
 cd merm8-splash
 
-# Install dependencies
-npm install
+# Install the locked dependencies
+npm ci
 ```
 
 ### Running Locally
@@ -131,6 +132,8 @@ localStorage.removeItem('merm8_api_endpoint')
 ```
 
 `NEXT_PUBLIC_MERM8_API_URL` is public configuration included in the built frontend; do not put secrets in it. Because Docker serves a static build, passing this variable to `docker run` does not change the API endpoint. For a Docker deployment, set and save the endpoint in the app’s API Configuration panel.
+
+Diagram source is sent to the selected API endpoint for regular analysis and optional semantic review. Semantic review also sends the API key you enter; the app does not save it. The endpoint operator controls how requests are processed and retained, so choose an endpoint you trust with your diagrams.
 
 ### Local API Setup
 
@@ -223,7 +226,7 @@ For custom deployments:
 - **[Mermaid](https://mermaid.js.org/)** — Diagram rendering
 - **[beautiful-mermaid](https://www.npmjs.com/package/beautiful-mermaid)** ^1.1.3 — Beautiful Mermaid rendering enhancements
 
-The application is a **pure frontend** that communicates with a remote merm8 API instance via REST API. No backend server required.
+The application is a **pure frontend** that communicates with a remote merm8 API instance via REST API. No backend server required. For the hosted Worker’s endpoints, request limits, CORS behavior, and live contract, see the [Worker API reference](https://github.com/CyanAutomation/merm8/blob/main/docs/worker-api.md); a deployed API also exposes its current specification at `/v1/spec`.
 
 ## Project Structure
 
