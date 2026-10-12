@@ -12,7 +12,7 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 - **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
 - **Multiple Diagram Types** — Renders Mermaid diagrams and adapts lint controls to the connected API's advertised capabilities
 - **Export Support** — Export analyzed diagrams in multiple formats
-- **Semantic Review** — Authenticated, provider-backed semantic review of diagram code via the Semantic Review dialog (`SemanticReviewDialog.tsx`, driven by `reviewCodeSemantics()` in `lib/api.ts`). Posts to `/v1/semantic-review` with a Bearer API key; missing, invalid, or unauthorized keys surface clear auth and rate-limit messages
+- **Semantic Review** — Optional AI review of diagram code through the configured API. The diagram and entered API key are sent to that endpoint; the app does not save the key. Use an endpoint you trust, since its operator controls retention.
 - **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
 - **Desktop-Optimized Design** — Clean UI styled with project CSS (optimized for desktop with responsive mobile stacking)
 
@@ -20,19 +20,26 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 
 ### Using Cloud-Hosted Version
 
-The easiest way to try merm8-splash is to use the cloud-hosted version:
+Try the [hosted merm8-splash app](https://merm8-splash.vercel.app/). The built-in default API is the official merm8 API; a saved endpoint or valid `api` URL parameter can override it.
 
-1. Navigate to the live application (URL provided by your deployment)
-2. Enter your merm8 API endpoint URL in the API Config panel
-3. Start writing Mermaid diagram code in the editor
-4. View real-time linting results and rule violations
-5. Configure which rules to enforce using the Rules panel
+1. Open **API Configuration** and select **Test** to check the current API connection. To use another instance, enter its URL, test it, then select **Save**.
+2. Paste this Mermaid diagram into the editor:
+
+   ```mermaid
+   flowchart TD
+       Start([Start]) --> Check{Valid?}
+       Check -- Yes --> Done[Continue]
+       Check -- No --> Fix[Show error]
+   ```
+
+3. The preview renders the diagram. After the API responds, the results panel shows analysis; available lint rules depend on the API and diagram type.
+4. Use the Rules panel to choose which available rules to apply.
 
 ## Development
 
 ### Prerequisites
 
-- **Node.js** 24 or higher
+- **Node.js** 24.x
 - **npm** 9+ or **yarn** 4+
 
 ### Installation
@@ -86,6 +93,14 @@ npm run test:coverage
 
 The project uses [Vitest](https://vitest.dev/) as the test runner. Test files are located in the `tests/` directory and follow the pattern `*.test.ts`. Coverage reports are written to `coverage/`.
 
+### Documentation check
+
+```bash
+npm run check:readme
+```
+
+This checks relative Markdown links for existing targets and verifies that documented `npm run` commands and `npm test` exist in `package.json`. It does not request external URLs.
+
 **Test Coverage:**
 
 - API request building and validation
@@ -97,21 +112,25 @@ The project uses [Vitest](https://vitest.dev/) as the test runner. Test files ar
 
 ### API Endpoint
 
-The application needs to connect to a merm8 API instance. The endpoint is resolved in this order:
+The application needs to connect to a merm8 API instance. On page load, it chooses the initial endpoint in this order:
 
-1. **`?api=` URL Parameter** (at runtime, highest precedence):
-   - Any `?api=<url>` query parameter overrides all other configuration
-2. **Environment Variable** (at build time):
+1. A valid **`?api=<url>` URL parameter**.
+2. A valid endpoint saved from the API Configuration panel in `localStorage.merm8_api_endpoint`.
+3. **`NEXT_PUBLIC_MERM8_API_URL`**, embedded at build time for static deployments:
 
    ```bash
    NEXT_PUBLIC_MERM8_API_URL=https://merm8.scheimann.workers.dev npm run build
    ```
 
-3. **UI Configuration** (at runtime):
-   - Use the API Config panel
-   - Enter any merm8 API endpoint URL
-   - The app saves your selection in browser storage (`localStorage.merm8_api_endpoint`)
-4. **Default** — the built-in default endpoint, used if none of the above resolve (or resolve to invalid values). Invalid values are ignored with a warning and resolution continues through the remaining fallbacks
+4. The built-in official API endpoint.
+
+Invalid configured values are ignored and resolution continues to the next option. A saved browser endpoint takes precedence over the build-time value. To remove it, run this in the browser console and reload the page:
+
+```js
+localStorage.removeItem('merm8_api_endpoint')
+```
+
+`NEXT_PUBLIC_MERM8_API_URL` is public configuration included in the built frontend; do not put secrets in it. Because Docker serves a static build, passing this variable to `docker run` does not change the API endpoint. For a Docker deployment, set and save the endpoint in the app’s API Configuration panel.
 
 ### Local API Setup
 
@@ -119,6 +138,16 @@ For development against a local merm8 API instance:
 
 ```bash
 NEXT_PUBLIC_MERM8_API_URL=http://localhost:8080 npm run dev
+```
+
+The local API must be running and reachable from the browser. Local or private API addresses are allowed in development; production builds reject them.
+
+### Static hosting path settings
+
+For a site served below a URL path, set `NEXT_PUBLIC_BASE_PATH` before building. Set `NEXT_PUBLIC_ASSET_PREFIX` only when Next.js assets are served from a separate prefix or CDN. Both are build-time settings; see [.env.example](.env.example).
+
+```bash
+NEXT_PUBLIC_BASE_PATH=/tools/merm8 npm run build
 ```
 
 ## Deployment
@@ -200,51 +229,15 @@ The application is a **pure frontend** that communicates with a remote merm8 API
 
 ```
 .
-├── app/
-│   ├── components/           # React components (flat files)
-│   │   ├── ApiConfigPanel.tsx    # API endpoint configuration
-│   │   ├── DiagramEditor.tsx     # Code editor
-│   │   ├── DiagramPreview.tsx    # Mermaid rendering
-│   │   ├── ErrorBoundary.tsx     # Error boundary wrapper
-│   │   ├── ExportDropdown.tsx    # Export analyzed diagrams
-│   │   ├── HomeDialogs.tsx        # Dialog orchestration (API config, semantic review)
-│   │   ├── HomeHeader.tsx         # App header
-│   │   ├── Modal.tsx             # Modal dialog wrapper
-│   │   ├── ResultsPanel.tsx      # Analysis results display
-│   │   ├── RulesPanel.tsx        # Rule configuration
-│   │   ├── SemanticReviewDialog.tsx # Semantic review dialog
-│   │   ├── Snackbar.tsx          # Toast notification system
-│   │   ├── StatusBar.tsx         # App status bar
-│   │   ├── ToggleSlider.tsx      # Toggle slider component
-│   │   ├── WorkspaceArea.tsx       # Main workspace layout
-│   │   └── WorkspaceDivider.tsx    # Draggable workspace split divider
-│   ├── layout.tsx                # Root layout
-│   ├── page.tsx                  # Main page
-│   └── globals.css               # Global styles
-├── lib/                          # Shared utilities and hooks
-│   ├── analysisReadiness.ts        # Analysis readiness gate
-│   ├── api.ts                    # merm8 API client
-│   ├── constants.ts              # App constants
-│   ├── diagramTypes.ts           # Diagram type detection
-│   ├── errorUtils.ts             # Error handling utilities
-│   ├── homeFeedback.ts           # Endpoint test/save feedback notices
-│   ├── rulesState.ts             # Rules state management
-│   ├── status.ts                 # Parse status utilities
-│   ├── theme.ts                  # Theme tokens
-│   ├── useApiEndpoint.ts         # API endpoint hook
-│   ├── useDiagramAnalysis.ts     # Analysis state hook
-│   ├── useEndpointFeedback.ts    # Endpoint test/save feedback hook
-│   ├── useLayoutPreferences.ts   # Layout preferences hook
-│   ├── useManualRecheck.ts      # Manual recheck gate logic
-│   ├── useRulesConfiguration.ts # Rules fetch/enable/disable state
-│   └── useScheduledAnalysis.ts  # Debounced/delayed analysis trigger
-├── design/                      # Frontend design guidance
-├── tests/                        # Unit tests
-├── Dockerfile                    # Docker configuration
-├── nginx.conf                    # Nginx static-serving/caching config
-├── netlify.toml                  # Netlify configuration
-├── next.config.ts                     # Next.js static-export config
-└── vercel.json                   # Vercel configuration
+├── app/                  # Next.js routes, UI components, and styles
+├── lib/                  # API client, hooks, and shared utilities
+├── tests/                # Vitest tests
+├── design/               # Design guidance and assets
+├── .github/workflows/    # CI and documentation workflows
+├── Dockerfile            # Nginx static-site image
+├── netlify.toml          # Netlify build and publish settings
+├── next.config.ts        # Static export and asset-path settings
+└── vercel.json           # Vercel build and response headers
 ```
 
 ## Contributing
@@ -266,7 +259,7 @@ Found a bug or have a feature request? [Open an issue](https://github.com/CyanAu
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/your-feature`
 3. Make your changes
-4. Test locally: `npm run dev` and `npm run lint`
+4. Validate locally: `npm test`, `npm run lint`, `npm run build`, and `npm run check:readme`
 5. Commit with clear messages: `git commit -m "Add feature description"`
 6. Push to your fork
 7. Open a Pull Request with description of changes
