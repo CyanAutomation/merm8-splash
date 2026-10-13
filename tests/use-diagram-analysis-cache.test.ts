@@ -75,7 +75,7 @@ function Harness() {
 }
 
 function renderHarness() {
-  Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', { configurable: true, value: true })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -86,7 +86,7 @@ async function forceAnalysis(request: AnalysisRequest) {
   if (!currentHook) throw new Error('Expected the analysis hook to be mounted.')
 
   await act(async () => {
-    currentHook?.forceAnalysis(
+    currentHook!.forceAnalysis(
       request.endpoint,
       request.code,
       request.enabledRules,
