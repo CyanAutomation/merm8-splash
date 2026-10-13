@@ -24,47 +24,59 @@ afterEach(() => {
   currentState = null
 })
 
-it('opens and closes each dialog independently', () => {
+it('changes only the selected dialog visibility and toggles metrics separately', () => {
   renderHarness()
 
-  expect(currentState).toMatchObject({
-    isResetConfirmationOpen: false,
-    isRulesOpen: false,
-    isApiConfigurationOpen: false,
-    isFullscreenOpen: false,
-    isSemanticReviewOpen: false,
-    showMetrics: false,
-  })
+  const dialogTransitions = [
+    {
+      key: 'isResetConfirmationOpen',
+      open: () => currentState?.openResetConfirmation(),
+      close: () => currentState?.closeResetConfirmation(),
+    },
+    {
+      key: 'isRulesOpen',
+      open: () => currentState?.openRules(),
+      close: () => currentState?.closeRules(),
+    },
+    {
+      key: 'isApiConfigurationOpen',
+      open: () => currentState?.openApiConfiguration(),
+      close: () => currentState?.closeApiConfiguration(),
+    },
+    {
+      key: 'isFullscreenOpen',
+      open: () => currentState?.openFullscreen(),
+      close: () => currentState?.closeFullscreen(),
+    },
+    {
+      key: 'isSemanticReviewOpen',
+      open: () => currentState?.openSemanticReview(),
+      close: () => currentState?.closeSemanticReview(),
+    },
+  ] as const
+  const dialogKeys = dialogTransitions.map(({ key }) => key)
 
-  act(() => currentState?.openApiConfiguration())
-  act(() => currentState?.openRules())
-  act(() => currentState?.openFullscreen())
-  act(() => currentState?.openSemanticReview())
-  act(() => currentState?.openResetConfirmation())
+  let openedKeys: (typeof dialogKeys)[number][] = []
+  for (const { key, open } of dialogTransitions) {
+    act(open)
+    for (const dialogKey of dialogKeys) {
+      expect(currentState?.[dialogKey]).toBe(openedKeys.includes(dialogKey) || dialogKey === key)
+    }
+    openedKeys = [...openedKeys, key]
+  }
+
+  for (const { key, close } of dialogTransitions) {
+    act(close)
+    openedKeys = openedKeys.filter((openedKey) => openedKey !== key)
+    for (const dialogKey of dialogKeys) {
+      expect(currentState?.[dialogKey]).toBe(openedKeys.includes(dialogKey))
+    }
+  }
+
   act(() => currentState?.toggleMetrics())
+  expect(currentState?.showMetrics).toBe(true)
+  expect(dialogKeys.every((key) => currentState?.[key] === false)).toBe(true)
 
-  expect(currentState).toMatchObject({
-    isResetConfirmationOpen: true,
-    isRulesOpen: true,
-    isApiConfigurationOpen: true,
-    isFullscreenOpen: true,
-    isSemanticReviewOpen: true,
-    showMetrics: true,
-  })
-
-  act(() => currentState?.closeApiConfiguration())
-  act(() => currentState?.closeRules())
-  act(() => currentState?.closeFullscreen())
-  act(() => currentState?.closeSemanticReview())
-  act(() => currentState?.closeResetConfirmation())
   act(() => currentState?.toggleMetrics())
-
-  expect(currentState).toMatchObject({
-    isResetConfirmationOpen: false,
-    isRulesOpen: false,
-    isApiConfigurationOpen: false,
-    isFullscreenOpen: false,
-    isSemanticReviewOpen: false,
-    showMetrics: false,
-  })
+  expect(currentState?.showMetrics).toBe(false)
 })
