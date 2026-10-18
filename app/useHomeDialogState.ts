@@ -6,7 +6,6 @@ interface HomeDialogVisibility {
   isApiConfigurationOpen: boolean
   isFullscreenOpen: boolean
   showMetrics: boolean
-  isSemanticReviewOpen: boolean
 }
 
 const initialVisibility: HomeDialogVisibility = {
@@ -15,7 +14,6 @@ const initialVisibility: HomeDialogVisibility = {
   isApiConfigurationOpen: false,
   isFullscreenOpen: false,
   showMetrics: false,
-  isSemanticReviewOpen: false,
 }
 
 export function useHomeDialogState() {
@@ -48,13 +46,6 @@ export function useHomeDialogState() {
   const toggleMetrics = useCallback(() => {
     setVisibility((current) => ({ ...current, showMetrics: !current.showMetrics }))
   }, [])
-  const openSemanticReview = useCallback(() => {
-    setVisibility((current) => ({ ...current, isSemanticReviewOpen: true }))
-  }, [])
-  const closeSemanticReview = useCallback(() => {
-    setVisibility((current) => ({ ...current, isSemanticReviewOpen: false }))
-  }, [])
-
   return {
     ...visibility,
     openResetConfirmation,
@@ -66,7 +57,5 @@ export function useHomeDialogState() {
     openFullscreen,
     closeFullscreen,
     toggleMetrics,
-    openSemanticReview,
-    closeSemanticReview,
   }
 }
