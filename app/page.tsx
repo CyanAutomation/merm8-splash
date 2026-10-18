@@ -33,7 +33,7 @@ function HomeContent() {
     handleSaveEndpoint,
     showSnackbar,
   } = useHomeEndpointController()
-  const { hasParseError, parseErrorDetail, onParseStateChange } = useHomeParseState()
+  const { hasParseError, parseErrorDetail, parseErrorFullDetail, onParseStateChange } = useHomeParseState()
   const {
     code,
     setCode,
@@ -63,8 +63,8 @@ function HomeContent() {
     })
   }, [dialogState.openApiConfiguration])
 
-  const handleJumpToLine = useCallback((lineNum: number) => {
-    editorRef.current?.highlightLine(lineNum)
+  const handleJumpToLine = useCallback((lineNum: number | null, options?: { persistOnBlur?: boolean }) => {
+    editorRef.current?.highlightLine(lineNum, options)
   }, [])
 
   const handleReset = useCallback(() => {
@@ -163,6 +163,7 @@ function HomeContent() {
           onClose: dialogState.closeFullscreen,
           code,
           parseErrorDetail,
+          parseErrorFullDetail,
           preferences: prefs,
         },
       }}

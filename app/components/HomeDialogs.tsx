@@ -46,6 +46,7 @@ interface HomeDialogsProps {
     onClose: () => void
     code: string
     parseErrorDetail: string | null
+    parseErrorFullDetail: string | null
     preferences: Pick<LayoutPreferences, 'useBeautifulRenderer' | 'diagramPreviewMode'>
   }
 }
@@ -166,6 +167,7 @@ export default function HomeDialogs({ reset, api, rules, fullscreen }: HomeDialo
           <DiagramPreview
             code={fullscreen.code}
             parseErrorMessage={fullscreen.parseErrorDetail}
+            parseErrorFullMessage={fullscreen.parseErrorFullDetail}
             useBeautifulRenderer={fullscreen.preferences.useBeautifulRenderer}
             diagramColorMode={fullscreen.preferences.diagramPreviewMode}
           />
