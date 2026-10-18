@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
+import { useRef, useState, useImperativeHandle, forwardRef, useEffect, useCallback } from 'react'
 import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
 import { copyTextWithMountedCompletion } from '@/lib/clipboard'
 import { useSnackbar } from '@/app/components/Snackbar'
@@ -12,7 +12,7 @@ interface DiagramEditorProps {
 
 export interface DiagramEditorRef {
   focus: () => void
-  highlightLine: (lineNum: number | null) => void
+  highlightLine: (lineNum: number | null, options?: { persistOnBlur?: boolean }) => void
 }
 
 type CopyStatus = 'idle' | 'success' | 'error'
@@ -27,9 +27,11 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     const editorContainerRef = useRef<HTMLDivElement>(null)
     const [currentExampleIndex, setCurrentExampleIndex] = useState(0)
     const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
+    const persistHighlightOnBlurRef = useRef(false)
     const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
     const copyStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const mountedRef = useRef(false)
+    const lineCount = value.split('\n').length
 
     useEffect(() => {
       mountedRef.current = true
@@ -42,16 +44,53 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       }
     }, [])
 
+    const scrollToLine = useCallback((lineNum: number) => {
+      const textarea = textareaRef.current
+      if (!textarea) return
+
+      const gutter = editorContainerRef.current?.querySelector('[data-gutter]') as HTMLElement | null
+      const style = window.getComputedStyle(textarea)
+      const fontSize = Number.parseFloat(style.fontSize) || 13
+      const lineHeightValue = Number.parseFloat(style.lineHeight)
+      const lineHeight = style.lineHeight.endsWith('px')
+        ? lineHeightValue
+        : fontSize * (Number.isFinite(lineHeightValue) ? lineHeightValue : 1.5)
+      const paddingTop = Number.parseFloat(style.paddingTop) || 0
+      const paddingBottom = Number.parseFloat(style.paddingBottom) || 0
+      const lineTop = paddingTop + (lineNum - 1) * lineHeight
+      const lineBottom = lineTop + lineHeight
+      const visibleHeight = Math.max(0, textarea.clientHeight - paddingBottom)
+      const viewportBottom = textarea.scrollTop + visibleHeight
+
+      if (lineTop < textarea.scrollTop || lineBottom > viewportBottom) {
+        const nextScrollTop = Math.max(0, lineTop - Math.max(0, (visibleHeight - lineHeight) / 2))
+        textarea.scrollTop = nextScrollTop
+        if (gutter) gutter.scrollTop = nextScrollTop
+      }
+    }, [])
+
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
-      highlightLine: (lineNum: number | null) => setHighlightedLine(lineNum),
-    }))
+      highlightLine: (lineNum: number | null, options?: { persistOnBlur?: boolean }) => {
+        if (lineNum == null) {
+          persistHighlightOnBlurRef.current = false
+          setHighlightedLine(null)
+          return
+        }
+
+        persistHighlightOnBlurRef.current = Boolean(options?.persistOnBlur)
+        const visibleLine = Math.max(1, Math.min(lineNum, lineCount))
+        setHighlightedLine(visibleLine)
+        scrollToLine(visibleLine)
+      },
+    }), [lineCount, scrollToLine])
 
     const handleExampleClick = () => {
       const nextIndex = (currentExampleIndex + 1) % EXAMPLE_DIAGRAMS.length
       const nextExample = EXAMPLE_DIAGRAMS[nextIndex]
       setCurrentExampleIndex(nextIndex)
       onChange(nextExample.code)
+      persistHighlightOnBlurRef.current = false
       setHighlightedLine(null)
       snackbar.show(`Loaded example ${nextIndex + 1} (${nextExample.type}).`)
     }
@@ -84,10 +123,9 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     }
 
     const handleLineNumberClick = (lineNum: number) => {
+      persistHighlightOnBlurRef.current = false
       setHighlightedLine(lineNum === highlightedLine ? null : lineNum)
     }
-
-    const lineCount = value.split('\n').length
 
     const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
       if (editorContainerRef.current) {
@@ -226,7 +264,9 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
               if (editorContainerRef.current) {
                 editorContainerRef.current.style.borderColor = 'var(--color-border)'
               }
-              setHighlightedLine(null)
+              if (!persistHighlightOnBlurRef.current) {
+                setHighlightedLine(null)
+              }
             }}
             placeholder="graph TD&#10;    A --> B"
           />
