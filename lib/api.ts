@@ -146,6 +146,7 @@ interface ApiFailureDetails {
   name: string
   message: string
   status: number | null
+  retryAfterSeconds: number | null
 }
 
 function getAuthorizationFailureMessage(
@@ -167,13 +168,17 @@ function getAuthorizationFailureMessage(
   return `The API denied this request (HTTP ${status}). Check API access settings.`
 }
 
-function getRateLimitFailureMessage(status: number | null, context: ApiFailureContext): string | null {
+function getRateLimitFailureMessage(status: number | null, context: ApiFailureContext, retryAfterSeconds: number | null): string | null {
   if (status !== 429) return null
 
   switch (context) {
     case 'connection':
       return 'The endpoint is rate-limiting health checks. Wait a moment and try again.'
     case 'semantic-review':
+      if (retryAfterSeconds !== null) {
+        const unit = retryAfterSeconds === 1 ? 'second' : 'seconds'
+        return `Semantic review is temporarily rate-limited. Try again in ${retryAfterSeconds} ${unit}.`
+      }
       return 'Semantic review is temporarily rate-limited. Wait a moment and try again.'
     case 'analysis':
       return 'The API is rate-limiting requests. Wait a moment and try again.'
@@ -209,12 +214,25 @@ function getConnectionClientFailureMessage(status: number | null, context: ApiFa
   return `The endpoint responded with HTTP ${status} during its health check. Check the endpoint and its access settings.`
 }
 
-function getStatusFailureMessage(status: number | null, context: ApiFailureContext): string | null {
+function getStatusFailureMessage(
+  status: number | null,
+  context: ApiFailureContext,
+  retryAfterSeconds: number | null
+): string | null {
   return getAuthorizationFailureMessage(status, context)
-    ?? getRateLimitFailureMessage(status, context)
+    ?? getRateLimitFailureMessage(status, context, retryAfterSeconds)
     ?? getServerFailureMessage(status, context)
     ?? getNotFoundFailureMessage(status, context)
     ?? getConnectionClientFailureMessage(status, context)
+}
+
+function getRetryAfterSeconds(errorRecord: Record<string, unknown> | null): number | null {
+  const headers = errorRecord?.headers
+  if (!headers || typeof headers !== 'object' || !('get' in headers) || typeof headers.get !== 'function') return null
+  const value = headers.get('retry-after')
+  if (typeof value !== 'string') return null
+  const seconds = Number(value)
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : null
 }
 
 function getTimeoutFailureMessage(details: ApiFailureDetails, context: ApiFailureContext): string | null {
@@ -249,13 +267,10 @@ export function getApiFailureMessage(error: unknown, context: ApiFailureContext 
     name: typeof errorRecord?.name === 'string' ? errorRecord.name : '',
     message: typeof errorRecord?.message === 'string' ? errorRecord.message : '',
     status: typeof errorRecord?.status === 'number' ? errorRecord.status : null,
+    retryAfterSeconds: getRetryAfterSeconds(errorRecord),
   }
 
-  if (details.name === 'MissingApiKeyError') {
-    return 'Enter an API key to run semantic review.'
-  }
-
-  const statusFailureMessage = getStatusFailureMessage(details.status, context)
+  const statusFailureMessage = getStatusFailureMessage(details.status, context, details.retryAfterSeconds)
   if (statusFailureMessage) return statusFailureMessage
 
   if (context === 'connection' && details.message.startsWith('API health check failed:')) {
@@ -431,24 +446,19 @@ export async function analyzeCodeSarif(
   return requestApi(endpoint, '/v1/analyze/sarif', { method: 'POST', body: request })
 }
 
-/** Sends one diagram for an authenticated, provider-backed semantic review. */
+/** Sends one diagram for a provider-backed semantic review. API keys are optional for custom endpoints. */
 export async function reviewCodeSemantics(
   endpoint: string,
   code: string,
-  apiKey: string,
+  apiKey?: string,
   signal?: AbortSignal
 ): Promise<SemanticReviewResponse> {
-  const normalizedApiKey = apiKey.trim()
-  if (!normalizedApiKey) {
-    const error = new Error('Enter an API key to run semantic review.')
-    error.name = 'MissingApiKeyError'
-    throw error
-  }
+  const normalizedApiKey = apiKey?.trim()
 
   return requestApi(endpoint, '/v1/semantic-review', {
     method: 'POST',
     body: { code },
     signal,
-    headers: { Authorization: `Bearer ${normalizedApiKey}` },
+    headers: normalizedApiKey ? { Authorization: `Bearer ${normalizedApiKey}` } : {},
   })
 }

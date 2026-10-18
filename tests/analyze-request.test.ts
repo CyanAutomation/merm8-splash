@@ -553,16 +553,15 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
   expect(JSON.stringify(calls[0].init.body)).not.toContain('secret-key')
 })
 
-it('does not send a semantic review request when the API key is missing', async () => {
+it('sends a semantic review request without an authorization header when no key is supplied', async () => {
   const { fetchImpl, calls } = mockJsonFetch({})
-  const api = loadApiModule({ fetchImpl })
-  const error = await api.reviewCodeSemantics('https://api.example.com', 'flowchart TD\nA --> B', '  ')
-    .catch((caughtError) => caughtError)
+  const { reviewCodeSemantics } = loadApiModule({ fetchImpl })
 
-  expect(error).toMatchObject({ name: 'MissingApiKeyError' })
-  expect(api.getApiFailureMessage(error, 'semantic-review'))
-    .toBe('Enter an API key to run semantic review.')
-  expect(calls).toEqual([])
+  await reviewCodeSemantics('https://api.example.com', 'flowchart TD\nA --> B')
+
+  expect(calls[0].url).toBe('https://api.example.com/v1/semantic-review')
+  expect(calls[0].init.headers).toEqual({ 'Content-Type': 'application/json' })
+  expect(calls[0].init.body).toBe(JSON.stringify({ code: 'flowchart TD\nA --> B' }))
 })
 
 it('explains that a 401 semantic review response can mean the API key expired', async () => {

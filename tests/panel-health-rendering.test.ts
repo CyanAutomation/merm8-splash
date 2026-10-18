@@ -301,7 +301,7 @@ describe('health hotspot panel rendering', () => {
     }
   })
 
-  it('explains semantic review data handling and accepts an API key', () => {
+  it('explains semantic review data handling and makes the API key optional', () => {
     const markup = renderToStaticMarkup(createElement(SemanticReviewDialog, {
       endpoint: 'https://api.example.test',
       code: 'flowchart TD\\nA --> B',
@@ -309,11 +309,12 @@ describe('health hotspot panel rendering', () => {
     }))
 
     expect(markup).toContain('This sends the current diagram to the configured API')
-    expect(markup).toContain('An API key is required; it is sent with this request and is not saved.')
-    expect(markup).toContain('Enter an API key to enable semantic review.')
+    expect(markup).toContain('The hosted API does not require a key. Custom endpoints may require one; it is sent with this request and is not saved.')
+    expect(markup).toContain('Only needed by API endpoints that require it.')
     expect(markup).toContain('type="password"')
+    expect(markup).not.toContain('required=""')
     expect(markup).toContain('aria-describedby="semantic-review-api-key-help"')
-    expect(markup).toContain('disabled=""')
+    expect(markup).not.toContain('disabled=""')
   })
 
   it('explains that analysis falls back to server defaults when rules metadata is unavailable', () => {
