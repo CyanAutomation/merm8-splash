@@ -13,7 +13,8 @@
     "test": "vitest --run",
     "test:coverage": "vitest --run --coverage",
     "test:watch": "vitest",
-    "check:readme": "node scripts/check-readme.mjs"
+    "check:readme": "node scripts/check-readme.mjs",
+    "check:readme:links": "node scripts/check-readme.mjs --external"
   },
   "dependencies": {
     "beautiful-mermaid": "^1.1.3",
