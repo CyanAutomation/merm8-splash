@@ -109,6 +109,14 @@ describe('getApiFailureMessage', () => {
     expect(getApiFailureMessage(error, 'analysis')).toBeNull()
   })
 
+  it.each([
+    ['60', 'Semantic review is temporarily rate-limited. Try again in 60 seconds.'],
+    ['1', 'Semantic review is temporarily rate-limited. Try again in 1 second.'],
+  ])('shows the semantic review retry delay when the API provides %s seconds', (retryAfter, expected) => {
+    expect(getApiFailureMessage({ status: 429, headers: new Headers({ 'retry-after': retryAfter }) }, 'semantic-review'))
+      .toBe(expected)
+  })
+
   it('returns null for errors without a known recovery message', () => {
     expect(getApiFailureMessage(new Error('Unexpected response'))).toBeNull()
   })
