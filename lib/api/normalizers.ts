@@ -441,7 +441,8 @@ function warnForDroppedRules(
 ): void {
   if (process.env.NODE_ENV === 'production' || normalizedRules.length === rawRules.length) return
 
-  const droppedCount = rawRules.length - normalizedRules.length
+  const droppedCount = rawRules.length - normalizedRules.length - reasonCounts.planned
+  if (droppedCount <= 0) return
   const reasonSummary = summarizeRuleDropReasons(reasonCounts)
   console.warn(
     `[api.fetchRules] Dropped ${droppedCount} invalid rule entr${droppedCount === 1 ? 'y' : 'ies'} during normalization${reasonSummary ? ` (${reasonSummary})` : ''}`

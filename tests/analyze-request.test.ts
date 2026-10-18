@@ -659,8 +659,9 @@ it('fetchRules filters malformed rule entries and warns with drop summary', asyn
     severity: 'warning',
   }])
   expect(warn).toHaveBeenCalledWith(
-    expect.stringContaining('Dropped 4 invalid rule entries during normalization'),
+    expect.stringContaining('Dropped 3 invalid rule entries during normalization'),
   )
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining('planned=1'))
 })
 
 it('fetchRules normalizes optional rule metadata and drops malformed options', async () => {
@@ -907,6 +908,19 @@ it('validateApiEndpoint blocks normalized local/private bypass forms in producti
       expect(result.valid).toBe(false) // `expected ${invalidUrl} to be rejected as invalid`
   expect(result.message).toBe('Enter a valid URL (example: https://merm8.scheimann.workers.dev).')
     }
+  } finally {
+    process.env.NODE_ENV = originalNodeEnv
+  }
+})
+
+it('validateApiEndpoint allows local API endpoints in development', () => {
+  const { validateApiEndpoint } = loadApiModule()
+  const originalNodeEnv = process.env.NODE_ENV
+  process.env.NODE_ENV = 'development'
+
+  try {
+    expect(validateApiEndpoint('http://localhost:8000').valid).toBe(true)
+    expect(validateApiEndpoint('http://127.0.0.1:8000').valid).toBe(true)
   } finally {
     process.env.NODE_ENV = originalNodeEnv
   }
