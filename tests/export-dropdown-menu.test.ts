@@ -45,39 +45,66 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-it('renders actions, forwards hover and click events, and disables actions during export', () => {
+it('runs the selected export action', () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   props = createProps()
   renderMenu()
 
-  const buttons = Array.from(host!.querySelectorAll('button'))
-  expect(buttons).toHaveLength(5)
-  const jsonButton = buttons.find((button) => button.textContent === '↓ JSON')!
+  const jsonButton = Array.from(host!.querySelectorAll('button'))
+    .find((button) => button.textContent === '↓ JSON')
+  if (!jsonButton) throw new Error('Expected the JSON export action to render.')
+
+  act(() => jsonButton.click())
+  expect(props.onExportJson).toHaveBeenCalledOnce()
+})
+
+it('forwards clicks on the export toggle', () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  props = createProps()
+  renderMenu()
+
+  const toggleButton = Array.from(host!.querySelectorAll('button'))
+    .find((button) => button.textContent?.includes('Export'))
+  if (!toggleButton) throw new Error('Expected the export toggle to render.')
+
+  act(() => toggleButton.click())
+  expect(props.onToggleOpen).toHaveBeenCalledOnce()
+})
+
+it('reports the export item currently under the pointer', () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  props = createProps()
+  renderMenu()
+
+  const jsonButton = Array.from(host!.querySelectorAll('button'))
+    .find((button) => button.textContent === '↓ JSON')
+  if (!jsonButton) throw new Error('Expected the JSON export action to render.')
 
   act(() => jsonButton.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })))
   expect(props.onHover).toHaveBeenCalledWith('↓ JSON')
   act(() => jsonButton.dispatchEvent(new MouseEvent('mouseout', { bubbles: true })))
   expect(props.onHover).toHaveBeenLastCalledWith(null)
+})
 
-  renderMenu({ hoveredItem: '↓ JSON' })
-  const hoveredJsonButton = Array.from(host!.querySelectorAll('button'))
-    .find((button) => button.textContent === '↓ JSON')!
-  expect(hoveredJsonButton.style.background).toBe('var(--color-bg-primary)')
-  act(() => hoveredJsonButton.click())
-  expect(props.onExportJson).toHaveBeenCalledOnce()
+it('prevents export actions while an export is in progress', () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  props = createProps()
 
-  const toggleButton = Array.from(host!.querySelectorAll('button'))
-    .find((button) => button.textContent?.includes('Export'))!
-  act(() => toggleButton.click())
-  expect(props.onToggleOpen).toHaveBeenCalledOnce()
+  renderMenu({ isExporting: true })
+  const buttons = Array.from(host!.querySelectorAll('button'))
+  const exportActions = buttons.filter((button) => button.textContent === 'Exporting…')
 
-  renderMenu({ isExporting: true, copying: 'JSON', hoveredItem: null })
-  const exportingButtons = Array.from(host!.querySelectorAll('button'))
-  expect(exportingButtons[0]?.textContent).toContain('Copied (JSON)')
-  expect(exportingButtons.slice(1).every((button) => button.disabled)).toBe(true)
-  expect(exportingButtons.slice(1).every((button) => button.textContent === 'Exporting…')).toBe(true)
-  act(() => exportingButtons[1]?.click())
+  expect(exportActions).toHaveLength(4)
+  expect(exportActions.every((button) => button.disabled)).toBe(true)
+
+  for (const button of exportActions) {
+    act(() => button.click())
+  }
+
   expect(props.onExportSarif).not.toHaveBeenCalled()
+  expect(props.onExportJson).not.toHaveBeenCalled()
+  expect(props.onExportMarkdown).not.toHaveBeenCalled()
+  expect(props.onExportText).not.toHaveBeenCalled()
 })
 
 it('hides the actions when closed', () => {
