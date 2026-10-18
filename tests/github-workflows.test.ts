@@ -8,6 +8,7 @@ const workflowDirectory = join(repoRoot, '.github', 'workflows')
 const dryWorkflow = readFileSync(join(workflowDirectory, 'kaseki-dry.yaml'), 'utf8')
 const docsWorkflow = readFileSync(join(workflowDirectory, 'kaseki-docs.yaml'), 'utf8')
 const ciWorkflow = readFileSync(join(workflowDirectory, 'ci.yml'), 'utf8')
+const readmeLinksWorkflow = readFileSync(join(workflowDirectory, 'readme-links.yml'), 'utf8')
 const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
   scripts: Record<string, string>
 }
@@ -306,6 +307,14 @@ it('serializes each Kaseki workflow independently for the same repository', () =
   expect(dryWorkflowName).not.toBe(docsWorkflowName)
   expect(dryConcurrency).toContain('cancel-in-progress: false')
   expect(docsConcurrency).toContain('cancel-in-progress: false')
+})
+
+it('checks external README links on a schedule with read-only permissions', () => {
+  expect(readmeLinksWorkflow).toContain("cron: '0 6 * * 1'")
+  expect(readmeLinksWorkflow).toContain('workflow_dispatch:')
+  expect(readmeLinksWorkflow).toContain('permissions:\n  contents: read')
+  expect(readmeLinksWorkflow).toContain('timeout-minutes: 10')
+  expect(readmeLinksWorkflow).toContain('run: npm run check:readme:links')
 })
 
 it('requests full pull requests with a bounded diff for both Kaseki sweeps', () => {

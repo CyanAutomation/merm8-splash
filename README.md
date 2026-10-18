@@ -11,7 +11,7 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 - **Fast Analysis** — Debounced, optimized API calls for responsive user experience
 - **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
 - **Multiple Diagram Types** — Renders Mermaid diagrams and adapts lint controls to the connected API's advertised capabilities
-- **Export Support** — Export analyzed diagrams in multiple formats
+- **Export Support** — Export analysis results as SARIF JSON, JSON, Markdown, or plain text
 - **Semantic Review** — Optional AI review through the configured API; requires an API key. See [API Endpoint](#api-endpoint) for data-handling details.
 - **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
 - **Desktop-Optimized Design** — Clean UI styled with project CSS (optimized for desktop with responsive mobile stacking)
@@ -35,6 +35,15 @@ Try the [hosted merm8-splash app](https://merm8-splash.vercel.app/). The built-i
 3. The preview renders the diagram. After the API responds, the Results panel lists findings by rule, severity, message, and line; available rules depend on the API and diagram type.
 4. Select a finding with a line number to jump to that line in the editor. Use **Rules** to choose which available checks to apply.
 5. Open **Export** to download SARIF JSON or JSON, or copy the results as Markdown or plain text.
+
+## Troubleshooting
+
+### API connection or analysis fails
+
+- Open **API Configuration** and select **Test** to check the selected endpoint. Confirm the endpoint is reachable from your browser and is a compatible merm8 API.
+- A valid `?api=` URL parameter or endpoint saved in browser storage can override the built-in or build-time endpoint. Review the [API Endpoint configuration](#api-endpoint) if the app is using an unexpected instance.
+- If the browser reports a CORS error, the API operator must allow the frontend's exact origin. CORS is configured by the API, not by this frontend; see the [Worker API reference](https://github.com/CyanAutomation/merm8/blob/main/docs/worker-api.md) for the hosted API's policy.
+- If the connection test passes but analysis fails, check that the API supports the requested diagram type and review its current contract at `/v1/spec`.
 
 ## Development
 
@@ -100,7 +109,15 @@ The project uses [Vitest](https://vitest.dev/) as the test runner. Test files ar
 npm run check:readme
 ```
 
-This checks relative Markdown links for existing targets and verifies that documented `npm run` commands and `npm test` exist in `package.json`. It does not request external URLs.
+This checks local Markdown link targets and heading anchors, and verifies that documented `npm run` commands and `npm test` exist in `package.json`. It does not request external URLs.
+
+To check external HTTP(S) links as well, run:
+
+```bash
+npm run check:readme:links
+```
+
+The external link check follows redirects, retries transient failures, and skips localhost examples. Confirmed HTTP errors fail the check; network-level failures are reported as unverified warnings. It runs weekly in the **README Link Check** workflow and can also be started manually from GitHub Actions.
 
 **Test Coverage:**
 
@@ -285,6 +302,6 @@ MIT © 2026 [CyanAutomation](https://github.com/CyanAutomation)
 
 ## Support
 
-- Check the [Setup](#development) section for common issues
+- Check the [Troubleshooting](#troubleshooting) section for API connection and analysis issues
 - [Search existing issues](https://github.com/CyanAutomation/merm8-splash/issues) for solutions
 - Open a new issue if you need help
