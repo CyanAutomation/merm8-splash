@@ -92,6 +92,9 @@ export class AnalysisCache {
 
   set(key: string, result: AnalyzeResponse, now: number): void {
     this.entries.set(key, { result, ts: now })
+    if (this.entries.size > ANALYSIS_CACHE_MAX_ENTRIES) {
+      this.prune(now)
+    }
   }
 
   prune(now: number): void {

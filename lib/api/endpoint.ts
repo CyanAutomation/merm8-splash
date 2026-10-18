@@ -316,7 +316,7 @@ export function validateApiEndpoint(url: string): EndpointValidationResult {
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return { valid: false, message: 'Endpoint must start with http:// or https://.' }
     }
-    // Reject localhost and internal IPs in production
+    // Restrict browser access to private hosts in production builds while allowing local API development.
     if (process.env.NODE_ENV === 'production') {
       const normalizedHostname = normalizeHost(parsed.hostname)
 
