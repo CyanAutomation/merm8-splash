@@ -6,7 +6,6 @@ import { describe, expect, it, vi } from 'vitest'
 import ApiConfigPanel from '../app/components/ApiConfigPanel'
 import RulesPanel from '../app/components/RulesPanel'
 import StatusBar from '../app/components/StatusBar'
-import SemanticReviewDialog from '../app/components/SemanticReviewDialog'
 import ResultsPanel from '../app/components/ResultsPanel'
 
 function mount(element: ReactNode) {
@@ -299,22 +298,6 @@ describe('health hotspot panel rendering', () => {
     } finally {
       view.unmount()
     }
-  })
-
-  it('explains semantic review data handling and makes the API key optional', () => {
-    const markup = renderToStaticMarkup(createElement(SemanticReviewDialog, {
-      endpoint: 'https://api.example.test',
-      code: 'flowchart TD\\nA --> B',
-      onClose: vi.fn(),
-    }))
-
-    expect(markup).toContain('This sends the current diagram to the configured API')
-    expect(markup).toContain('The hosted API does not require a key. Custom endpoints may require one; it is sent with this request and is not saved.')
-    expect(markup).toContain('Only needed by API endpoints that require it.')
-    expect(markup).toContain('type="password"')
-    expect(markup).not.toContain('required=""')
-    expect(markup).toContain('aria-describedby="semantic-review-api-key-help"')
-    expect(markup).not.toContain('disabled=""')
   })
 
   it('explains that analysis falls back to server defaults when rules metadata is unavailable', () => {

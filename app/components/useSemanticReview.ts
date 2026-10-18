@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getApiFailureMessage, isApiRequestError, reviewCodeSemantics, type SemanticReviewResponse } from '@/lib/api'
 
 function readErrorMessage(error: unknown): string {
@@ -18,40 +18,52 @@ function readErrorMessage(error: unknown): string {
 }
 
 export function useSemanticReview(endpoint: string, code: string) {
-  const [apiKey, setApiKey] = useState('')
   const [result, setResult] = useState<SemanticReviewResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const requestController = useRef<AbortController | null>(null)
+  const requestId = useRef(0)
 
-  useEffect(() => () => {
+  useEffect(() => {
     requestController.current?.abort()
     requestController.current = null
-  }, [])
+    requestId.current += 1
+    setResult(null)
+    setError(null)
+    setIsLoading(false)
 
-  const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!code.trim() || isLoading) return
+    return () => {
+      requestId.current += 1
+      requestController.current?.abort()
+      requestController.current = null
+    }
+  }, [code, endpoint])
+
+  const run = useCallback(async () => {
+    if (!code.trim() || requestController.current) return
+
+    const currentRequestId = requestId.current + 1
+    requestId.current = currentRequestId
+    const controller = new AbortController()
+    requestController.current = controller
     setIsLoading(true)
     setError(null)
     setResult(null)
-    const controller = new AbortController()
-    requestController.current = controller
+
     try {
-      const response = await reviewCodeSemantics(endpoint, code, apiKey.trim() || undefined, controller.signal)
-      if (!controller.signal.aborted) setResult(response)
+      const response = await reviewCodeSemantics(endpoint, code, undefined, controller.signal)
+      if (!controller.signal.aborted && requestId.current === currentRequestId) setResult(response)
     } catch (requestError) {
-      if (!controller.signal.aborted) setError(readErrorMessage(requestError))
+      if (!controller.signal.aborted && requestId.current === currentRequestId) {
+        setError(readErrorMessage(requestError))
+      }
     } finally {
-      if (!controller.signal.aborted) setIsLoading(false)
-      requestController.current = null
+      if (requestId.current === currentRequestId) {
+        requestController.current = null
+        setIsLoading(false)
+      }
     }
-  }, [apiKey, code, endpoint, isLoading])
+  }, [code, endpoint])
 
-  const reset = useCallback(() => {
-    setResult(null)
-    setError(null)
-  }, [])
-
-  return { apiKey, setApiKey, result, error, isLoading, handleSubmit, reset }
+  return { result, error, isLoading, run }
 }
