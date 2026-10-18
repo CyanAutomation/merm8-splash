@@ -3,15 +3,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   analyzeCode,
-  AnalyzeRequestOptions,
-  AnalyzeResponse,
-  Violation,
-  Rule,
-  AnalyzeHint,
-  AnalysisMetrics,
   getApiFailureMessage,
   isApiRequestError,
 } from './api'
+import type {
+  AnalyzeHint,
+  AnalyzeRequestOptions,
+  AnalyzeResponse,
+  AnalysisMetrics,
+  Rule,
+  Violation,
+} from './api'
+import { AnalysisCache, buildAnalysisRequestKey } from './analysis/cache'
+import { getScheduledDelay, type AnalysisTriggerSource } from './analysis/scheduling'
 import { DEFAULT_DIAGRAM } from './constants'
 
 export interface UseDiagramAnalysisReturn {
@@ -53,35 +57,13 @@ export interface AnalysisRunResult {
   error: string | null
 }
 
-type AnalysisTriggerSource = 'input' | 'config'
-
 interface AnalysisSchedulingOptions {
   source?: AnalysisTriggerSource
 }
 
-const SMALL_EDIT_MAX_LENGTH = 160
-const LARGE_DIAGRAM_MIN_LENGTH = 1400
-const LARGE_DIAGRAM_MIN_LINES = 70
-const RAPID_INPUT_WINDOW_MS = 260
-
-const TINY_EDIT_DEBOUNCE_MS = 250
-const NORMAL_DEBOUNCE_MS = 550
-const LARGE_DIAGRAM_DEBOUNCE_MS = 900
-
-const NORMAL_IDLE_MIN_MS = 450
-const LARGE_IDLE_MIN_MS = 1000
-const RAPID_INPUT_EXTRA_MS = 150
-const RAPID_INPUT_EXTRA_MAX_MS = 450
-const ANALYSIS_CACHE_TTL_MS = 60_000
-const ANALYSIS_CACHE_MAX_ENTRIES = 100
 const ANALYSIS_CACHE_CLEANUP_INTERVAL_MS = 30_000
 const ANALYSIS_MAX_RETRIES = 2
 const ANALYSIS_RETRY_DELAY_MS = 1000
-
-interface AnalysisCacheEntry {
-  result: AnalyzeResponse
-  ts: number
-}
 
 interface InFlightAnalysisRequest {
   promise: Promise<AnalyzeResponse>
@@ -165,37 +147,6 @@ function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): 
       }
     )
   })
-}
-
-function countLines(value: string): number {
-  if (!value) return 0
-  return value.split('\n').length
-}
-
-function getAdaptiveDebounceMs(newCode: string): { debounceMs: number; minIdleMs: number } {
-  const trimmedLength = newCode.trim().length
-  const lineCount = countLines(newCode)
-  const isLargeDiagram =
-    trimmedLength >= LARGE_DIAGRAM_MIN_LENGTH || lineCount >= LARGE_DIAGRAM_MIN_LINES
-
-  if (isLargeDiagram) {
-    return {
-      debounceMs: LARGE_DIAGRAM_DEBOUNCE_MS,
-      minIdleMs: LARGE_IDLE_MIN_MS,
-    }
-  }
-
-  if (trimmedLength <= SMALL_EDIT_MAX_LENGTH) {
-    return {
-      debounceMs: TINY_EDIT_DEBOUNCE_MS,
-      minIdleMs: 0,
-    }
-  }
-
-  return {
-    debounceMs: NORMAL_DEBOUNCE_MS,
-    minIdleMs: NORMAL_IDLE_MIN_MS,
-  }
 }
 
 function firstNonEmptyString(record: Record<string, unknown>, keys: string[]): string | null {
@@ -317,96 +268,6 @@ function parseAnalysisError(err: unknown): ParsedAnalysisError {
   }
 }
 
-function canonicalizeAnalysisEndpoint(endpoint: string): string {
-  const trimmedEndpoint = endpoint.trim()
-
-  try {
-    const url = new URL(trimmedEndpoint)
-    url.protocol = url.protocol.toLowerCase()
-    url.hostname = url.hostname.toLowerCase()
-
-    if (!url.pathname.endsWith('/')) {
-      url.pathname = `${url.pathname}/`
-    }
-
-    return url.toString()
-  } catch {
-    return trimmedEndpoint
-  }
-}
-
-function buildAnalysisRequestKey(
-  endpoint: string,
-  code: string,
-  enabledRules: string[],
-  rulesMetadata: Rule[],
-  options: AnalyzeRequestOptions
-): string {
-  const normalizedEndpoint = canonicalizeAnalysisEndpoint(endpoint)
-  const normalizedRules = [...enabledRules].sort().join(',')
-  const metadataFingerprint = buildRulesMetadataFingerprint(rulesMetadata)
-  const useServerDefaults = options.useServerDefaults === true ? '1' : '0'
-  return `${normalizedEndpoint}::${normalizedRules}::${metadataFingerprint}::${useServerDefaults}::${code}`
-}
-
-function stableSerializeUnknown(value: unknown): string {
-  if (value === null) return 'null'
-  if (value === undefined) return 'undefined'
-  if (typeof value === 'string') return JSON.stringify(value)
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
-
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableSerializeUnknown(item)).join(',')}]`
-  }
-
-  if (typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-      a.localeCompare(b)
-    )
-    return `{${entries
-      .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerializeUnknown(entryValue)}`)
-      .join(',')}}`
-  }
-
-  return String(value)
-}
-
-function buildRulesMetadataFingerprint(rulesMetadata: Rule[]): string {
-  return [...rulesMetadata]
-    .map((rule) => ({
-      id: rule.id,
-      severity: rule.severity,
-      state: rule.state,
-      availability: rule.availability,
-      defaultConfig: rule.defaultConfig,
-      configurableOptions: rule.configurableOptions,
-    }))
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map((rule) => stableSerializeUnknown(rule))
-    .join('|')
-}
-
-function pruneAnalysisCache(cache: Map<string, AnalysisCacheEntry>, now: number): void {
-  for (const [key, entry] of cache.entries()) {
-    if (now - entry.ts > ANALYSIS_CACHE_TTL_MS) {
-      cache.delete(key)
-    }
-  }
-
-  if (cache.size <= ANALYSIS_CACHE_MAX_ENTRIES) {
-    return
-  }
-
-  const sortedByTs = Array.from(cache.entries()).sort((a, b) => a[1].ts - b[1].ts)
-  const itemsToDelete = cache.size - ANALYSIS_CACHE_MAX_ENTRIES
-  for (let i = 0; i < itemsToDelete; i += 1) {
-    const candidate = sortedByTs[i]
-    if (candidate) {
-      cache.delete(candidate[0])
-    }
-  }
-}
-
 interface AnalysisStateActions {
   setViolations: (violations: Violation[]) => void
   setIsAnalyzing: (isAnalyzing: boolean) => void
@@ -431,7 +292,7 @@ class AnalysisRequestCoordinator {
   private runSeq = 0
   private activeTransport: AbortController | null = null
   private activeWaiter: AbortController | null = null
-  private readonly cache = new Map<string, AnalysisCacheEntry>()
+  private readonly cache = new AnalysisCache()
   private readonly inFlight = new Map<string, InFlightAnalysisRequest>()
 
   constructor(private readonly state: AnalysisStateActions) {}
@@ -468,7 +329,7 @@ class AnalysisRequestCoordinator {
   }
 
   pruneCache(now: number): void {
-    pruneAnalysisCache(this.cache, now)
+    this.cache.prune(now)
   }
 
   dispose(): void {
@@ -526,7 +387,7 @@ class AnalysisRequestCoordinator {
       const result = await waitForPromiseWithSignal(requestPromise, waiterController.signal)
       if (seq !== this.requestSeq) return
 
-      this.cache.set(requestKey, { result, ts: Date.now() })
+      this.cache.set(requestKey, result, Date.now())
       if (pruneCacheOnSuccess) this.pruneCache(Date.now())
       this.applyResult(result, runId, source)
     } catch (error) {
@@ -599,16 +460,15 @@ class AnalysisRequestCoordinator {
       args.options
     )
     const runId = ++this.runSeq
-    const cachedEntry = this.cache.get(requestKey)
     const now = Date.now()
+    const cachedEntry = this.cache.get(requestKey, now)
 
-    if (cachedEntry && now - cachedEntry.ts <= ANALYSIS_CACHE_TTL_MS) {
+    if (cachedEntry) {
       this.stopActiveRequest()
       this.applyResult(cachedEntry.result, runId, source)
       this.state.setIsAnalyzing(false)
       return
     }
-    if (cachedEntry) this.cache.delete(requestKey)
 
     const waiterController = new AbortController()
     this.activeWaiter?.abort()
@@ -715,34 +575,6 @@ function useAnalysisViewState() {
       setMetrics,
       setLastCompletedRun,
     },
-  }
-}
-
-function getScheduledDelay(
-  code: string,
-  source: AnalysisTriggerSource,
-  now: number,
-  lastInputAt: number,
-  rapidInputStreak: number
-): { delayMs: number; lastInputAt: number; rapidInputStreak: number } {
-  const { debounceMs, minIdleMs } = getAdaptiveDebounceMs(code)
-  const baseDelayMs = Math.max(debounceMs, minIdleMs)
-  if (source !== 'input') {
-    return { delayMs: baseDelayMs, lastInputAt, rapidInputStreak: 0 }
-  }
-
-  const elapsedSinceLastInput = now - lastInputAt
-  const isRapid = elapsedSinceLastInput > 0 && elapsedSinceLastInput <= RAPID_INPUT_WINDOW_MS
-  const nextRapidInputStreak = isRapid ? rapidInputStreak + 1 : 0
-  const rapidExtraMs = Math.min(
-    nextRapidInputStreak * RAPID_INPUT_EXTRA_MS,
-    RAPID_INPUT_EXTRA_MAX_MS
-  )
-
-  return {
-    delayMs: Math.max(baseDelayMs + rapidExtraMs, minIdleMs),
-    lastInputAt: now,
-    rapidInputStreak: nextRapidInputStreak,
   }
 }
 
