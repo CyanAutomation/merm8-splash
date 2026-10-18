@@ -59,12 +59,6 @@ function HomeDialogsHarness() {
         parseErrorDetail: null,
         preferences: { useBeautifulRenderer: false, diagramPreviewMode: 'dark' },
       },
-      semanticReview: {
-        isOpen: state.isSemanticReviewOpen,
-        onClose: state.closeSemanticReview,
-        endpoint: 'https://api.example.test',
-        code: 'flowchart TD\nA --> B',
-      },
     }),
     createElement(WorkspaceResults, {
       analysis: {
@@ -101,7 +95,6 @@ function HomeDialogsHarness() {
         canRecheck: true,
         onRecheck: () => undefined,
         onOpenRules: state.openRules,
-        onOpenSemanticReview: state.openSemanticReview,
       },
     }),
   )
@@ -149,12 +142,6 @@ const dialogTransitions = [
     title: 'Diagram Preview',
     open: () => currentState?.openFullscreen(),
     close: () => currentState?.closeFullscreen(),
-  },
-  {
-    key: 'semantic review',
-    title: 'Semantic Review',
-    open: () => currentState?.openSemanticReview(),
-    close: () => currentState?.closeSemanticReview(),
   },
 ] as const
 

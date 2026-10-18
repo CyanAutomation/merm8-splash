@@ -1,11 +1,14 @@
 'use client'
 
 import type { RefObject } from 'react'
+import { useCallback, useState } from 'react'
 import type { AnalysisMetrics, Rule, Violation } from '@/lib/api'
 import type { ResultsPanelRef } from './ResultsPanel'
 import ErrorBoundary from './ErrorBoundary'
 import ExportDropdown from './ExportDropdown'
 import ResultsPanel from './ResultsPanel'
+import SemanticReviewResults from './SemanticReviewResults'
+import { useSemanticReview } from './useSemanticReview'
 
 export interface WorkspaceResultsProps {
   analysis: {
@@ -33,8 +36,31 @@ export interface WorkspaceResultsProps {
     canRecheck: boolean
     onRecheck: () => void
     onOpenRules: () => void
-    onOpenSemanticReview: () => void
   }
+}
+
+function SemanticReviewRenderError({
+  isLoading,
+  onBack,
+  onRetry,
+}: {
+  isLoading: boolean
+  onBack: () => void
+  onRetry: () => void
+}) {
+  return (
+    <div role="alert" style={{ padding: '12px' }}>
+      <p style={{ color: 'var(--color-error)', margin: '0 0 12px' }}>
+        Semantic review response could not be displayed. Check the endpoint response and try again.
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+        <button type="button" className="btn" onClick={onBack}>Back to analysis</button>
+        <button type="button" className="btn btn-primary" onClick={onRetry} disabled={isLoading}>
+          {isLoading ? 'Reviewing…' : 'Retry review'}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function MetricItem({ label, value }: { label: string; value: string | number }) {
@@ -59,6 +85,23 @@ function MetricItem({ label, value }: { label: string; value: string | number })
 
 export default function WorkspaceResults({ analysis, exportOptions, metrics, actions }: WorkspaceResultsProps) {
   const hasErrors = analysis.violations.some((violation) => violation.severity === 'error')
+  const [showSemanticReview, setShowSemanticReview] = useState(false)
+  const [semanticReviewAttempt, setSemanticReviewAttempt] = useState(0)
+  const {
+    result: semanticReviewResult,
+    error: semanticReviewError,
+    isLoading: semanticReviewLoading,
+    run: runSemanticReview,
+  } = useSemanticReview(exportOptions.endpoint, exportOptions.code)
+  const openSemanticReview = useCallback(() => {
+    setShowSemanticReview(true)
+    setSemanticReviewAttempt((attempt) => attempt + 1)
+    void runSemanticReview()
+  }, [runSemanticReview])
+  const retrySemanticReview = useCallback(() => {
+    setSemanticReviewAttempt((attempt) => attempt + 1)
+    void runSemanticReview()
+  }, [runSemanticReview])
 
   return (
     <div className="workspace-results-content" style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -106,8 +149,8 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
           <button
             className="btn"
             style={{ fontSize: '12px', padding: '4px 12px' }}
-            onClick={actions.onOpenSemanticReview}
-            disabled={!exportOptions.code.trim() || analysis.isAnalyzing}
+            onClick={openSemanticReview}
+            disabled={!exportOptions.code.trim() || analysis.isAnalyzing || semanticReviewLoading}
             title="Ask the configured API to review diagram clarity"
           >
             ✦ Semantic review
@@ -127,19 +170,40 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
         </div>
       </div>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        <ErrorBoundary>
-          <ResultsPanel
-            ref={analysis.resultsRef}
-            results={analysis.violations}
-            isAnalyzing={analysis.isAnalyzing}
-            analyzeError={analysis.analyzeError}
-            analysisHints={analysis.analysisHints}
-            lintSupported={analysis.lintSupported}
-            parseError={analysis.parseErrorDetail}
-            onJumpToLine={analysis.onJumpToLine}
-            showInternalHeader={false}
-          />
-        </ErrorBoundary>
+        {showSemanticReview ? (
+          <ErrorBoundary
+            resetKeys={[semanticReviewAttempt, exportOptions.endpoint, exportOptions.code]}
+            fallback={(
+              <SemanticReviewRenderError
+                isLoading={semanticReviewLoading}
+                onBack={() => setShowSemanticReview(false)}
+                onRetry={retrySemanticReview}
+              />
+            )}
+          >
+            <SemanticReviewResults
+              result={semanticReviewResult}
+              error={semanticReviewError}
+              isLoading={semanticReviewLoading}
+              onBack={() => setShowSemanticReview(false)}
+              onReviewAgain={retrySemanticReview}
+            />
+          </ErrorBoundary>
+        ) : (
+          <ErrorBoundary>
+            <ResultsPanel
+              ref={analysis.resultsRef}
+              results={analysis.violations}
+              isAnalyzing={analysis.isAnalyzing}
+              analyzeError={analysis.analyzeError}
+              analysisHints={analysis.analysisHints}
+              lintSupported={analysis.lintSupported}
+              parseError={analysis.parseErrorDetail}
+              onJumpToLine={analysis.onJumpToLine}
+              showInternalHeader={false}
+            />
+          </ErrorBoundary>
+        )}
       </div>
       {metrics.visible && metrics.data && (
         <div

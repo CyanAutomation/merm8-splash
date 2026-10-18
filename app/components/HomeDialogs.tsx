@@ -9,7 +9,6 @@ import DiagramPreview from './DiagramPreview'
 import ErrorBoundary from './ErrorBoundary'
 import Modal from './Modal'
 import RulesPanel from './RulesPanel'
-import SemanticReviewDialog from './SemanticReviewDialog'
 import type { LayoutPreferences } from '@/lib/useLayoutPreferences'
 
 interface HomeDialogsProps {
@@ -49,15 +48,9 @@ interface HomeDialogsProps {
     parseErrorDetail: string | null
     preferences: Pick<LayoutPreferences, 'useBeautifulRenderer' | 'diagramPreviewMode'>
   }
-  semanticReview: {
-    isOpen: boolean
-    onClose: () => void
-    endpoint: string
-    code: string
-  }
 }
 
-export default function HomeDialogs({ reset, api, rules, fullscreen, semanticReview }: HomeDialogsProps) {
+export default function HomeDialogs({ reset, api, rules, fullscreen }: HomeDialogsProps) {
   return (
     <>
       {reset.isOpen && (
@@ -179,13 +172,6 @@ export default function HomeDialogs({ reset, api, rules, fullscreen, semanticRev
         </div>
       </Modal>
 
-      {semanticReview.isOpen && (
-        <SemanticReviewDialog
-          endpoint={semanticReview.endpoint}
-          code={semanticReview.code}
-          onClose={semanticReview.onClose}
-        />
-      )}
     </>
   )
 }
