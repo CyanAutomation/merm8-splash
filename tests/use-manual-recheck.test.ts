@@ -28,10 +28,8 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-it('starts an available manual run and reports its completion', () => {
-  const forceAnalysis = vi.fn()
-  const showSnackbar = vi.fn()
-  const options: ManualRecheckOptions = {
+function createOptions(overrides: Partial<ManualRecheckOptions> = {}): ManualRecheckOptions {
+  return {
     code: 'flowchart TD\nA --> B',
     endpoint: 'https://api.example.test',
     connectionStatus: 'connected',
@@ -43,23 +41,52 @@ it('starts an available manual run and reports its completion', () => {
     rules: [{ id: 'no-cycles', description: 'Avoid cycles', severity: 'error' }],
     isAnalyzing: false,
     lastCompletedRun: null,
-    forceAnalysis,
-    showSnackbar,
+    forceAnalysis: vi.fn(),
+    showSnackbar: vi.fn(),
+    ...overrides,
   }
+}
 
+function renderRecheck(options: ManualRecheckOptions) {
   act(() => root?.render(createElement(ManualRecheckHarness, { options })))
-  const button = container.querySelector('button') as HTMLButtonElement
+  const button = container.querySelector('button')
+  if (!button) throw new Error('Expected the manual recheck button to render.')
+  return button
+}
+
+it('starts an analysis when manual recheck is available', () => {
+  const options = createOptions()
+  const button = renderRecheck(options)
+
   expect(button.disabled).toBe(false)
 
   act(() => button.click())
-  expect(forceAnalysis).toHaveBeenCalledWith(
+  expect(options.forceAnalysis).toHaveBeenCalledWith(
     options.endpoint,
     options.code,
     options.enabledRules,
     options.rules,
     { useServerDefaults: false },
   )
-  expect(showSnackbar).toHaveBeenCalledWith('Re-check started.', 'success')
+  expect(options.showSnackbar).toHaveBeenCalledWith('Re-check started.', 'success')
+})
+
+it('does not start a manual recheck while the API is disconnected', () => {
+  const options = createOptions({ connectionStatus: 'disconnected' })
+  const button = renderRecheck(options)
+
+  expect(button.disabled).toBe(true)
+
+  act(() => button.click())
+  expect(options.forceAnalysis).not.toHaveBeenCalled()
+  expect(options.showSnackbar).not.toHaveBeenCalled()
+})
+
+it('reports the result after a started manual recheck completes', () => {
+  const options = createOptions()
+  const button = renderRecheck(options)
+
+  act(() => button.click())
 
   const completedOptions = {
     ...options,
@@ -71,6 +98,7 @@ it('starts an available manual run and reports its completion', () => {
       error: null,
     },
   }
-  act(() => root?.render(createElement(ManualRecheckHarness, { options: completedOptions })))
-  expect(showSnackbar).toHaveBeenLastCalledWith('Check complete: 2 violations', 'success')
+  renderRecheck(completedOptions)
+
+  expect(options.showSnackbar).toHaveBeenLastCalledWith('Check complete: 2 violations', 'success')
 })

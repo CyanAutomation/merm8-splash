@@ -78,7 +78,7 @@ it('falls back to SVG bounds when the viewBox does not provide dimensions', () =
   expect(svg.style.getPropertyValue('height')).toBe('50px')
 })
 
-it('skips fitting when dimensions are unavailable and contains measurement errors', () => {
+it('does not fit an SVG when the preview container has no measurable dimensions', () => {
   mountHarness()
   const container = commitSvg('<svg viewBox="0 0 100 50"></svg>')
   setContainerSize(container, 0, 82)
@@ -86,16 +86,25 @@ it('skips fitting when dimensions are unavailable and contains measurement error
   currentDom?.fitDiagramToContainer()
   const svg = container.querySelector('svg') as SVGSVGElement
   expect(svg.style.getPropertyValue('width')).toBe('')
+})
 
-  setContainerSize(container, 132, 82)
-  vi.spyOn(svg, 'getAttribute').mockImplementation(() => {
+it('can fit an SVG after a measurement error', () => {
+  mountHarness()
+  const container = commitSvg('<svg viewBox="0 0 100 50"></svg>')
+  const svg = container.querySelector('svg') as SVGSVGElement
+
+  const getAttribute = vi.spyOn(svg, 'getAttribute').mockImplementationOnce(() => {
     throw new Error('measurement failed')
   })
-  const debug = vi.spyOn(console, 'debug').mockImplementation(() => undefined)
+  vi.spyOn(console, 'debug').mockImplementation(() => undefined)
 
+  expect(() => currentDom?.fitDiagramToContainer()).not.toThrow()
+
+  getAttribute.mockRestore()
   currentDom?.fitDiagramToContainer()
 
-  expect(debug).toHaveBeenCalledWith('Auto-fit calculation error:', 'measurement failed')
+  expect(svg.style.getPropertyValue('width')).toBe('100px')
+  expect(svg.style.getPropertyValue('height')).toBe('50px')
 })
 
 it('removes only fallback nodes owned by this preview', () => {
