@@ -156,6 +156,37 @@ it('submits a semantic review and displays the returned summary', async () => {
   expect(container.textContent).toContain('review-model')
 })
 
+it('submits a semantic review without an API key', async () => {
+  semanticReviewMock.reviewCodeSemantics.mockResolvedValue({
+    'semantic-review': {
+      purpose: { value: 'process', confidence: 0.9 },
+      'label-clarity': { value: true, probability: 0.8 },
+      'branch-clarity': { value: true, probability: 0.7 },
+      'abstraction-consistency': { value: false, probability: 0.6 },
+      ambiguity: { value: false, probability: 0.9 },
+      'review-priority': { value: 'low', confidence: 0.85 },
+    },
+    meta: { model: 'review-model' },
+  })
+  mount(createElement(SemanticReviewDialog, {
+    endpoint: 'https://api.example.test',
+    code: 'flowchart TD\nA --> B',
+    onClose: vi.fn(),
+  }))
+
+  const form = container.querySelector('form') as HTMLFormElement
+  await act(async () => {
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+  })
+
+  expect(semanticReviewMock.reviewCodeSemantics).toHaveBeenCalledWith(
+    'https://api.example.test',
+    'flowchart TD\nA --> B',
+    undefined,
+    expect.any(AbortSignal),
+  )
+})
+
 const semanticReviewFailures = [
   {
     name: 'the API error message',

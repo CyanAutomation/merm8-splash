@@ -31,14 +31,14 @@ export function useSemanticReview(endpoint: string, code: string) {
 
   const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!apiKey.trim() || !code.trim() || isLoading) return
+    if (!code.trim() || isLoading) return
     setIsLoading(true)
     setError(null)
     setResult(null)
     const controller = new AbortController()
     requestController.current = controller
     try {
-      const response = await reviewCodeSemantics(endpoint, code, apiKey.trim(), controller.signal)
+      const response = await reviewCodeSemantics(endpoint, code, apiKey.trim() || undefined, controller.signal)
       if (!controller.signal.aborted) setResult(response)
     } catch (requestError) {
       if (!controller.signal.aborted) setError(readErrorMessage(requestError))
