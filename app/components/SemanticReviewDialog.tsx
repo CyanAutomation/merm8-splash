@@ -42,21 +42,20 @@ function ApiKeyInput({ apiKey, onChange, show }: { apiKey: string; onChange: (va
   return (
     <>
       <label htmlFor="semantic-review-api-key" style={{ display: 'block', marginBottom: '6px', fontWeight: 600 }}>
-        API key
+        API key (optional)
       </label>
       <input
         id="semantic-review-api-key"
         type="password"
-        required
         aria-describedby="semantic-review-api-key-help"
         autoComplete="off"
         value={apiKey}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="Enter an API key"
+        placeholder="Only if your endpoint requires it"
         style={{ width: '100%', padding: '9px 10px', background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '5px' }}
       />
       <p id="semantic-review-api-key-help" style={{ color: 'var(--color-text-secondary)', fontSize: '12px', margin: '6px 0 12px' }}>
-        Enter an API key to enable semantic review.
+        Only needed by API endpoints that require it.
       </p>
     </>
   )
@@ -88,14 +87,12 @@ function ReviewSummary({ result }: { result: SemanticReviewResponse | null }) {
 
 function ReviewActions({
   result,
-  apiKey,
   code,
   isLoading,
   onClose,
   onReset,
 }: {
   result: SemanticReviewResponse | null
-  apiKey: string
   code: string
   isLoading: boolean
   onClose: () => void
@@ -106,7 +103,7 @@ function ReviewActions({
       {result && <button type="button" className="btn" onClick={onReset}>Review again</button>}
       <button type="button" className="btn" onClick={onClose}>Close</button>
       {!result && (
-        <button type="submit" className="btn btn-primary" disabled={!apiKey.trim() || !code.trim() || isLoading}>
+        <button type="submit" className="btn btn-primary" disabled={!code.trim() || isLoading}>
           {isLoading ? 'Reviewing…' : 'Run review'}
         </button>
       )}
@@ -121,12 +118,12 @@ export default function SemanticReviewDialog({ endpoint, code, onClose }: Semant
     <Modal isOpen onClose={onClose} title="Semantic Review" maxHeight="85vh">
       <form onSubmit={handleSubmit}>
         <p style={{ marginBottom: '16px', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-          This sends the current diagram to the configured API for an AI review. An API key is required; it is sent with this request and is not saved.
+          This sends the current diagram to the configured API for an AI review. The hosted API does not require a key. Custom endpoints may require one; it is sent with this request and is not saved.
         </p>
         <ApiKeyInput apiKey={apiKey} onChange={setApiKey} show={!result} />
         <ReviewFeedback error={error} isLoading={isLoading} />
         <ReviewSummary result={result} />
-        <ReviewActions result={result} apiKey={apiKey} code={code} isLoading={isLoading} onClose={onClose} onReset={reset} />
+        <ReviewActions result={result} code={code} isLoading={isLoading} onClose={onClose} onReset={reset} />
       </form>
     </Modal>
   )
