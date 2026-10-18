@@ -1,6 +1,7 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { extractLineNumber } from '@/lib/errorUtils'
 import type { DiagramColorMode } from './diagramRenderer'
 import DiagramPreviewErrorPanel from './DiagramPreviewErrorPanel'
 import DiagramPreviewToolbar from './DiagramPreviewToolbar'
@@ -8,8 +9,9 @@ import { useDiagramPreviewRenderer } from './useDiagramPreviewRenderer'
 
 interface DiagramPreviewProps {
   code: string
-  onParseStateChange?: (state: { hasParseError: boolean; message: string | null }) => void
+  onParseStateChange?: (state: { hasParseError: boolean; message: string | null; fullMessage?: string | null }) => void
   parseErrorMessage?: string | null
+  parseErrorFullMessage?: string | null
   useBeautifulRenderer?: boolean
   onToggleBeautifulRenderer?: (value: boolean) => void
   diagramColorMode?: DiagramColorMode
@@ -22,6 +24,7 @@ export default function DiagramPreview({
   code,
   onParseStateChange,
   parseErrorMessage,
+  parseErrorFullMessage,
   useBeautifulRenderer = false,
   onToggleBeautifulRenderer,
   diagramColorMode: controlledDiagramColorMode,
@@ -38,9 +41,7 @@ export default function DiagramPreview({
     containerRef,
     renderError,
     fullRenderError,
-    isErrorExpanded,
     isRendering,
-    onExpandError,
     fitDiagramToContainer,
   } = useDiagramPreviewRenderer({
     code,
@@ -53,8 +54,27 @@ export default function DiagramPreview({
   })
 
   const currentErrorMessage = parseErrorMessage ?? renderError
+  const currentFullErrorMessage = parseErrorFullMessage ?? fullRenderError
   const hasError = Boolean(parseErrorMessage || renderError)
   const hasCode = Boolean(code.trim())
+  const lastAutoJumpedLineRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!hasError) {
+      lastAutoJumpedLineRef.current = null
+      return
+    }
+
+    if (!onJumpToLine) return
+
+    const line = extractLineNumber(currentFullErrorMessage ?? '')
+      ?? extractLineNumber(currentErrorMessage ?? '')
+
+    if (line == null || line === lastAutoJumpedLineRef.current) return
+
+    lastAutoJumpedLineRef.current = line
+    onJumpToLine(line)
+  }, [currentErrorMessage, currentFullErrorMessage, hasError, onJumpToLine])
 
   const toggleColorMode = () => {
     const nextMode = effectiveDiagramColorMode === 'dark' ? 'light' : 'dark'
@@ -86,10 +106,7 @@ export default function DiagramPreview({
 
       <DiagramPreviewErrorPanel
         message={currentErrorMessage}
-        fullMessage={fullRenderError}
-        expanded={isErrorExpanded}
-        onToggleExpanded={onExpandError}
-        onJumpToLine={onJumpToLine}
+        fullMessage={currentFullErrorMessage}
       />
 
       <div

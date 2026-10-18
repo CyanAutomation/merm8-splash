@@ -155,6 +155,7 @@ function createLayoutProps(callbacks: {
         onClose: vi.fn(),
         code: '',
         parseErrorDetail: null,
+        parseErrorFullDetail: null,
         preferences: { useBeautifulRenderer: false, diagramPreviewMode: 'dark' },
       },
     } satisfies ComponentProps<typeof HomeDialogs>,

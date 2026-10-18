@@ -27,12 +27,18 @@ export function useHomeEndpointController() {
 export function useHomeParseState() {
   const [hasParseError, setHasParseError] = useState(false)
   const [parseErrorDetail, setParseErrorDetail] = useState<string | null>(null)
-  const onParseStateChange = useCallback((state: { hasParseError: boolean; message: string | null }) => {
+  const [parseErrorFullDetail, setParseErrorFullDetail] = useState<string | null>(null)
+  const onParseStateChange = useCallback((state: {
+    hasParseError: boolean
+    message: string | null
+    fullMessage?: string | null
+  }) => {
     setHasParseError(state.hasParseError)
     setParseErrorDetail(state.message)
+    setParseErrorFullDetail(state.hasParseError ? state.fullMessage ?? state.message : null)
   }, [])
 
-  return { hasParseError, parseErrorDetail, onParseStateChange }
+  return { hasParseError, parseErrorDetail, parseErrorFullDetail, onParseStateChange }
 }
 
 interface UseHomeAnalysisControllerOptions {

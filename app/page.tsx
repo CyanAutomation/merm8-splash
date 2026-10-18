@@ -33,7 +33,7 @@ function HomeContent() {
     handleSaveEndpoint,
     showSnackbar,
   } = useHomeEndpointController()
-  const { hasParseError, parseErrorDetail, onParseStateChange } = useHomeParseState()
+  const { hasParseError, parseErrorDetail, parseErrorFullDetail, onParseStateChange } = useHomeParseState()
   const {
     code,
     setCode,
@@ -163,6 +163,7 @@ function HomeContent() {
           onClose: dialogState.closeFullscreen,
           code,
           parseErrorDetail,
+          parseErrorFullDetail,
           preferences: prefs,
         },
       }}

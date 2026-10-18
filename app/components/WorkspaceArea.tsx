@@ -22,7 +22,7 @@ export interface WorkspaceAreaProps {
   }
   preview: {
     resetKey: string
-    onParseStateChange: (state: { hasParseError: boolean; message: string | null }) => void
+    onParseStateChange: (state: { hasParseError: boolean; message: string | null; fullMessage?: string | null }) => void
     onJumpToLine: (line: number) => void
     onExpandToFullscreen: () => void
   }

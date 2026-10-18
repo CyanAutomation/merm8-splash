@@ -9,7 +9,13 @@ const testState = vi.hoisted(() => ({
 
 vi.mock('../app/components/HomeHeader', () => ({ default: () => null }))
 vi.mock('../app/components/StatusBar', () => ({ default: () => null }))
-vi.mock('../app/components/HomeDialogs', () => ({ default: () => null }))
+vi.mock('../app/components/HomeDialogs', async () => {
+  const React = await vi.importActual<typeof import('react')>('react')
+  return {
+    default: ({ fullscreen }: { fullscreen: { parseErrorFullDetail: string | null } }) =>
+      React.createElement('output', { 'data-testid': 'fullscreen-parse-error' }, fullscreen.parseErrorFullDetail ?? ''),
+  }
+})
 vi.mock('../app/components/ExportDropdown', () => ({ default: () => null }))
 vi.mock('../app/components/WorkspaceDivider', () => ({ default: () => null }))
 vi.mock('../app/components/ErrorBoundary', () => ({
@@ -37,7 +43,7 @@ vi.mock('../app/components/DiagramPreview', async () => {
       parseErrorMessage,
     }: {
       code: string
-      onParseStateChange?: (state: { hasParseError: boolean; message: string }) => void
+      onParseStateChange?: (state: { hasParseError: boolean; message: string; fullMessage?: string | null }) => void
       parseErrorMessage?: string | null
     }) => React.createElement('section', null,
       React.createElement('pre', {
@@ -46,7 +52,11 @@ vi.mock('../app/components/DiagramPreview', async () => {
       }, code),
       React.createElement('button', {
         'data-testid': 'report-parse-error',
-        onClick: () => onParseStateChange?.({ hasParseError: true, message: 'Parse error on line 2' }),
+        onClick: () => onParseStateChange?.({
+          hasParseError: true,
+          message: 'Parse error on line 2',
+          fullMessage: 'Parse error on line 2\nFull parser trace',
+        }),
       }, 'Report parse error'),
     ),
   }
@@ -157,6 +167,8 @@ it('shows a parse error as feedback while sending corrected Mermaid to the previ
 
   expect(container.querySelector('[data-testid="parse-error-feedback"]')?.textContent)
     .toBe('Parse error on line 2')
+  expect(container.querySelector('[data-testid="fullscreen-parse-error"]')?.textContent)
+    .toBe('Parse error on line 2\nFull parser trace')
   expect(container.querySelector('[data-testid="preview-code"]')?.getAttribute('data-parse-error-message')).toBe('')
 
   const correctedCode = 'flowchart TD\n  A --> B'
