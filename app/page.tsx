@@ -63,8 +63,8 @@ function HomeContent() {
     })
   }, [dialogState.openApiConfiguration])
 
-  const handleJumpToLine = useCallback((lineNum: number) => {
-    editorRef.current?.highlightLine(lineNum)
+  const handleJumpToLine = useCallback((lineNum: number | null, options?: { persistOnBlur?: boolean }) => {
+    editorRef.current?.highlightLine(lineNum, options)
   }, [])
 
   const handleReset = useCallback(() => {

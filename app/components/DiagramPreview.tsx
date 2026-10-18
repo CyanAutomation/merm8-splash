@@ -16,7 +16,7 @@ interface DiagramPreviewProps {
   onToggleBeautifulRenderer?: (value: boolean) => void
   diagramColorMode?: DiagramColorMode
   onToggleDiagramColorMode?: (value: DiagramColorMode) => void
-  onJumpToLine?: (line: number) => void
+  onJumpToLine?: (line: number | null, options?: { persistOnBlur?: boolean }) => void
   onExpandToFullscreen?: () => void
 }
 
@@ -57,11 +57,14 @@ export default function DiagramPreview({
   const currentFullErrorMessage = parseErrorFullMessage ?? fullRenderError
   const hasError = Boolean(parseErrorMessage || renderError)
   const hasCode = Boolean(code.trim())
-  const lastAutoJumpedLineRef = useRef<number | null>(null)
+  const lastAutoJumpKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!hasError) {
-      lastAutoJumpedLineRef.current = null
+      if (lastAutoJumpKeyRef.current !== null) {
+        onJumpToLine?.(null, { persistOnBlur: true })
+      }
+      lastAutoJumpKeyRef.current = null
       return
     }
 
@@ -70,10 +73,19 @@ export default function DiagramPreview({
     const line = extractLineNumber(currentFullErrorMessage ?? '')
       ?? extractLineNumber(currentErrorMessage ?? '')
 
-    if (line == null || line === lastAutoJumpedLineRef.current) return
+    if (line == null) {
+      if (lastAutoJumpKeyRef.current !== null) {
+        lastAutoJumpKeyRef.current = null
+        onJumpToLine(null, { persistOnBlur: true })
+      }
+      return
+    }
 
-    lastAutoJumpedLineRef.current = line
-    onJumpToLine(line)
+    const autoJumpKey = JSON.stringify([line, currentFullErrorMessage ?? currentErrorMessage])
+    if (autoJumpKey === lastAutoJumpKeyRef.current) return
+
+    lastAutoJumpKeyRef.current = autoJumpKey
+    onJumpToLine(line, { persistOnBlur: true })
   }, [currentErrorMessage, currentFullErrorMessage, hasError, onJumpToLine])
 
   const toggleColorMode = () => {

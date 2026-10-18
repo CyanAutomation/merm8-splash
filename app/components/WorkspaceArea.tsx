@@ -23,7 +23,7 @@ export interface WorkspaceAreaProps {
   preview: {
     resetKey: string
     onParseStateChange: (state: { hasParseError: boolean; message: string | null; fullMessage?: string | null }) => void
-    onJumpToLine: (line: number) => void
+    onJumpToLine: (line: number | null, options?: { persistOnBlur?: boolean }) => void
     onExpandToFullscreen: () => void
   }
   results: WorkspaceResultsProps
