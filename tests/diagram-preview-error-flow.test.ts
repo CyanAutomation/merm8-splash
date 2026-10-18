@@ -67,7 +67,7 @@ it('automatically highlights each reported error line once', () => {
   mount(createElement(DiagramPreview, props))
 
   expect(onJumpToLine).toHaveBeenCalledOnce()
-  expect(onJumpToLine).toHaveBeenCalledWith(8)
+  expect(onJumpToLine).toHaveBeenCalledWith(8, { persistOnBlur: true })
   expect(container.textContent).toContain('Detailed parser trace')
   expect(Array.from(container.querySelectorAll('button')).some((button) =>
     button.textContent === 'Show me where' || button.textContent === 'Show details'
@@ -78,18 +78,25 @@ it('automatically highlights each reported error line once', () => {
 
   rendererState.fullRenderError = 'Syntax error in diagram\nParse error on line 9'
   act(() => root?.render(createElement(DiagramPreview, props)))
-  expect(onJumpToLine).toHaveBeenNthCalledWith(2, 9)
+  expect(onJumpToLine).toHaveBeenNthCalledWith(2, 9, { persistOnBlur: true })
   act(() => root?.render(createElement(DiagramPreview, props)))
   expect(onJumpToLine).toHaveBeenCalledTimes(2)
+
+  rendererState.fullRenderError = 'Syntax error in diagram\nParse error on line 9\nA different parser error'
+  act(() => root?.render(createElement(DiagramPreview, props)))
+  expect(onJumpToLine).toHaveBeenNthCalledWith(3, 9, { persistOnBlur: true })
 
   rendererState.renderError = null
   rendererState.fullRenderError = null
   act(() => root?.render(createElement(DiagramPreview, props)))
+  expect(onJumpToLine).toHaveBeenNthCalledWith(4, null, { persistOnBlur: true })
 
   rendererState.renderError = 'Syntax error in diagram'
   rendererState.fullRenderError = 'Syntax error in diagram\nParse error on line 11'
   act(() => root?.render(createElement(DiagramPreview, props)))
-  expect(onJumpToLine).toHaveBeenNthCalledWith(3, 11)
+  expect(onJumpToLine).toHaveBeenNthCalledWith(5, 11, { persistOnBlur: true })
+  act(() => root?.render(createElement(DiagramPreview, props)))
+  expect(onJumpToLine).toHaveBeenCalledTimes(5)
 })
 
 it('uses full parse details when the summary has no line number', () => {
@@ -101,6 +108,6 @@ it('uses full parse details when the summary has no line number', () => {
     onJumpToLine,
   }))
 
-  expect(onJumpToLine).toHaveBeenCalledWith(4)
+  expect(onJumpToLine).toHaveBeenCalledWith(4, { persistOnBlur: true })
   expect(container.textContent).toContain('Parse error on line 4')
 })

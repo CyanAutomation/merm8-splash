@@ -34,10 +34,33 @@ it('scrolls the editor and line-number gutter to an automatically highlighted li
   const gutter = container.querySelector('[data-gutter]') as HTMLDivElement
   Object.defineProperty(textarea, 'clientHeight', { configurable: true, value: 78 })
 
-  act(() => editorRef.current?.highlightLine(20))
+  act(() => editorRef.current?.highlightLine(20, { persistOnBlur: true }))
 
   expect(textarea.scrollTop).toBeGreaterThan(0)
   expect(gutter.scrollTop).toBe(textarea.scrollTop)
   expect(document.activeElement).not.toBe(textarea)
   expect((gutter.children[19] as HTMLElement).style.background).not.toBe('transparent')
+
+  act(() => textarea.dispatchEvent(new FocusEvent('focusout', { bubbles: true })))
+
+  expect((gutter.children[19] as HTMLElement).style.background).not.toBe('transparent')
+})
+
+it('clears manually highlighted lines on blur', () => {
+  const editorRef = createRef<DiagramEditorRef>()
+  root = createRoot(container)
+
+  act(() => root?.render(createElement(SnackbarProvider, null,
+    createElement(DiagramEditor, { ref: editorRef, value: 'A --> B', onChange: () => undefined })
+  )))
+
+  const textarea = container.querySelector('textarea') as HTMLTextAreaElement
+  const gutter = container.querySelector('[data-gutter]') as HTMLDivElement
+
+  act(() => editorRef.current?.highlightLine(1))
+  expect((gutter.children[0] as HTMLElement).style.background).not.toBe('transparent')
+
+  act(() => textarea.dispatchEvent(new FocusEvent('focusout', { bubbles: true })))
+
+  expect((gutter.children[0] as HTMLElement).style.background).toBe('transparent')
 })
