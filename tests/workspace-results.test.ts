@@ -44,6 +44,7 @@ function mount(element: ReactNode) {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks()
   if (root) act(() => root?.unmount())
   root = null
   container?.remove()
@@ -228,6 +229,47 @@ it('shows a request error and lets the user retry from the results pane', async 
 
   expect(semanticReviewMock.reviewCodeSemantics).toHaveBeenCalledTimes(2)
   expect(view.textContent).toContain('review-model')
+})
+
+it('contains a rendering failure from malformed review data and provides recovery actions', async () => {
+  semanticReviewMock.reviewCodeSemantics
+    .mockResolvedValueOnce({
+      'semantic-review': { purpose: { value: 'process', confidence: 0.9 } },
+      meta: { model: 'incomplete-model' },
+    })
+    .mockResolvedValueOnce({
+      'semantic-review': {
+        purpose: { value: 'process', confidence: 0.9 },
+        'label-clarity': { value: true, probability: 0.8 },
+        'branch-clarity': { value: true, probability: 0.7 },
+        'abstraction-consistency': { value: false, probability: 0.6 },
+        ambiguity: { value: false, probability: 0.9 },
+        'review-priority': { value: 'low', confidence: 0.85 },
+      },
+      meta: { model: 'valid-model' },
+    })
+  vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  const view = mount(createElement(WorkspaceResults, {
+    analysis: {
+      violations: [], isAnalyzing: false, analyzeError: null, analysisHints: [], lintSupported: true,
+      parseErrorDetail: null, onJumpToLine: vi.fn(), resultsRef: createRef<ResultsPanelRef>(),
+    },
+    exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
+    metrics: { data: null, visible: false, onToggle: vi.fn() },
+    actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
+  }))
+  const semanticReviewButton = Array.from(view.querySelectorAll('button'))
+    .find((button) => button.title === 'Ask the configured API to review diagram clarity')
+  if (!semanticReviewButton) throw new Error('Expected the semantic review action to render.')
+
+  await act(async () => semanticReviewButton.click())
+
+  expect(view.querySelector('[role="alert"]')?.textContent).toContain('Semantic review response could not be displayed.')
+  const retryButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Retry review')
+  if (!retryButton) throw new Error('Expected an action to retry after a rendering failure.')
+  await act(async () => retryButton.click())
+
+  expect(view.textContent).toContain('valid-model')
 })
 
 it('aborts an in-flight semantic review when the results pane unmounts', () => {
