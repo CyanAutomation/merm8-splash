@@ -204,7 +204,7 @@ function getTimeoutFailureMessage(details: ApiFailureDetails, context: ApiFailur
 
   switch (context) {
     case 'connection':
-      return 'The API endpoint did not respond within 10 seconds. Check its URL and server status.'
+      return `The API endpoint did not respond within ${API_REQUEST_TIMEOUT_MS / 1000} seconds. Check its URL and server status.`
     case 'semantic-review':
       return 'Semantic review timed out while waiting for the API. Check the endpoint and try again.'
     case 'analysis':
