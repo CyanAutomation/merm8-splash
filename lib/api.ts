@@ -361,6 +361,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function hasScoredValue(
+  value: unknown,
+  valueType: 'string' | 'boolean',
+  scoreKey: 'confidence' | 'probability'
+): boolean {
+  return isRecord(value) && typeof value.value === valueType && isFiniteNumber(value[scoreKey])
+}
+
+function isSemanticReviewResponse(value: unknown): value is SemanticReviewResponse {
+  if (!isRecord(value)) return false
+
+  const review = value['semantic-review']
+  const metadata = value.meta
+  if (!isRecord(review) || !isRecord(metadata) || typeof metadata.model !== 'string') return false
+
+  return hasScoredValue(review.purpose, 'string', 'confidence')
+    && hasScoredValue(review['label-clarity'], 'boolean', 'probability')
+    && hasScoredValue(review['branch-clarity'], 'boolean', 'probability')
+    && hasScoredValue(review['abstraction-consistency'], 'boolean', 'probability')
+    && hasScoredValue(review.ambiguity, 'boolean', 'probability')
+    && hasScoredValue(review['review-priority'], 'string', 'confidence')
+}
+
 export interface HealthzResponse {
   status: 'ok'
 }
@@ -455,10 +482,16 @@ export async function reviewCodeSemantics(
 ): Promise<SemanticReviewResponse> {
   const normalizedApiKey = apiKey?.trim()
 
-  return requestApi(endpoint, '/v1/semantic-review', {
+  const response = await requestApi<unknown>(endpoint, '/v1/semantic-review', {
     method: 'POST',
     body: { code },
     signal,
     headers: normalizedApiKey ? { Authorization: `Bearer ${normalizedApiKey}` } : {},
   })
+
+  if (!isSemanticReviewResponse(response)) {
+    throw new Error('The API returned an invalid semantic review response.')
+  }
+
+  return response
 }

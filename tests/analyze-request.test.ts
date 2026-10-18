@@ -554,7 +554,17 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
 })
 
 it('sends a semantic review request without an authorization header when no key is supplied', async () => {
-  const { fetchImpl, calls } = mockJsonFetch({})
+  const { fetchImpl, calls } = mockJsonFetch({
+    'semantic-review': {
+      purpose: { value: 'process', confidence: 0.9 },
+      'label-clarity': { value: true, probability: 0.8 },
+      'branch-clarity': { value: true, probability: 0.7 },
+      'abstraction-consistency': { value: false, probability: 0.6 },
+      ambiguity: { value: false, probability: 0.9 },
+      'review-priority': { value: 'low', confidence: 0.85 },
+    },
+    meta: { source: 'jev', model: 'test-model' },
+  })
   const { reviewCodeSemantics } = loadApiModule({ fetchImpl })
 
   await reviewCodeSemantics('https://api.example.com', 'flowchart TD\nA --> B')
@@ -562,6 +572,19 @@ it('sends a semantic review request without an authorization header when no key 
   expect(calls[0].url).toBe('https://api.example.com/v1/semantic-review')
   expect(calls[0].init.headers).toEqual({ 'Content-Type': 'application/json' })
   expect(calls[0].init.body).toBe(JSON.stringify({ code: 'flowchart TD\nA --> B' }))
+})
+
+it('rejects malformed semantic review responses with a recoverable error', async () => {
+  const { fetchImpl } = mockJsonFetch({
+    'semantic-review': {
+      purpose: { value: 'process', confidence: 0.9 },
+    },
+    meta: { model: 'test-model' },
+  })
+  const { reviewCodeSemantics } = loadApiModule({ fetchImpl })
+
+  await expect(reviewCodeSemantics('https://api.example.com', 'flowchart TD\nA --> B'))
+    .rejects.toThrow('The API returned an invalid semantic review response.')
 })
 
 it('explains that a 401 semantic review response can mean the API key expired', async () => {

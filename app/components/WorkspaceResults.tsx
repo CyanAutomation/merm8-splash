@@ -39,6 +39,30 @@ export interface WorkspaceResultsProps {
   }
 }
 
+function SemanticReviewRenderError({
+  isLoading,
+  onBack,
+  onRetry,
+}: {
+  isLoading: boolean
+  onBack: () => void
+  onRetry: () => void
+}) {
+  return (
+    <div role="alert" style={{ padding: '12px' }}>
+      <p style={{ color: 'var(--color-error)', margin: '0 0 12px' }}>
+        Semantic review response could not be displayed. Check the endpoint response and try again.
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+        <button type="button" className="btn" onClick={onBack}>Back to analysis</button>
+        <button type="button" className="btn btn-primary" onClick={onRetry} disabled={isLoading}>
+          {isLoading ? 'Reviewing…' : 'Retry review'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function MetricItem({ label, value }: { label: string; value: string | number }) {
   return (
     <div
@@ -62,11 +86,22 @@ function MetricItem({ label, value }: { label: string; value: string | number })
 export default function WorkspaceResults({ analysis, exportOptions, metrics, actions }: WorkspaceResultsProps) {
   const hasErrors = analysis.violations.some((violation) => violation.severity === 'error')
   const [showSemanticReview, setShowSemanticReview] = useState(false)
-  const semanticReview = useSemanticReview(exportOptions.endpoint, exportOptions.code)
+  const [semanticReviewAttempt, setSemanticReviewAttempt] = useState(0)
+  const {
+    result: semanticReviewResult,
+    error: semanticReviewError,
+    isLoading: semanticReviewLoading,
+    run: runSemanticReview,
+  } = useSemanticReview(exportOptions.endpoint, exportOptions.code)
   const openSemanticReview = useCallback(() => {
     setShowSemanticReview(true)
-    void semanticReview.run()
-  }, [semanticReview.run])
+    setSemanticReviewAttempt((attempt) => attempt + 1)
+    void runSemanticReview()
+  }, [runSemanticReview])
+  const retrySemanticReview = useCallback(() => {
+    setSemanticReviewAttempt((attempt) => attempt + 1)
+    void runSemanticReview()
+  }, [runSemanticReview])
 
   return (
     <div className="workspace-results-content" style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -115,7 +150,7 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
             className="btn"
             style={{ fontSize: '12px', padding: '4px 12px' }}
             onClick={openSemanticReview}
-            disabled={!exportOptions.code.trim() || analysis.isAnalyzing || semanticReview.isLoading}
+            disabled={!exportOptions.code.trim() || analysis.isAnalyzing || semanticReviewLoading}
             title="Ask the configured API to review diagram clarity"
           >
             ✦ Semantic review
@@ -136,13 +171,24 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
       </div>
       <div style={{ flex: 1, overflow: 'auto' }}>
         {showSemanticReview ? (
-          <SemanticReviewResults
-            result={semanticReview.result}
-            error={semanticReview.error}
-            isLoading={semanticReview.isLoading}
-            onBack={() => setShowSemanticReview(false)}
-            onReviewAgain={() => { void semanticReview.run() }}
-          />
+          <ErrorBoundary
+            resetKeys={[semanticReviewAttempt, exportOptions.endpoint, exportOptions.code]}
+            fallback={(
+              <SemanticReviewRenderError
+                isLoading={semanticReviewLoading}
+                onBack={() => setShowSemanticReview(false)}
+                onRetry={retrySemanticReview}
+              />
+            )}
+          >
+            <SemanticReviewResults
+              result={semanticReviewResult}
+              error={semanticReviewError}
+              isLoading={semanticReviewLoading}
+              onBack={() => setShowSemanticReview(false)}
+              onReviewAgain={retrySemanticReview}
+            />
+          </ErrorBoundary>
         ) : (
           <ErrorBoundary>
             <ResultsPanel
