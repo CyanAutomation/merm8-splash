@@ -1,11 +1,14 @@
 'use client'
 
 import type { RefObject } from 'react'
+import { useCallback, useState } from 'react'
 import type { AnalysisMetrics, Rule, Violation } from '@/lib/api'
 import type { ResultsPanelRef } from './ResultsPanel'
 import ErrorBoundary from './ErrorBoundary'
 import ExportDropdown from './ExportDropdown'
 import ResultsPanel from './ResultsPanel'
+import SemanticReviewResults from './SemanticReviewResults'
+import { useSemanticReview } from './useSemanticReview'
 
 export interface WorkspaceResultsProps {
   analysis: {
@@ -33,7 +36,6 @@ export interface WorkspaceResultsProps {
     canRecheck: boolean
     onRecheck: () => void
     onOpenRules: () => void
-    onOpenSemanticReview: () => void
   }
 }
 
@@ -59,6 +61,12 @@ function MetricItem({ label, value }: { label: string; value: string | number })
 
 export default function WorkspaceResults({ analysis, exportOptions, metrics, actions }: WorkspaceResultsProps) {
   const hasErrors = analysis.violations.some((violation) => violation.severity === 'error')
+  const [showSemanticReview, setShowSemanticReview] = useState(false)
+  const semanticReview = useSemanticReview(exportOptions.endpoint, exportOptions.code)
+  const openSemanticReview = useCallback(() => {
+    setShowSemanticReview(true)
+    void semanticReview.run()
+  }, [semanticReview.run])
 
   return (
     <div className="workspace-results-content" style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -106,8 +114,8 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
           <button
             className="btn"
             style={{ fontSize: '12px', padding: '4px 12px' }}
-            onClick={actions.onOpenSemanticReview}
-            disabled={!exportOptions.code.trim() || analysis.isAnalyzing}
+            onClick={openSemanticReview}
+            disabled={!exportOptions.code.trim() || analysis.isAnalyzing || semanticReview.isLoading}
             title="Ask the configured API to review diagram clarity"
           >
             ✦ Semantic review
@@ -127,19 +135,29 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
         </div>
       </div>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        <ErrorBoundary>
-          <ResultsPanel
-            ref={analysis.resultsRef}
-            results={analysis.violations}
-            isAnalyzing={analysis.isAnalyzing}
-            analyzeError={analysis.analyzeError}
-            analysisHints={analysis.analysisHints}
-            lintSupported={analysis.lintSupported}
-            parseError={analysis.parseErrorDetail}
-            onJumpToLine={analysis.onJumpToLine}
-            showInternalHeader={false}
+        {showSemanticReview ? (
+          <SemanticReviewResults
+            result={semanticReview.result}
+            error={semanticReview.error}
+            isLoading={semanticReview.isLoading}
+            onBack={() => setShowSemanticReview(false)}
+            onReviewAgain={() => { void semanticReview.run() }}
           />
-        </ErrorBoundary>
+        ) : (
+          <ErrorBoundary>
+            <ResultsPanel
+              ref={analysis.resultsRef}
+              results={analysis.violations}
+              isAnalyzing={analysis.isAnalyzing}
+              analyzeError={analysis.analyzeError}
+              analysisHints={analysis.analysisHints}
+              lintSupported={analysis.lintSupported}
+              parseError={analysis.parseErrorDetail}
+              onJumpToLine={analysis.onJumpToLine}
+              showInternalHeader={false}
+            />
+          </ErrorBoundary>
+        )}
       </div>
       {metrics.visible && metrics.data && (
         <div

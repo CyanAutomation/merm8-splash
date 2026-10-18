@@ -12,7 +12,7 @@ An interactive frontend for the **merm8 API**—bringing real-time Mermaid diagr
 - **Flexible API Configuration** — Point to any merm8 API endpoint (cloud or self-hosted) without code changes
 - **Multiple Diagram Types** — Renders Mermaid diagrams and adapts lint controls to the connected API's advertised capabilities
 - **Export Support** — Export analysis results as SARIF JSON, JSON, Markdown, or plain text
-- **Semantic Review** — Optional AI review through the configured API. The hosted API does not require a client key; custom endpoints may. See [API Endpoint](#api-endpoint) for data-handling details.
+- **Semantic Review** — Optional AI review through the configured API. Semantic review requests do not include a client API key. See [API Endpoint](#api-endpoint) for data-handling details.
 - **Self-Hostable** — Deploy privately with Docker, Netlify, Vercel, or custom infrastructure
 - **Desktop-Optimized Design** — Clean UI styled with project CSS (optimized for desktop with responsive mobile stacking)
 
@@ -150,7 +150,7 @@ localStorage.removeItem('merm8_api_endpoint')
 
 `NEXT_PUBLIC_MERM8_API_URL` is public configuration included in the built frontend; do not put secrets in it. Because Docker serves a static build, passing this variable to `docker run` does not change the API endpoint. For a Docker deployment, set and save the endpoint in the app’s API Configuration panel.
 
-Diagram source is sent to the selected API endpoint for regular analysis and optional semantic review. If you enter an API key for a custom endpoint, the app sends it with the request and does not save it. The hosted semantic review endpoint applies a per-IP request limit. The endpoint operator controls how requests are processed and retained, so choose an endpoint you trust with your diagrams.
+Diagram source is sent to the selected API endpoint for regular analysis and optional semantic review. Semantic review requests do not include a client API key. The hosted semantic review endpoint applies a per-IP request limit. The endpoint operator controls how requests are processed and retained, so choose an endpoint you trust with your diagrams.
 
 ### Local API Setup
 

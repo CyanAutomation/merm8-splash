@@ -112,7 +112,6 @@ function HomeContent() {
             canRecheck,
             onRecheck: handleRecheck,
             onOpenRules: dialogState.openRules,
-            onOpenSemanticReview: dialogState.openSemanticReview,
           },
         },
       }}
@@ -165,12 +164,6 @@ function HomeContent() {
           code,
           parseErrorDetail,
           preferences: prefs,
-        },
-        semanticReview: {
-          isOpen: dialogState.isSemanticReviewOpen,
-          onClose: dialogState.closeSemanticReview,
-          endpoint,
-          code,
         },
       }}
     />

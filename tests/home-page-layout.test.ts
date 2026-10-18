@@ -113,7 +113,6 @@ function createLayoutProps(callbacks: {
           canRecheck: false,
           onRecheck: vi.fn(),
           onOpenRules: vi.fn(),
-          onOpenSemanticReview: vi.fn(),
         },
       },
     } satisfies WorkspaceAreaProps,
@@ -157,12 +156,6 @@ function createLayoutProps(callbacks: {
         code: '',
         parseErrorDetail: null,
         preferences: { useBeautifulRenderer: false, diagramPreviewMode: 'dark' },
-      },
-      semanticReview: {
-        isOpen: false,
-        onClose: vi.fn(),
-        endpoint: 'https://api.example.test',
-        code: '',
       },
     } satisfies ComponentProps<typeof HomeDialogs>,
   }
