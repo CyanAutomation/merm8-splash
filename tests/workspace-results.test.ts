@@ -75,8 +75,19 @@ it('keeps result toolbar actions and metrics together in the results pane', () =
     .find((button) => button.title === title)
 
   expect(view.textContent).toContain('Diagram Metrics')
-  expect(view.textContent).toContain('Diagram Type')
-  expect(view.textContent).toContain('flowchart')
+  for (const [label, value] of [
+    ['Diagram Type', 'flowchart'],
+    ['Nodes', '2'],
+    ['Edges', '1'],
+    ['Disconnected', '0'],
+    ['Duplicates', '0'],
+    ['Max Fan-in', '1'],
+    ['Max Fan-out', '1'],
+  ]) {
+    const metricLabel = Array.from(view.querySelectorAll('span'))
+      .find((span) => span.textContent === label)
+    expect(metricLabel?.parentElement?.textContent).toBe(`${label}${value}`)
+  }
 
   const metricsButton = buttonWithTitle('Toggle diagram metrics')
   const semanticReviewButton = buttonWithTitle('Ask the configured API to review diagram clarity')
