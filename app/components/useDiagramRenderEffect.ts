@@ -6,6 +6,7 @@ import type { useDiagramPreviewDom } from './useDiagramPreviewDom'
 interface ParseState {
   hasParseError: boolean
   message: string | null
+  fullMessage?: string | null
 }
 
 interface RenderOptions {
@@ -19,7 +20,6 @@ interface RenderOptions {
   dom: ReturnType<typeof useDiagramPreviewDom>
   setRenderError: Dispatch<SetStateAction<string | null>>
   setFullRenderError: Dispatch<SetStateAction<string | null>>
-  setIsErrorExpanded: Dispatch<SetStateAction<boolean>>
   setIsRendering: Dispatch<SetStateAction<boolean>>
 }
 
@@ -51,15 +51,13 @@ async function requestDiagramSvg(options: RenderOptions, container: HTMLDivEleme
 function resetRenderErrors(options: RenderOptions) {
   options.setRenderError(null)
   options.setFullRenderError(null)
-  options.setIsErrorExpanded(false)
 }
 
 function applyRenderError(options: RenderOptions, message: string) {
   const collapsedMessage = extractErrorFirstLine(message)
   options.setRenderError(collapsedMessage)
   options.setFullRenderError(message)
-  options.setIsErrorExpanded(false)
-  options.onParseStateChange?.({ hasParseError: true, message: collapsedMessage })
+  options.onParseStateChange?.({ hasParseError: true, message: collapsedMessage, fullMessage: message })
   options.dom.removeMermaidFallbackNodes(options.dom.lastRenderIdRef.current ?? undefined)
   if (options.dom.containerRef.current) options.dom.containerRef.current.innerHTML = ''
 }
@@ -75,7 +73,6 @@ export function useDiagramRenderEffect(options: RenderOptions) {
     dom,
     setRenderError,
     setFullRenderError,
-    setIsErrorExpanded,
     setIsRendering,
   } = options
 
@@ -95,7 +92,7 @@ export function useDiagramRenderEffect(options: RenderOptions) {
       if (dom.containerRef.current) dom.containerRef.current.innerHTML = ''
       dom.removeMermaidFallbackNodes(dom.lastRenderIdRef.current ?? undefined)
       resetRenderErrors(options)
-      onParseStateChange?.({ hasParseError: true, message: parseErrorMessage })
+      onParseStateChange?.({ hasParseError: true, message: parseErrorMessage, fullMessage: parseErrorMessage })
       setIsRendering(false)
       return
     }
@@ -138,7 +135,6 @@ export function useDiagramRenderEffect(options: RenderOptions) {
     setIsRendering,
     setRenderError,
     setFullRenderError,
-    setIsErrorExpanded,
   ])
 
   useEffect(() => () => dom.clearPendingFitRaf(), [dom.clearPendingFitRaf])

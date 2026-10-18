@@ -57,6 +57,7 @@ function HomeDialogsHarness() {
         onClose: state.closeFullscreen,
         code: 'flowchart TD\nA --> B',
         parseErrorDetail: null,
+        parseErrorFullDetail: null,
         preferences: { useBeautifulRenderer: false, diagramPreviewMode: 'dark' },
       },
     }),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useImperativeHandle, forwardRef, useEffect } from 'react'
+import { useRef, useState, useImperativeHandle, forwardRef, useEffect, useCallback } from 'react'
 import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
 import { copyTextWithMountedCompletion } from '@/lib/clipboard'
 import { useSnackbar } from '@/app/components/Snackbar'
@@ -30,6 +30,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
     const copyStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const mountedRef = useRef(false)
+    const lineCount = value.split('\n').length
 
     useEffect(() => {
       mountedRef.current = true
@@ -42,10 +43,44 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       }
     }, [])
 
+    const scrollToLine = useCallback((lineNum: number) => {
+      const textarea = textareaRef.current
+      if (!textarea) return
+
+      const gutter = editorContainerRef.current?.querySelector('[data-gutter]') as HTMLElement | null
+      const style = window.getComputedStyle(textarea)
+      const fontSize = Number.parseFloat(style.fontSize) || 13
+      const lineHeightValue = Number.parseFloat(style.lineHeight)
+      const lineHeight = style.lineHeight.endsWith('px')
+        ? lineHeightValue
+        : fontSize * (Number.isFinite(lineHeightValue) ? lineHeightValue : 1.5)
+      const paddingTop = Number.parseFloat(style.paddingTop) || 0
+      const paddingBottom = Number.parseFloat(style.paddingBottom) || 0
+      const lineTop = paddingTop + (lineNum - 1) * lineHeight
+      const lineBottom = lineTop + lineHeight
+      const visibleHeight = Math.max(0, textarea.clientHeight - paddingBottom)
+      const viewportBottom = textarea.scrollTop + visibleHeight
+
+      if (lineTop < textarea.scrollTop || lineBottom > viewportBottom) {
+        const nextScrollTop = Math.max(0, lineTop - Math.max(0, (visibleHeight - lineHeight) / 2))
+        textarea.scrollTop = nextScrollTop
+        if (gutter) gutter.scrollTop = nextScrollTop
+      }
+    }, [])
+
     useImperativeHandle(ref, () => ({
       focus: () => textareaRef.current?.focus(),
-      highlightLine: (lineNum: number | null) => setHighlightedLine(lineNum),
-    }))
+      highlightLine: (lineNum: number | null) => {
+        if (lineNum == null) {
+          setHighlightedLine(null)
+          return
+        }
+
+        const visibleLine = Math.max(1, Math.min(lineNum, lineCount))
+        setHighlightedLine(visibleLine)
+        scrollToLine(visibleLine)
+      },
+    }), [lineCount, scrollToLine])
 
     const handleExampleClick = () => {
       const nextIndex = (currentExampleIndex + 1) % EXAMPLE_DIAGRAMS.length
@@ -86,8 +121,6 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     const handleLineNumberClick = (lineNum: number) => {
       setHighlightedLine(lineNum === highlightedLine ? null : lineNum)
     }
-
-    const lineCount = value.split('\n').length
 
     const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
       if (editorContainerRef.current) {

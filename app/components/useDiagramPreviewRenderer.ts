@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useDiagramRenderEffect } from './useDiagramRenderEffect'
 import { useDiagramPreviewDom } from './useDiagramPreviewDom'
 import type { DiagramColorMode } from './diagramRenderer'
@@ -6,6 +6,7 @@ import type { DiagramColorMode } from './diagramRenderer'
 interface ParseState {
   hasParseError: boolean
   message: string | null
+  fullMessage?: string | null
 }
 
 interface UseDiagramPreviewRendererOptions {
@@ -29,7 +30,6 @@ export function useDiagramPreviewRenderer({
 }: UseDiagramPreviewRendererOptions) {
   const [renderError, setRenderError] = useState<string | null>(null)
   const [fullRenderError, setFullRenderError] = useState<string | null>(null)
-  const [isErrorExpanded, setIsErrorExpanded] = useState(false)
   const [isRendering, setIsRendering] = useState(false)
   const dom = useDiagramPreviewDom(previewId)
 
@@ -44,7 +44,6 @@ export function useDiagramPreviewRenderer({
     dom,
     setRenderError,
     setFullRenderError,
-    setIsErrorExpanded,
     setIsRendering,
   }), [
     code,
@@ -57,20 +56,15 @@ export function useDiagramPreviewRenderer({
     dom,
     setRenderError,
     setFullRenderError,
-    setIsErrorExpanded,
     setIsRendering,
   ])
   useDiagramRenderEffect(renderOptions)
-
-  const onExpandError = useCallback(() => setIsErrorExpanded((expanded) => !expanded), [])
 
   return {
     containerRef: dom.containerRef,
     renderError,
     fullRenderError,
-    isErrorExpanded,
     isRendering,
-    onExpandError,
     fitDiagramToContainer: dom.fitDiagramToContainer,
   }
 }
