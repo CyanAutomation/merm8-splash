@@ -1,12 +1,19 @@
 'use client'
 
-import { ConnectionStatus } from '@/lib/useApiEndpoint'
-import { getParseStatusLabel, ParseStatus } from '@/lib/status'
+import type { ConnectionStatus } from '@/lib/useApiEndpoint'
+import { getParseStatusLabel } from '@/lib/status'
+import type { ParseStatus } from '@/lib/status'
+import { getConnectionStatusLabel } from '@/lib/uiCopy'
+import Button from './Button'
 
 interface StatusBarProps {
   connectionStatus: ConnectionStatus
   parseStatus: ParseStatus
   ruleCount: number
+  availableRuleCount?: number
+  rulesUnavailable?: boolean
+  rulesReady?: boolean
+  rulesLoading?: boolean
   violationCount: number
   apiEndpoint: string
   diagramType?: string | null
@@ -19,16 +26,6 @@ function truncateEndpoint(url: string, max = 40): string {
   return url.length > max ? `${url.slice(0, max - 3)}...` : url
 }
 
-function getConnectionLabel(status: ConnectionStatus): string {
-  const labels: Record<ConnectionStatus, string> = {
-    connected: 'API Connected',
-    error: 'API Error',
-    checking: 'Checking...',
-    disconnected: 'API Not Tested',
-  }
-  return labels[status]
-}
-
 function getConnectionColor(status: ConnectionStatus): string {
   if (status === 'connected') return 'var(--color-success)'
   if (status === 'error') return 'var(--color-error)'
@@ -39,8 +36,8 @@ function getConnectionColor(status: ConnectionStatus): string {
 function ConnectionSummary({ status }: { status: ConnectionStatus }) {
   return (
     <span className="status-bar-connection">
-      <span className={`status-dot status-dot-${status}`} />
-      {getConnectionLabel(status)}
+      <span className={`status-dot status-dot-${status}`} aria-hidden="true" />
+      API: {getConnectionStatusLabel(status)}
     </span>
   )
 }
@@ -62,25 +59,35 @@ function DiagramTypeSummary({ diagramType }: { diagramType?: string | null }) {
 
 function LintSupportSummary({ lintSupported }: { lintSupported?: boolean | null }) {
   if (lintSupported !== false) return null
-  return <span className="status-bar-lint-support" style={{ color: 'var(--color-info)' }}>Syntax checked only</span>
+  return <span className="status-bar-lint-support" style={{ color: 'var(--color-info)' }}>Syntax only</span>
 }
 
-function RuleSummary({ ruleCount, violationCount, parseStatus }: {
+function RuleSummary({ ruleCount, availableRuleCount, violationCount, rulesUnavailable, rulesReady, rulesLoading }: {
   ruleCount: number
+  availableRuleCount: number
   violationCount: number
-  parseStatus: ParseStatus
+  rulesUnavailable: boolean
+  rulesReady: boolean
+  rulesLoading: boolean
 }) {
-  const clean = parseStatus !== 'error' && violationCount === 0 && ruleCount > 0
-
   return (
     <span className="status-bar-rules">
-      {ruleCount} rule{ruleCount !== 1 ? 's' : ''} enabled
+      {rulesUnavailable
+        ? 'Using API defaults'
+        : rulesLoading
+          ? 'Loading rules…'
+          : !rulesReady
+            ? 'Test API to load rules'
+            : availableRuleCount === 0
+              ? 'No rules available'
+              : ruleCount === 0
+                ? 'No rules enabled'
+                : `${ruleCount} rule${ruleCount !== 1 ? 's' : ''} enabled`}
       {violationCount > 0 && (
         <span style={{ color: 'var(--color-error)', marginLeft: '4px' }}>
           · {violationCount} violation{violationCount !== 1 ? 's' : ''}
         </span>
       )}
-      {clean && <span style={{ color: 'var(--color-success)', marginLeft: '4px' }}>· clean</span>}
     </span>
   )
 }
@@ -98,14 +105,14 @@ function ConnectionActions({ status, endpoint, onTestConnection }: {
   return (
     <div className="status-bar-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
       {onTestConnection && (
-        <button
-          className="btn"
-          style={{ fontSize: '11px', padding: '2px 8px' }}
+        <Button
+          size="small"
+          aria-label="Test API connection"
           onClick={onTestConnection}
           disabled={status === 'checking' || !endpoint}
         >
-          Test
-        </button>
+          {status === 'checking' ? 'Testing…' : 'Test API'}
+        </Button>
       )}
       <div className="status-bar-endpoint" aria-label={`API endpoint ${endpoint}`} style={{ color: 'var(--color-text-secondary)' }}>{truncateEndpoint(endpoint)}</div>
     </div>
@@ -116,6 +123,10 @@ export default function StatusBar({
   connectionStatus,
   parseStatus,
   ruleCount,
+  availableRuleCount = ruleCount,
+  rulesUnavailable = false,
+  rulesReady = true,
+  rulesLoading = false,
   violationCount,
   apiEndpoint,
   diagramType,
@@ -146,8 +157,11 @@ export default function StatusBar({
         <LintSupportSummary lintSupported={lintSupported} />
         <RuleSummary
           ruleCount={ruleCount}
+          availableRuleCount={availableRuleCount}
           violationCount={violationCount}
-          parseStatus={parseStatus}
+          rulesUnavailable={rulesUnavailable}
+          rulesReady={rulesReady}
+          rulesLoading={rulesLoading}
         />
       </div>
 

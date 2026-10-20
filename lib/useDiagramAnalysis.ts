@@ -276,7 +276,7 @@ interface AnalysisStateActions {
   setDiagramType: (diagramType: string | null) => void
   setLintSupported: (lintSupported: boolean | null) => void
   setMetrics: (metrics: AnalysisMetrics | null) => void
-  setLastCompletedRun: (run: AnalysisRunResult) => void
+  setLastCompletedRun: (run: AnalysisRunResult | null) => void
 }
 
 interface AnalysisRequestArgs {
@@ -326,6 +326,7 @@ class AnalysisRequestCoordinator {
     this.state.setLintSupported(null)
     this.state.setMetrics(null)
     this.state.setIsAnalyzing(false)
+    this.state.setLastCompletedRun(null)
   }
 
   pruneCache(now: number): void {
@@ -620,6 +621,7 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     scheduling: AnalysisSchedulingOptions = {}
   ) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
+    coordinatorRef.current.cancel()
 
     const source = scheduling.source ?? 'input'
     const schedule = getScheduledDelay(
@@ -664,8 +666,9 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   }, [])
 
   const setCode = useCallback((newCode: string) => {
+    cancelAnalysis()
     setCodeState(newCode)
-  }, [])
+  }, [cancelAnalysis])
 
   return {
     code,

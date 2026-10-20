@@ -90,15 +90,15 @@ it('keeps result toolbar actions and metrics together in the results pane', () =
   const buttonWithTitle = (title: string) => Array.from(view.querySelectorAll('button'))
     .find((button) => button.title === title)
 
-  expect(view.textContent).toContain('Diagram Metrics')
+  expect(view.querySelector('.metrics-title')?.textContent?.trim()).toBe('Metrics')
   for (const [label, value] of [
-    ['Diagram Type', 'flowchart'],
+    ['Diagram type', 'flowchart'],
     ['Nodes', '2'],
     ['Edges', '1'],
-    ['Disconnected', '0'],
-    ['Duplicates', '0'],
-    ['Max Fan-in', '1'],
-    ['Max Fan-out', '1'],
+    ['Disconnected nodes', '0'],
+    ['Duplicate nodes', '0'],
+    ['Max fan-in', '1'],
+    ['Max fan-out', '1'],
   ]) {
     const metricLabel = Array.from(view.querySelectorAll('span'))
       .find((span) => span.textContent === label)
@@ -106,9 +106,9 @@ it('keeps result toolbar actions and metrics together in the results pane', () =
   }
 
   const metricsButton = buttonWithTitle('Toggle diagram metrics')
-  const semanticReviewButton = buttonWithTitle('Ask the configured API to review diagram clarity')
-  const rulesButton = buttonWithTitle('Configure rules')
-  const recheckButton = buttonWithTitle('Re-run analysis')
+  const semanticReviewButton = buttonWithTitle('Review the diagram’s clarity')
+  const rulesButton = buttonWithTitle('Manage enabled rules')
+  const recheckButton = buttonWithTitle('Run a check on this diagram')
   if (!metricsButton || !semanticReviewButton || !rulesButton || !recheckButton) {
     throw new Error('Expected each results toolbar action to render.')
   }
@@ -164,7 +164,7 @@ it('runs semantic review directly from the toolbar and displays the API result i
   }))
 
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
-    .find((button) => button.title === 'Ask the configured API to review diagram clarity')
+    .find((button) => button.title === 'Review the diagram’s clarity')
   if (!semanticReviewButton) throw new Error('Expected the semantic review action to render.')
 
   act(() => semanticReviewButton.click())
@@ -184,13 +184,13 @@ it('runs semantic review directly from the toolbar and displays the API result i
   )
   expect(view.textContent).toContain('Diagram purpose')
   expect(view.textContent).toContain('review-model')
-  expect(view.textContent).toContain('Back to analysis')
+  expect(view.textContent).toContain('Back to results')
   expect(view.querySelector('#semantic-review-api-key')).toBeNull()
 
-  const backButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Back to analysis')
+  const backButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Back to results')
   if (!backButton) throw new Error('Expected a way back to analysis results.')
   act(() => backButton.click())
-  expect(view.textContent).toContain('No violations found')
+  expect(view.textContent).toContain('Run a check to see results.')
 })
 
 it('shows a request error and lets the user retry from the results pane', async () => {
@@ -217,13 +217,13 @@ it('shows a request error and lets the user retry from the results pane', async 
     actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
   }))
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
-    .find((button) => button.title === 'Ask the configured API to review diagram clarity')
+    .find((button) => button.title === 'Review the diagram’s clarity')
   if (!semanticReviewButton) throw new Error('Expected the semantic review action to render.')
 
   await act(async () => semanticReviewButton.click())
   expect(view.querySelector('[role="alert"]')?.textContent).toContain('Could not connect to the API')
 
-  const retryButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Retry review')
+  const retryButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Try again')
   if (!retryButton) throw new Error('Expected a retry action after the request fails.')
   await act(async () => retryButton.click())
 
@@ -259,13 +259,13 @@ it('contains a rendering failure from malformed review data and provides recover
     actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
   }))
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
-    .find((button) => button.title === 'Ask the configured API to review diagram clarity')
+    .find((button) => button.title === 'Review the diagram’s clarity')
   if (!semanticReviewButton) throw new Error('Expected the semantic review action to render.')
 
   await act(async () => semanticReviewButton.click())
 
   expect(view.querySelector('[role="alert"]')?.textContent).toContain('Semantic review response could not be displayed.')
-  const retryButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Retry review')
+  const retryButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Try again')
   if (!retryButton) throw new Error('Expected an action to retry after a rendering failure.')
   await act(async () => retryButton.click())
 
@@ -288,7 +288,7 @@ it('aborts an in-flight semantic review when the results pane unmounts', () => {
     actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
   }))
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
-    .find((button) => button.title === 'Ask the configured API to review diagram clarity')
+    .find((button) => button.title === 'Review the diagram’s clarity')
   if (!semanticReviewButton) throw new Error('Expected the semantic review action to render.')
 
   act(() => semanticReviewButton.click())
@@ -316,7 +316,7 @@ it('aborts an in-flight review and discards its response when the diagram change
   }
   const view = mount(createElement(WorkspaceResults, props))
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
-    .find((button) => button.title === 'Ask the configured API to review diagram clarity')
+    .find((button) => button.title === 'Review the diagram’s clarity')
   if (!semanticReviewButton) throw new Error('Expected the semantic review action to render.')
 
   act(() => semanticReviewButton.click())
@@ -346,6 +346,6 @@ it('aborts an in-flight review and discards its response when the diagram change
     await Promise.resolve()
   })
 
-  expect(view.textContent).toContain('The diagram changed. Run a new review to see updated feedback.')
+  expect(view.textContent).toContain('The diagram has changed. Run a new review to see updated feedback.')
   expect(view.textContent).not.toContain('outdated-model')
 })

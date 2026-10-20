@@ -280,6 +280,32 @@ it('cancelAnalysis aborts in-flight analysis and resets state', async () => {
   expect(rerenderedHook.analyzeError).toBe(null)
 })
 
+it('clears completed results as soon as the diagram code changes', async () => {
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => ({
+      diagram_type: 'flowchart',
+      results: [{ rule_id: 'r1', severity: 'warning', message: 'Existing result', line: 1 }],
+    }),
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const completedHook = useDiagramAnalysis()
+  expect(completedHook.lastCompletedRun?.status).toBe('success')
+  expect(completedHook.violations).toHaveLength(1)
+
+  completedHook.setCode('graph TD\nA-->C')
+
+  reactMock.__prepareRender()
+  const editedHook = useDiagramAnalysis()
+  expect(editedHook.lastCompletedRun).toBe(null)
+  expect(editedHook.violations).toEqual([])
+})
+
 
 
 

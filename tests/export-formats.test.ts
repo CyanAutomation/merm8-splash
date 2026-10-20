@@ -10,14 +10,17 @@ const violations: Violation[] = [
 describe('export formats', () => {
   it('escapes markdown cells and emits a readable empty state', () => {
     expect(createMarkdownExport(violations)).toContain('| no\\|cycles | error | Edge<br>invalid | 4 |')
-    expect(createMarkdownExport([])).toContain('✓ No violations found')
+    expect(createMarkdownExport([])).toContain('No check results to export yet.')
+    expect(createMarkdownExport([], 'No issues found.')).toContain('No issues found.')
   })
 
   it('creates text summaries with optional line numbers', () => {
     expect(createTextExport(violations)).toBe(
       '[ERROR] no|cycles: Edge\ninvalid (line 4)\n[WARNING] clear-label: Use a label',
     )
-    expect(createTextExport([])).toBe('No violations found')
+    expect(createTextExport([])).toBe('No check results to export yet.')
+    expect(createTextExport([], 'Syntax is valid; lint results are not available.'))
+      .toBe('Syntax is valid; lint results are not available.')
   })
 
   it('creates fallback SARIF levels and source locations', () => {

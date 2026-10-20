@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import ToggleSlider from './ToggleSlider'
 import type { DiagramColorMode } from './diagramRenderer'
+import Button from './Button'
 
 interface DiagramPreviewToolbarProps {
   hasCode: boolean
@@ -25,31 +26,14 @@ interface ToolbarButtonProps {
 
 function ToolbarButton({ children, title, onClick, ariaLabel }: ToolbarButtonProps) {
   return (
-    <button
+    <Button
+      size="small"
       onClick={onClick}
       title={title}
       aria-label={ariaLabel}
-      style={{
-        padding: '4px 8px',
-        fontSize: '12px',
-        border: '1px solid var(--color-border)',
-        background: 'var(--color-bg-secondary)',
-        color: 'var(--color-text-primary)',
-        borderRadius: '3px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-      }}
-      onMouseEnter={(event) => {
-        event.currentTarget.style.background = 'var(--color-accent-primary)'
-        event.currentTarget.style.color = '#000'
-      }}
-      onMouseLeave={(event) => {
-        event.currentTarget.style.background = 'var(--color-bg-secondary)'
-        event.currentTarget.style.color = 'var(--color-text-primary)'
-      }}
     >
       {children}
-    </button>
+    </Button>
   )
 }
 
@@ -80,24 +64,24 @@ function DiagramToolbarActions({
       <ToolbarButton
         onClick={onToggleColorMode}
         title={`Switch to ${colorMode === 'dark' ? 'light' : 'dark'} diagram mode`}
-        ariaLabel={`Toggle diagram mode. Current mode: ${colorMode}`}
+        ariaLabel={`Use ${colorMode === 'dark' ? 'light' : 'dark'} diagram colors`}
       >
-        {colorMode === 'dark' ? '☾ Dark' : '☀︎ Light'}
+        {colorMode === 'dark' ? 'Dark diagram' : 'Light diagram'}
       </ToolbarButton>
-      <ToolbarButton onClick={onFit} title="Reset zoom to fit diagram in view">
-        ↔ Fit
+      <ToolbarButton onClick={onFit} title="Fit the diagram in the preview">
+        Fit diagram
       </ToolbarButton>
       {canExpand && onExpand && (
-        <ToolbarButton onClick={onExpand} title="Expand diagram to full screen">
-          ⛶ Expand
+        <ToolbarButton onClick={onExpand} title="Open the diagram in full screen">
+          Full screen
         </ToolbarButton>
       )}
       {canToggleBeautifulRenderer && onToggleBeautifulRenderer && (
         <ToggleSlider
           value={useBeautifulRenderer}
           onChange={onToggleBeautifulRenderer}
-          label="✨ Beautiful"
-          title="Toggle beautiful-mermaid renderer"
+          label="Styled renderer"
+          title="Use the styled Mermaid renderer"
         />
       )}
     </>
@@ -120,7 +104,7 @@ export default function DiagramPreviewToolbar({
   const isVisible = hasCode && !hasError
 
   return (
-    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+    <div className="diagram-preview-toolbar">
       <DiagramToolbarActions
         visible={isVisible}
         colorMode={colorMode}
@@ -133,8 +117,8 @@ export default function DiagramPreviewToolbar({
         onToggleBeautifulRenderer={onToggleBeautifulRenderer}
       />
       {isRendering && (
-        <span style={{ fontSize: '12px', color: 'var(--color-accent-primary)' }}>
-          ⠋ Rendering...
+        <span role="status" style={{ fontSize: '12px', color: 'var(--color-accent-primary)' }}>
+          Rendering diagram…
         </span>
       )}
     </div>

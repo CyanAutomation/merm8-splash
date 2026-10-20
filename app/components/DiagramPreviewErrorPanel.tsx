@@ -34,7 +34,7 @@ export default function DiagramPreviewErrorPanel({
       }}
     >
       <div style={{ marginBottom: '4px' }}>
-        <div style={{ fontWeight: 600 }}>⚠ Syntax Error</div>
+        <div style={{ fontWeight: 600 }}>Syntax error</div>
       </div>
       <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{message}</pre>
       <ErrorDetails fullMessage={fullMessage} hasMoreDetails={hasMoreDetails} />

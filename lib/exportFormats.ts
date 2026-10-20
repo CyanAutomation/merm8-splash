@@ -8,16 +8,19 @@ function escapeMarkdownCell(text: string): string {
     .replace(/\|/g, '\\|')
 }
 
-export function createMarkdownExport(results: Violation[]): string {
+export function createMarkdownExport(
+  results: Violation[],
+  emptyResultMessage = 'No check results to export yet.',
+): string {
   const lines = [
-    '# merm8 Analysis Results',
+    '# merm8 check results',
     '',
     `**Total violations:** ${results.length}`,
     '',
   ]
 
   if (results.length === 0) {
-    lines.push('✓ No violations found')
+    lines.push(emptyResultMessage)
   } else {
     lines.push('| Rule | Severity | Message | Line |')
     lines.push('|------|----------|---------|------|')
@@ -35,11 +38,14 @@ export function createMarkdownExport(results: Violation[]): string {
   return lines.join('\n')
 }
 
-export function createTextExport(results: Violation[]): string {
+export function createTextExport(
+  results: Violation[],
+  emptyResultMessage = 'No check results to export yet.',
+): string {
   const lines = results.map((violation) =>
     `[${violation.severity.toUpperCase()}] ${violation.rule_id}: ${violation.message}${violation.line != null ? ` (line ${violation.line})` : ''}`,
   )
-  return lines.join('\n') || 'No violations found'
+  return lines.join('\n') || emptyResultMessage
 }
 
 export function createFallbackSarif(results: Violation[]) {

@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Rule, deriveDisplayName } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
 import { severityColor } from '@/lib/severity'
+import Button from './Button'
 
 interface RulesPanelProps {
   rules: Rule[]
@@ -13,6 +15,7 @@ interface RulesPanelProps {
   onDisableAll: () => void
   isLoading: boolean
   isUnavailable: boolean
+  rulesReady?: boolean
   diagramType: string | null
 }
 
@@ -41,6 +44,8 @@ function RulesPanelHeader({
   onToggle,
   onEnableAll,
   onDisableAll,
+  isLoading,
+  isUnavailable,
 }: {
   collapsed: boolean
   badgeLabel: string
@@ -48,49 +53,25 @@ function RulesPanelHeader({
   onToggle: () => void
   onEnableAll: () => void
   onDisableAll: () => void
+  isLoading: boolean
+  isUnavailable: boolean
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: collapsed ? 0 : '8px',
-        cursor: 'pointer',
-      }}
-      onClick={onToggle}
-    >
-      <div className="panel-heading" style={{ marginBottom: 0 }}>
-        {collapsed ? '▸' : '▾'} Rules{' '}
-        <span
-          style={{
-            background: 'var(--color-accent-primary)',
-            color: 'var(--color-bg-primary)',
-            padding: '0 8px',
-            fontSize: '12px',
-            borderRadius: '8px',
-            marginLeft: '4px',
-          }}
-        >
-          {badgeLabel}
-        </span>
-      </div>
-      {!collapsed && displayedRuleCount > 0 && (
-        <div style={{ display: 'flex', gap: '4px' }} onClick={(event) => event.stopPropagation()}>
-          <button
-            className="btn"
-            style={{ fontSize: '12px', padding: '4px 12px' }}
-            onClick={onEnableAll}
-          >
-            All visible
-          </button>
-          <button
-            className="btn"
-            style={{ fontSize: '12px', padding: '4px 12px' }}
-            onClick={onDisableAll}
-          >
-            None visible
-          </button>
+    <div className="rules-panel-header">
+      <Button
+        variant="quiet"
+        className="rules-panel-toggle"
+        aria-expanded={!collapsed}
+        aria-controls="rules-content"
+        onClick={onToggle}
+      >
+        <span className="panel-heading">Rules</span>
+        <span className="rules-count">{badgeLabel}</span>
+      </Button>
+      {!collapsed && !isLoading && !isUnavailable && displayedRuleCount > 0 && (
+        <div className="rules-panel-actions">
+          <Button onClick={onEnableAll}>Enable all</Button>
+          <Button onClick={onDisableAll}>Disable all</Button>
         </div>
       )}
     </div>
@@ -109,15 +90,15 @@ function RulesDescription({
   diagramType: string | null
 }) {
   const message = isUnavailable
-    ? 'Analysis uses server defaults for linting.'
+    ? 'Checks use the API’s default rules.'
     : hasNoRulesForDiagramType
-      ? `No lint rules are available for ${diagramType} diagrams on this API.`
+      ? `No checks are available for ${diagramType} diagrams.`
       : displayedRuleCount > 0
-        ? 'Analysis uses your selected rules.'
-        : 'Connect and test API to fetch rules metadata.'
+        ? 'Checks use the rules you’ve selected.'
+        : 'Test the API connection to load rules.'
 
   return (
-    <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', marginBottom: '8px' }}>
+    <div className="rules-description">
       {message}
     </div>
   )
@@ -131,43 +112,27 @@ function RuleRow({ rule, enabled, onToggle }: {
   const color = severityColor(rule.severity)
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '8px',
-        padding: '6px 0',
-        borderBottom: '1px solid rgba(68,68,68,0.3)',
-      }}
-    >
+    <div className="rule-row">
       <input
         type="checkbox"
         id={`rule-${rule.id}`}
         checked={enabled}
         onChange={onToggle}
-        style={{ marginTop: '2px', cursor: 'pointer', accentColor: 'var(--color-accent-primary)' }}
+        className="rule-checkbox"
       />
-      <label htmlFor={`rule-${rule.id}`} style={{ cursor: 'pointer', flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--color-text-primary)', fontWeight: 600 }}>
+      <label htmlFor={`rule-${rule.id}`} className="rule-label">
+        <div className="rule-name-row">
+          <span className="rule-name">
             {deriveDisplayName(rule.id)}
           </span>
-          <span style={{ fontSize: '10px', color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>
+          <span className="rule-id">
             ({rule.id})
           </span>
-          <span
-            style={{
-              fontSize: '12px',
-              color,
-              border: `1px solid ${color}`,
-              padding: '2px 8px',
-              borderRadius: '8px',
-            }}
-          >
+          <span className="rule-severity" style={{ '--severity-color': color } as CSSProperties}>
             {rule.severity}
           </span>
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+        <div className="rule-description">
           {rule.description}
         </div>
       </label>
@@ -178,6 +143,7 @@ function RuleRow({ rule, enabled, onToggle }: {
 function RulesContent({
   isLoading,
   isUnavailable,
+  rulesReady,
   displayedRules,
   enabledRules,
   onToggleRule,
@@ -186,6 +152,7 @@ function RulesContent({
 }: {
   isLoading: boolean
   isUnavailable: boolean
+  rulesReady: boolean
   displayedRules: Rule[]
   enabledRules: string[]
   onToggleRule: (ruleId: string) => void
@@ -194,14 +161,16 @@ function RulesContent({
 }) {
   let content
   if (isLoading) {
-    content = <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>⠋ Loading rules...</div>
+    content = <div className="rules-empty-state" role="status">Loading rules…</div>
   } else if (isUnavailable) {
-    content = <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>Rules metadata could not be loaded. Analysis can continue using the API&apos;s server defaults.</div>
+    content = <div className="rules-empty-state">We couldn’t load the rules. Checks can still use the API’s defaults.</div>
+  } else if (!rulesReady) {
+    content = <div className="rules-empty-state">Test API to load rules.</div>
   } else if (displayedRules.length === 0) {
     const message = hasNoRulesForDiagramType
-      ? `No lint rules are available for ${diagramType} diagrams on this API.`
-      : 'No rules loaded yet. Connect and test API to fetch rules metadata.'
-    content = <div style={{ color: 'var(--color-text-secondary)', fontSize: '12px', padding: '8px 0' }}>{message}</div>
+      ? `No rules are available for ${diagramType} diagrams.`
+      : 'The API hasn’t provided any rules for this diagram type.'
+    content = <div className="rules-empty-state">{message}</div>
   } else {
     content = displayedRules.map((rule) => (
       <RuleRow
@@ -213,18 +182,25 @@ function RulesContent({
     ))
   }
 
-  return <div style={{ overflow: 'auto', maxHeight: '250px' }}>{content}</div>
+  return <div className="rules-list">{content}</div>
 }
 
 export default function RulesPanel(props: RulesPanelProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const rulesReady = props.rulesReady ?? props.rules.length > 0
   const view = getRulesPanelView(props.rules, props.enabledRules, props.diagramType)
   const badgeLabel = props.isUnavailable
     ? 'Server defaults'
-    : `${view.applicableEnabledCount}/${view.displayedRules.length}`
+    : props.isLoading
+      ? 'Loading…'
+      : !rulesReady
+        ? 'Not loaded'
+        : view.displayedRules.length === 0
+          ? 'No rules'
+          : `${view.applicableEnabledCount}/${view.displayedRules.length}`
 
   return (
-    <div className="panel" style={{ height: '100%' }}>
+    <div className="panel rules-panel">
       <RulesPanelHeader
         collapsed={collapsed}
         badgeLabel={badgeLabel}
@@ -232,26 +208,29 @@ export default function RulesPanel(props: RulesPanelProps) {
         onToggle={() => setCollapsed(!collapsed)}
         onEnableAll={props.onEnableAll}
         onDisableAll={props.onDisableAll}
+        isLoading={props.isLoading}
+        isUnavailable={props.isUnavailable}
       />
-      {!collapsed && !props.isLoading && (
-        <RulesDescription
-          isUnavailable={props.isUnavailable}
-          hasNoRulesForDiagramType={view.hasNoRulesForDiagramType}
-          displayedRuleCount={view.displayedRules.length}
-          diagramType={props.diagramType}
-        />
-      )}
-      {!collapsed && (
+      <div id="rules-content" hidden={collapsed}>
+        {!props.isLoading && (view.displayedRules.length > 0 || props.isUnavailable) && (
+          <RulesDescription
+            isUnavailable={props.isUnavailable}
+            hasNoRulesForDiagramType={view.hasNoRulesForDiagramType}
+            displayedRuleCount={view.displayedRules.length}
+            diagramType={props.diagramType}
+          />
+        )}
         <RulesContent
           isLoading={props.isLoading}
           isUnavailable={props.isUnavailable}
+          rulesReady={rulesReady}
           displayedRules={view.displayedRules}
           enabledRules={props.enabledRules}
           onToggleRule={props.onToggleRule}
           hasNoRulesForDiagramType={view.hasNoRulesForDiagramType}
           diagramType={props.diagramType}
         />
-      )}
+      </div>
     </div>
   )
 }
