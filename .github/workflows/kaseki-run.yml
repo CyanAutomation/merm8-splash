@@ -1,0 +1,282 @@
+name: Kaseki Remote Run
+
+on:
+  workflow_call:
+    inputs:
+      payload:
+        description: JSON payload for the Kaseki run, without an idempotency key.
+        required: true
+        type: string
+      task_description:
+        description: Short description included in the run summary.
+        required: true
+        type: string
+      allowlist:
+        description: Comma-separated files the Kaseki agent may change.
+        required: true
+        type: string
+      validation_command:
+        description: Validation command sent to Kaseki and shown in the summary.
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  run:
+    name: Run Kaseki task
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    environment: kaseki-agent
+    env:
+      KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}
+      REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+      REF: main
+      TASK_DESCRIPTION: ${{ inputs.task_description }}
+      ALLOWLIST: ${{ inputs.allowlist }}
+      VALIDATION_COMMAND: ${{ inputs.validation_command }}
+
+    steps:
+      - name: Validate Kaseki configuration and required tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+          [[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]] || {
+            echo "::error title=Invalid Kaseki controller URL::Use the approved HTTPS controller URL."
+            exit 1
+          }
+
+          command -v jq >/dev/null
+          command -v node >/dev/null
+          command -v timeout >/dev/null
+          command -v curl >/dev/null
+
+      - name: Verify controller health
+        uses: CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@30db5d15e117b8d8de13eb66766d48cf6b7d618b
+        with:
+          base-url: ${{ vars.KASEKI_BASE_URL }}
+
+      - name: Verify controller readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors \
+            --connect-timeout 10 --max-time 20 \
+            --output "$response_file" \
+            "$KASEKI_BASE_URL/ready"
+
+          jq -e '.status == "ready"' "$response_file" >/dev/null
+
+      - name: Verify gateway connectivity and authentication
+        shell: bash
+        env:
+          KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured as an environment secret}"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 \
+            --connect-timeout 10 --max-time 60 \
+            --output "$response_file" \
+            --header "Authorization: Bearer $KASEKI_API_TOKEN" \
+            "$KASEKI_BASE_URL/api/v1/gateway-test?stage=1"
+
+          jq -e '.status == "ok"' "$response_file" >/dev/null
+
+      - name: Submit Kaseki run
+        id: submit
+        shell: bash
+        env:
+          KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
+          PAYLOAD_JSON: ${{ inputs.payload }}
+        run: |
+          set -euo pipefail
+
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
+          : "${PAYLOAD_JSON:?Kaseki request payload is missing}"
+
+          idempotency_key="$(
+            node <<'NODE'
+            const { createHash } = require('node:crypto');
+            const namespace = Buffer.from('6ba7b8119dad11d180b400c04fd430c8', 'hex');
+            const identity = [
+              process.env.GITHUB_REPOSITORY,
+              process.env.GITHUB_WORKFLOW,
+              process.env.GITHUB_RUN_ID,
+            ];
+
+            if (identity.some((value) => !value)) {
+              throw new Error('GitHub run identity is incomplete');
+            }
+
+            const digest = createHash('sha1')
+              .update(namespace)
+              .update(JSON.stringify(identity), 'utf8')
+              .digest()
+              .subarray(0, 16);
+            digest[6] = (digest[6] & 0x0f) | 0x50;
+            digest[8] = (digest[8] & 0x3f) | 0x80;
+
+            const hex = digest.toString('hex');
+            process.stdout.write(
+              `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}\n`,
+            );
+          NODE
+          )"
+
+          payload="$(jq -c --arg idempotencyKey "$idempotency_key" \
+            '. + {idempotencyKey: $idempotencyKey}' <<< "$PAYLOAD_JSON")"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          http_status="$(
+            curl \
+              --silent \
+              --show-error \
+              --retry 3 \
+              --retry-all-errors \
+              --connect-timeout 10 \
+              --max-time 60 \
+              --output "$response_file" \
+              --write-out '%{http_code}' \
+              --request POST "$KASEKI_BASE_URL/api/v1/runs" \
+              --header "Authorization: Bearer $KASEKI_API_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload"
+          )"
+
+          if [[ ! "$http_status" =~ ^2 ]]; then
+            echo "::error title=Kaseki submission failed::Kaseki returned HTTP $http_status"
+
+            {
+              echo "## Kaseki submission failed"
+              echo
+              echo "Kaseki returned HTTP \`$http_status\`."
+              echo
+              echo "The controller response body is intentionally omitted from logs and summaries."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            exit 1
+          fi
+
+          run_id="$(jq -er '.id | strings | select(test("^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"))' "$response_file")"
+
+          printf 'run_id=%s\n' "$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for Kaseki completion
+        id: wait
+        shell: bash
+        env:
+          KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}
+          RUN_ID: ${{ steps.submit.outputs.run_id }}
+        run: |
+          set -euo pipefail
+
+          : "${KASEKI_BASE_URL:?KASEKI_BASE_URL is not configured}"
+          : "${KASEKI_API_TOKEN:?KASEKI_API_TOKEN is not configured}"
+          : "${RUN_ID:?Kaseki did not return a run ID}"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+
+          # Kaseki allows three hours; leave five minutes for final polling.
+          poll_deadline=$((SECONDS + 11100))
+          while (( SECONDS < poll_deadline )); do
+            remaining_seconds=$((poll_deadline - SECONDS))
+            request_timeout=60
+            if (( remaining_seconds < request_timeout )); then
+              request_timeout=$remaining_seconds
+            fi
+            if (( request_timeout <= 0 )); then
+              break
+            fi
+
+            if ! timeout --foreground "${request_timeout}s" curl \
+              --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors \
+              --connect-timeout 10 --max-time "$request_timeout" \
+              --output "$response_file" \
+              --header "Authorization: Bearer $KASEKI_API_TOKEN" \
+              "$KASEKI_BASE_URL/api/v1/runs/$RUN_ID/status"; then
+              if (( SECONDS >= poll_deadline )); then
+                break
+              fi
+              echo "::error title=Kaseki status poll failed::Unable to query the Kaseki run status."
+              exit 1
+            fi
+
+            status="$(jq -er '.status' "$response_file")"
+
+            case "$status" in
+              completed)
+                echo "status=$status" >> "$GITHUB_OUTPUT"
+                echo "Kaseki status: completed"
+                exit 0
+                ;;
+
+              failed)
+                echo "status=$status" >> "$GITHUB_OUTPUT"
+                echo "Kaseki status: failed"
+                exit 1
+                ;;
+
+              queued|running)
+                echo "Kaseki status: $status"
+                sleep_seconds=60
+                remaining_seconds=$((poll_deadline - SECONDS))
+                if (( remaining_seconds < sleep_seconds )); then
+                  sleep_seconds=$remaining_seconds
+                fi
+                if (( sleep_seconds > 0 )); then
+                  sleep "$sleep_seconds"
+                fi
+                ;;
+
+              *)
+                echo "::error title=Unexpected Kaseki status::Controller returned an unsupported status"
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "::error title=Kaseki run timed out::No terminal status after 185 minutes"
+          exit 1
+
+      - name: Publish Kaseki run summary
+        if: always()
+        shell: bash
+        env:
+          RUN_ID: ${{ steps.submit.outputs.run_id || 'not submitted' }}
+          FINAL_STATUS: ${{ steps.wait.outputs.status || 'not completed' }}
+        run: |
+          {
+            echo "## Kaseki run"
+            echo
+            echo "| Setting | Value |"
+            echo "|---|---|"
+            echo "| Repository | \`$REPO_URL\` |"
+            echo "| Ref | \`$REF\` |"
+            echo "| Task | $TASK_DESCRIPTION |"
+            echo "| Allowed paths | \`$ALLOWLIST\` |"
+            echo "| Validation | \`$VALIDATION_COMMAND\` |"
+            echo "| Mode | \`patch\` → full PR (not draft) |"
+            echo "| Timeout | 3 hours |"
+            echo "| Maximum diff | 100 KiB |"
+            echo "| Kaseki run | \`$RUN_ID\` |"
+            echo "| Final status | \`$FINAL_STATUS\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
