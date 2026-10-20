@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest'
+import { updateWorkflowToolPins } from '../scripts/update-workflow-tool-pins.mjs'
+
+const workflow = [
+  "actionlint_version='1.7.12'",
+  `actionlint_sha256='${'a'.repeat(64)}'`,
+  "zizmor_version='1.30.1'",
+  `zizmor_sha256='${'b'.repeat(64)}'`,
+].join('\n')
+
+describe('updateWorkflowToolPins', () => {
+  it('updates each analyzer version and checksum together', () => {
+    const updated = updateWorkflowToolPins(workflow, {
+      actionlint: { version: '1.8.0', sha256: 'c'.repeat(64) },
+      zizmor: { version: '1.31.0', sha256: 'd'.repeat(64) },
+    })
+
+    expect(updated).toContain("actionlint_version='1.8.0'")
+    expect(updated).toContain(`actionlint_sha256='${'c'.repeat(64)}'`)
+    expect(updated).toContain("zizmor_version='1.31.0'")
+    expect(updated).toContain(`zizmor_sha256='${'d'.repeat(64)}'`)
+    expect(updated).not.toContain("actionlint_version='1.7.12'")
+    expect(updated).not.toContain("zizmor_version='1.30.1'")
+  })
+
+  it('leaves the workflow unchanged when versions and checksums match', () => {
+    expect(updateWorkflowToolPins(workflow, {
+      actionlint: { version: '1.7.12', sha256: 'a'.repeat(64) },
+      zizmor: { version: '1.30.1', sha256: 'b'.repeat(64) },
+    })).toBe(workflow)
+  })
+
+  it('rejects invalid versions, checksums, and missing pin declarations', () => {
+    expect(() => updateWorkflowToolPins(workflow, {
+      actionlint: { version: 'latest', sha256: 'c'.repeat(64) },
+      zizmor: { version: '1.31.0', sha256: 'd'.repeat(64) },
+    })).toThrow(/Invalid actionlint release/)
+
+    expect(() => updateWorkflowToolPins(workflow, {
+      actionlint: { version: '1.8.0', sha256: 'not-a-sha256' },
+      zizmor: { version: '1.31.0', sha256: 'd'.repeat(64) },
+    })).toThrow(/Invalid actionlint release/)
+
+    expect(() => updateWorkflowToolPins(workflow.replace("zizmor_version='1.30.1'\n", ''), {
+      actionlint: { version: '1.8.0', sha256: 'c'.repeat(64) },
+      zizmor: { version: '1.31.0', sha256: 'd'.repeat(64) },
+    })).toThrow(/exactly one zizmor_version pin/)
+  })
+})

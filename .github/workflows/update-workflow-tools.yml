@@ -1,0 +1,82 @@
+name: Update GitHub Actions analyzers
+
+on:
+  schedule:
+    - cron: '0 7 1 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: update-workflow-tools-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Check analyzer releases
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Update and validate analyzer pins
+        id: update
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/update-workflow-tool-pins.mjs
+      - name: Prepare pull request file
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          mkdir -p workflow-update
+          cp .github/workflows/ci.yml workflow-update/ci.yml
+      - name: Upload updated CI workflow
+        if: steps.update.outputs.changed == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: workflow-tool-pins
+          path: workflow-update/ci.yml
+          if-no-files-found: error
+          retention-days: 1
+
+  open-pull-request:
+    name: Open analyzer update pull request
+    needs: prepare
+    if: needs.prepare.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: workflow-tool-pins
+          path: workflow-update
+      - name: Apply validated analyzer pins
+        run: cp workflow-update/ci.yml .github/workflows/ci.yml
+      - name: Create analyzer update pull request
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        with:
+          token: ${{ github.token }}
+          base: main
+          branch: automation/workflow-tool-pins
+          delete-branch: true
+          commit-message: 'chore: update GitHub Actions analyzer pins'
+          title: 'chore: update GitHub Actions analyzer pins'
+          body: >-
+            This pull request updates the pinned actionlint and zizmor releases and
+            their SHA-256 checksums. The new binaries passed actionlint and zizmor
+            against the workflow files before this pull request was opened.
