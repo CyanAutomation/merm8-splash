@@ -98,9 +98,9 @@ export default function DiagramPreview({
   }
 
   return (
-    <div className="panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <div className="panel-heading" style={{ marginBottom: 0 }}>◈ Diagram Preview</div>
+    <div className="panel diagram-preview-panel">
+      <div className="diagram-preview-header">
+        <h2 className="panel-heading preview-heading">Diagram preview</h2>
         <DiagramPreviewToolbar
           hasCode={hasCode}
           hasError={hasError}
@@ -124,21 +124,11 @@ export default function DiagramPreview({
       <div
         ref={containerRef}
         data-preview-id={previewId}
-        style={{
-          flex: 1,
-          overflow: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '200px',
-          background: 'var(--color-bg-primary)',
-          border: '1px solid var(--color-border)',
-          padding: '16px',
-        }}
+        className="diagram-preview-canvas"
       >
         {!hasCode && (
-          <span style={{ color: 'var(--color-text-secondary)', fontSize: '12px' }}>
-            No diagram code yet
+          <span className="preview-empty-state">
+            Add Mermaid code to see a preview.
           </span>
         )}
       </div>

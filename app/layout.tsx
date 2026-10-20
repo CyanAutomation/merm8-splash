@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { PRODUCT_DESCRIPTION, PRODUCT_NAME } from '@/lib/uiCopy'
 
 export const metadata: Metadata = {
-  title: 'merm8-splash | Mermaid Linter',
-  description: 'Interactive Bubble Tea-inspired UI for the merm8 Mermaid linter API',
+  title: `${PRODUCT_NAME} | Mermaid diagram checker`,
+  description: PRODUCT_DESCRIPTION,
   icons: {
     icon: '/favicon.svg',
   },

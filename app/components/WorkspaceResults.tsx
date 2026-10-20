@@ -3,8 +3,11 @@
 import type { RefObject } from 'react'
 import { useCallback, useState } from 'react'
 import type { AnalysisMetrics, Rule, Violation } from '@/lib/api'
+import type { AnalysisResultState } from '@/lib/analysisResultState'
+import { getExportEmptyMessage } from '@/lib/uiCopy'
 import type { ResultsPanelRef } from './ResultsPanel'
 import ErrorBoundary from './ErrorBoundary'
+import Button from './Button'
 import ExportDropdown from './ExportDropdown'
 import ResultsPanel from './ResultsPanel'
 import SemanticReviewResults from './SemanticReviewResults'
@@ -13,6 +16,7 @@ import { useSemanticReview } from './useSemanticReview'
 export interface WorkspaceResultsProps {
   analysis: {
     violations: Violation[]
+    resultState?: AnalysisResultState
     isAnalyzing: boolean
     analyzeError: string | null
     analysisHints: string[]
@@ -54,10 +58,10 @@ function SemanticReviewRenderError({
         Semantic review response could not be displayed. Check the endpoint response and try again.
       </p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-        <button type="button" className="btn" onClick={onBack}>Back to analysis</button>
-        <button type="button" className="btn btn-primary" onClick={onRetry} disabled={isLoading}>
-          {isLoading ? 'Reviewing…' : 'Retry review'}
-        </button>
+        <Button onClick={onBack}>Back to results</Button>
+        <Button variant="primary" onClick={onRetry} disabled={isLoading}>
+          {isLoading ? 'Reviewing…' : 'Try again'}
+        </Button>
       </div>
     </div>
   )
@@ -65,26 +69,16 @@ function SemanticReviewRenderError({
 
 function MetricItem({ label, value }: { label: string; value: string | number }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '4px 8px',
-        background: 'var(--color-bg-primary)',
-        borderRadius: '4px',
-      }}
-    >
-      <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
-      <span style={{ color: 'var(--color-text-primary)', fontWeight: 600, fontFamily: 'monospace' }}>
-        {value}
-      </span>
+    <div className="metric-item">
+      <span className="metric-label">{label}</span>
+      <span className="metric-value">{value}</span>
     </div>
   )
 }
 
 export default function WorkspaceResults({ analysis, exportOptions, metrics, actions }: WorkspaceResultsProps) {
   const hasErrors = analysis.violations.some((violation) => violation.severity === 'error')
+  const resultState = analysis.resultState ?? (analysis.violations.length > 0 ? 'violations' : 'ready')
   const [showSemanticReview, setShowSemanticReview] = useState(false)
   const [semanticReviewAttempt, setSemanticReviewAttempt] = useState(0)
   const {
@@ -104,26 +98,17 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
   }, [runSemanticReview])
 
   return (
-    <div className="workspace-results-content" style={{ padding: '8px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', gap: '8px', flexWrap: 'wrap' }}>
-        <div className="panel-heading" style={{ marginBottom: 0 }}>
-          ▦ Results{' '}
+    <div className="workspace-results-content">
+      <div className="workspace-results-toolbar">
+        <h2 className="panel-heading" style={{ marginBottom: 0 }}>
+          Results{' '}
           {analysis.violations.length > 0 && (
-            <span
-              style={{
-                background: hasErrors ? 'var(--color-error)' : 'var(--color-warning)',
-                color: 'var(--color-bg-primary)',
-                padding: '0 6px',
-                fontSize: '12px',
-                borderRadius: '8px',
-                marginLeft: '4px',
-              }}
-            >
+            <span className="results-count" data-severity={hasErrors ? 'error' : 'warning'}>
               {analysis.violations.length}
             </span>
           )}
-        </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        </h2>
+        <div className="workspace-results-actions">
           <ErrorBoundary>
             <ExportDropdown
               results={analysis.violations}
@@ -131,45 +116,39 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
               endpoint={exportOptions.endpoint}
               enabledRules={exportOptions.enabledRules}
               rulesMetadata={exportOptions.rules}
+              emptyResultMessage={getExportEmptyMessage(resultState)}
             />
           </ErrorBoundary>
-          <button
-            className="btn"
-            style={{
-              fontSize: '12px',
-              padding: '4px 12px',
-              ...(metrics.visible ? { background: 'var(--color-accent-primary)', color: '#000' } : {}),
-            }}
+          <Button
+            variant={metrics.visible ? 'primary' : 'secondary'}
+            aria-pressed={metrics.visible}
             onClick={metrics.onToggle}
             title="Toggle diagram metrics"
             disabled={!metrics.data}
           >
-            📊 Metrics
-          </button>
-          <button
-            className="btn"
-            style={{ fontSize: '12px', padding: '4px 12px' }}
+            Metrics
+          </Button>
+          <Button
             onClick={openSemanticReview}
             disabled={!exportOptions.code.trim() || analysis.isAnalyzing || semanticReviewLoading}
-            title="Ask the configured API to review diagram clarity"
+            title="Review the diagram’s clarity"
           >
-            ✦ Semantic review
-          </button>
-          <button className="btn" style={{ fontSize: '12px', padding: '4px 12px' }} onClick={actions.onOpenRules} title="Configure rules">
-            ⊞ Rules
-          </button>
-          <button
-            className="btn"
-            style={{ fontSize: '12px', padding: '4px 12px' }}
+            Diagram review
+          </Button>
+          <Button onClick={actions.onOpenRules} title="Manage enabled rules">
+            Rules
+          </Button>
+          <Button
+            variant="primary"
             onClick={actions.onRecheck}
             disabled={!actions.canRecheck}
-            title="Re-run analysis"
+            title="Run a check on this diagram"
           >
-            ↺ Check
-          </button>
+            Run check
+          </Button>
         </div>
       </div>
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div className="workspace-results-body">
         {showSemanticReview ? (
           <ErrorBoundary
             resetKeys={[semanticReviewAttempt, exportOptions.endpoint, exportOptions.code]}
@@ -194,6 +173,7 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
             <ResultsPanel
               ref={analysis.resultsRef}
               results={analysis.violations}
+              resultState={resultState}
               isAnalyzing={analysis.isAnalyzing}
               analyzeError={analysis.analyzeError}
               analysisHints={analysis.analysisHints}
@@ -206,29 +186,18 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
         )}
       </div>
       {metrics.visible && metrics.data && (
-        <div
-          style={{
-            marginTop: '8px',
-            padding: '12px',
-            background: 'var(--color-bg-secondary)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '4px',
-            fontSize: '12px',
-          }}
-        >
-          <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '8px' }}>
-            Diagram Metrics
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
-            <MetricItem label="Diagram Type" value={metrics.data.diagramType} />
+        <section className="metrics-panel" aria-labelledby="metrics-title">
+          <h3 className="metrics-title" id="metrics-title">Metrics</h3>
+          <div className="metrics-grid">
+            <MetricItem label="Diagram type" value={metrics.data.diagramType} />
             <MetricItem label="Nodes" value={metrics.data.nodeCount} />
             <MetricItem label="Edges" value={metrics.data.edgeCount} />
-            <MetricItem label="Disconnected" value={metrics.data.disconnectedNodeCount} />
-            <MetricItem label="Duplicates" value={metrics.data.duplicateNodeCount} />
-            <MetricItem label="Max Fan-in" value={metrics.data.maxFanin} />
-            <MetricItem label="Max Fan-out" value={metrics.data.maxFanout} />
+            <MetricItem label="Disconnected nodes" value={metrics.data.disconnectedNodeCount} />
+            <MetricItem label="Duplicate nodes" value={metrics.data.duplicateNodeCount} />
+            <MetricItem label="Max fan-in" value={metrics.data.maxFanin} />
+            <MetricItem label="Max fan-out" value={metrics.data.maxFanout} />
           </div>
-        </div>
+        </section>
       )}
     </div>
   )

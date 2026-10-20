@@ -13,6 +13,7 @@ interface ExportDropdownProps {
   endpoint: string
   enabledRules: string[]
   rulesMetadata: Rule[]
+  emptyResultMessage?: string
 }
 
 export default function ExportDropdown({
@@ -21,12 +22,12 @@ export default function ExportDropdown({
   endpoint,
   enabledRules,
   rulesMetadata,
+  emptyResultMessage = 'No check results to export yet.',
 }: ExportDropdownProps) {
   const snackbar = useSnackbar()
   const [open, setOpen] = useState(false)
   const [copying, setCopying] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const isMountedRef = useRef(true)
   const isExportingRef = useRef(false)
@@ -146,11 +147,21 @@ export default function ExportDropdown({
     })
 
   const exportJson = () => {
-    downloadFile(JSON.stringify({ results, code }, null, 2), 'merm8-analysis.json', 'application/json')
+    downloadFile(JSON.stringify({ results, code }, null, 2), 'merm8-check-results.json', 'application/json')
     closeDropdown()
   }
-  const exportMarkdown = () => copyFormat(createMarkdownExport(results), 'markdown', 'merm8-analysis.md', 'text/markdown')
-  const exportText = () => copyFormat(createTextExport(results), 'text', 'merm8-analysis.txt', 'text/plain')
+  const exportMarkdown = () => copyFormat(
+    createMarkdownExport(results, emptyResultMessage),
+    'markdown',
+    'merm8-check-results.md',
+    'text/markdown',
+  )
+  const exportText = () => copyFormat(
+    createTextExport(results, emptyResultMessage),
+    'text',
+    'merm8-check-results.txt',
+    'text/plain',
+  )
   const exportSarif = () => exportSarifWithFallback({
     endpoint,
     code,
@@ -169,9 +180,8 @@ export default function ExportDropdown({
         open={open}
         copying={copying}
         isExporting={isExporting}
-        hoveredItem={hoveredItem}
         onToggleOpen={toggleDropdown}
-        onHover={setHoveredItem}
+        onClose={closeDropdown}
         onExportSarif={() => runExportAction(exportSarif)}
         onExportJson={() => runExportAction(exportJson)}
         onExportMarkdown={() => runExportAction(exportMarkdown)}

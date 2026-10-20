@@ -50,6 +50,7 @@ function HomeDialogsHarness() {
         onDisableAll: () => undefined,
         isLoading: false,
         isUnavailable: false,
+        rulesReady: false,
         diagramType: 'flowchart',
       },
       fullscreen: {
@@ -122,25 +123,25 @@ afterEach(() => {
 const dialogTransitions = [
   {
     key: 'reset',
-    title: 'Reset Panel Sizes?',
+    title: 'Reset layout?',
     open: () => currentState?.openResetConfirmation(),
     close: () => currentState?.closeResetConfirmation(),
   },
   {
     key: 'rules',
-    title: 'Rules Configuration',
+    title: 'Rules',
     open: () => currentState?.openRules(),
     close: () => currentState?.closeRules(),
   },
   {
     key: 'api',
-    title: 'API Configuration',
+    title: 'API settings',
     open: () => currentState?.openApiConfiguration(),
     close: () => currentState?.closeApiConfiguration(),
   },
   {
     key: 'fullscreen',
-    title: 'Diagram Preview',
+    title: 'Diagram preview',
     open: () => currentState?.openFullscreen(),
     close: () => currentState?.closeFullscreen(),
   },
@@ -152,7 +153,7 @@ function expectVisibleDialogs(openedKeys: readonly DialogKey[]) {
   const expectedTitles = dialogTransitions
     .filter(({ key }) => openedKeys.includes(key))
     .map(({ title }) => title)
-  const actualTitles = Array.from(container!.querySelectorAll('h2'))
+  const actualTitles = Array.from(container!.querySelectorAll('.modal-title'))
     .map((heading) => heading.textContent)
 
   expect(actualTitles).toHaveLength(expectedTitles.length)
@@ -187,14 +188,14 @@ it('toggles diagram metrics independently of an open dialog', () => {
 
   act(() => currentState?.openRules())
   expectVisibleDialogs(['rules'])
-  expect(view.textContent).not.toContain('Diagram Metrics')
+  expect(view.querySelector('.metrics-title')).toBeNull()
 
   act(() => metricsButton.click())
-  expect(view.textContent).toContain('Diagram Metrics')
+  expect(view.querySelector('.metrics-title')?.textContent?.trim()).toBe('Metrics')
   expect(view.textContent).toContain('Nodes2')
   expectVisibleDialogs(['rules'])
 
   act(() => metricsButton.click())
-  expect(view.textContent).not.toContain('Diagram Metrics')
+  expect(view.querySelector('.metrics-title')).toBeNull()
   expectVisibleDialogs(['rules'])
 })

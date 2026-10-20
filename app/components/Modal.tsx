@@ -1,27 +1,24 @@
 'use client'
 
-import { useEffect, useCallback, useRef, ReactNode } from 'react'
+import { useEffect, useCallback, useId, useRef, type ReactNode } from 'react'
+import Button from './Button'
 
 let openModalCount = 0
+let bodyOverflowBeforeModal = ''
 
 function lockBodyScroll() {
   if (typeof document === 'undefined') return
-
   if (openModalCount === 0) {
+    bodyOverflowBeforeModal = document.body.style.overflow
     document.body.style.overflow = 'hidden'
   }
-
   openModalCount += 1
 }
 
 function unlockBodyScroll() {
   if (typeof document === 'undefined') return
-
   openModalCount = Math.max(0, openModalCount - 1)
-
-  if (openModalCount === 0) {
-    document.body.style.overflow = ''
-  }
+  if (openModalCount === 0) document.body.style.overflow = bodyOverflowBeforeModal
 }
 
 interface ModalProps {
@@ -33,6 +30,15 @@ interface ModalProps {
   maxHeight?: number | string
 }
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
+
 export default function Modal({
   isOpen,
   onClose,
@@ -41,37 +47,61 @@ export default function Modal({
   maxWidth = 640,
   maxHeight = '80vh',
 }: ModalProps) {
-  const hasScrollLockRef = useRef(false)
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    },
-    [onClose]
-  )
-
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-
-      if (!hasScrollLockRef.current) {
-        lockBodyScroll()
-        hasScrollLockRef.current = true
-      }
-    } else if (hasScrollLockRef.current) {
-      unlockBodyScroll()
-      hasScrollLockRef.current = false
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      onClose()
+      return
     }
 
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
+    if (event.key !== 'Tab') return
+    const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
+    if (focusable.length === 0) {
+      event.preventDefault()
+      dialogRef.current?.focus()
+      return
+    }
 
-      if (hasScrollLockRef.current) {
-        unlockBodyScroll()
-        hasScrollLockRef.current = false
-      }
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    if (!dialogRef.current?.contains(document.activeElement)) {
+      event.preventDefault()
+      ;(event.shiftKey ? last : first).focus()
+      return
+    }
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }, [onClose])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const focus = () => {
+      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+      ;(firstFocusable ?? dialogRef.current)?.focus()
+    }
+    const focusFrame = typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame(focus)
+      : window.setTimeout(focus, 0)
+
+    document.addEventListener('keydown', handleKeyDown)
+    lockBodyScroll()
+
+    return () => {
+      if (typeof window.cancelAnimationFrame === 'function') window.cancelAnimationFrame(focusFrame)
+      else window.clearTimeout(focusFrame)
+      document.removeEventListener('keydown', handleKeyDown)
+      unlockBodyScroll()
+      previousFocus?.focus()
     }
   }, [isOpen, handleKeyDown])
 
@@ -79,81 +109,33 @@ export default function Modal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '24px',
-        pointerEvents: 'none',
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
       }}
     >
       <div
+        ref={dialogRef}
+        className="modal-dialog"
         style={{
-          background: 'var(--color-bg-primary)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
           maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth,
-          width: '100%',
           maxHeight,
-          display: 'flex',
-          flexDirection: 'column',
-          pointerEvents: 'auto',
         }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={title ? undefined : 'Dialog'}
+        tabIndex={-1}
       >
         {title && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--color-border)',
-            }}
-          >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: '16px',
-                fontWeight: 600,
-                color: 'var(--color-text-primary)',
-              }}
-            >
-              {title}
-            </h2>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--color-text-secondary)',
-                fontSize: '20px',
-                cursor: 'pointer',
-                padding: '4px',
-                lineHeight: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'color 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                ;(e.target as HTMLElement).style.color = 'var(--color-text-primary)'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.target as HTMLElement).style.color = 'var(--color-text-secondary)'
-              }}
-              aria-label="Close modal"
-            >
+          <div className="modal-header">
+            <h2 id={titleId} className="modal-title">{title}</h2>
+            <Button variant="quiet" size="icon" onClick={onClose} aria-label="Close dialog">
               ×
-            </button>
+            </Button>
           </div>
         )}
-
-        <div style={{ overflow: 'auto', flex: 1, padding: '20px' }}>{children}</div>
+        <div className="modal-content">{children}</div>
       </div>
     </div>
   )

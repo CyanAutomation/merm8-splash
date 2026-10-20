@@ -10,6 +10,7 @@ import { useHomeDialogState } from './useHomeDialogState'
 import { useLayoutPreferences } from '@/lib/useLayoutPreferences'
 import { filterRulesByDiagramType } from '@/lib/diagramTypes'
 import { getParseStatus } from '@/lib/status'
+import { getAnalysisResultState } from '@/lib/analysisResultState'
 import {
   useHomeAnalysisController,
   useHomeEndpointController,
@@ -39,6 +40,7 @@ function HomeContent() {
     setCode,
     violations,
     isAnalyzing,
+    lastCompletedRun,
     analyzeError,
     analysisHints,
     diagramType,
@@ -47,6 +49,7 @@ function HomeContent() {
     rules,
     enabledRules,
     rulesLoading,
+    rulesLoadedEndpoint,
     rulesUnavailableEndpoint,
     toggleRule,
     enableAllRules,
@@ -78,7 +81,24 @@ function HomeContent() {
   const diagramPreviewResetKey = code
 
   const rulesUnavailableForEndpoint = rulesUnavailableEndpoint === endpoint
+  const rulesReadyForEndpoint = rulesLoadedEndpoint === endpoint
+  const applicableRuleCount = filterRulesByDiagramType(rules.map((rule) => rule.id), diagramType).length
   const applicableEnabledRuleCount = filterRulesByDiagramType(enabledRules, diagramType).length
+  const resultState = getAnalysisResultState({
+    code,
+    isAnalyzing,
+    analyzeError,
+    parseError: parseErrorDetail,
+    lastCompletedStatus: lastCompletedRun?.status ?? null,
+    lintSupported,
+    connectionStatus,
+    rulesLoading,
+    rulesReady: rulesReadyForEndpoint,
+    rulesUnavailable: rulesUnavailableForEndpoint,
+    availableRuleCount: applicableRuleCount,
+    enabledRuleCount: applicableEnabledRuleCount,
+    violationCount: violations.length,
+  })
 
   return (
     <HomePageLayout
@@ -98,6 +118,7 @@ function HomeContent() {
         results: {
           analysis: {
             violations,
+            resultState,
             isAnalyzing,
             analyzeError,
             analysisHints,
@@ -119,13 +140,17 @@ function HomeContent() {
         connectionStatus,
         parseStatus,
         ruleCount: applicableEnabledRuleCount,
+        availableRuleCount: applicableRuleCount,
+        rulesUnavailable: rulesUnavailableForEndpoint,
+        rulesReady: rulesReadyForEndpoint,
+        rulesLoading: rulesLoading && !rulesReadyForEndpoint,
         violationCount: violations.length,
         apiEndpoint: endpoint,
         diagramType,
         lintSupported,
         onTestConnection: handleTestConnection,
         statusMessage: rulesUnavailableForEndpoint
-          ? 'Rule metadata unavailable; using server defaults'
+          ? 'Rules unavailable; using API defaults.'
           : statusMessage,
       }}
       dialogs={{
@@ -156,6 +181,7 @@ function HomeContent() {
           onDisableAll: disableAllRules,
           isLoading: rulesLoading,
           isUnavailable: rulesUnavailableEndpoint === endpoint,
+          rulesReady: rulesReadyForEndpoint,
           diagramType,
         },
         fullscreen: {
