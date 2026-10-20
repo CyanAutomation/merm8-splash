@@ -17,20 +17,41 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(scriptDirectory, '..')
 const workflowPath = path.join(repoRoot, '.github', 'workflows', 'ci.yml')
 
-const toolDefinitions = [
+export const toolDefinitions = [
   {
     name: 'actionlint',
     repository: 'rhysd/actionlint',
     executable: 'actionlint',
     assetName: (version) => `actionlint_${version}_linux_amd64.tar.gz`,
+    validateArgs: ({ workflowPaths }) => workflowPaths,
   },
   {
     name: 'zizmor',
     repository: 'zizmorcore/zizmor',
     executable: 'zizmor',
     assetName: () => 'zizmor-x86_64-unknown-linux-gnu.tar.gz',
+    validateArgs: ({ workflowDirectory }) => ['--offline', workflowDirectory],
   },
 ]
+
+/**
+ * @param {{ name: string, validateArgs?: (context: { workflowPaths: string[], workflowDirectory: string }) => string[] }} tool
+ * @param {string[]} workflowPaths
+ * @param {string} workflowDirectory
+ * @returns {string[]}
+ */
+export function getValidationArguments(tool, workflowPaths, workflowDirectory) {
+  if (typeof tool.validateArgs !== 'function') {
+    throw new Error(`${tool.name} must define validateArgs`)
+  }
+
+  const args = tool.validateArgs({ workflowPaths, workflowDirectory })
+  if (!Array.isArray(args) || args.some((argument) => typeof argument !== 'string')) {
+    throw new Error(`${tool.name} validateArgs must return an array of strings`)
+  }
+
+  return args
+}
 
 /**
  * Update analyzer release versions and SHA-256 digests in the workflow.
@@ -139,36 +160,31 @@ function workflowFiles() {
 }
 
 /**
- * @param {Array<{ executable: string, archive: Buffer }>} releases
+ * @param {Array<{ tool: (typeof toolDefinitions)[number], archive: Buffer }>} releases
  */
 function validateWorkflowsWithReleases(releases) {
   const tempDirectory = mkdtempSync(path.join(tmpdir(), 'workflow-tool-update-'))
 
   try {
     const workflowPaths = workflowFiles()
+    const workflowDirectory = path.join(repoRoot, '.github', 'workflows')
     for (const release of releases) {
-      const archivePath = path.join(tempDirectory, `${release.executable}.tar.gz`)
-      const extractDirectory = path.join(tempDirectory, release.executable)
+      const { tool } = release
+      const archivePath = path.join(tempDirectory, `${tool.executable}.tar.gz`)
+      const extractDirectory = path.join(tempDirectory, tool.executable)
       writeFileSync(archivePath, release.archive)
       mkdirSync(extractDirectory)
       execFileSync('tar', ['-xzf', archivePath, '-C', extractDirectory], { stdio: 'inherit' })
 
-      const executablePath = path.join(extractDirectory, release.executable)
+      const executablePath = path.join(extractDirectory, tool.executable)
+      const validationArgs = getValidationArguments(tool, workflowPaths, workflowDirectory)
       const childEnvironment = { ...process.env }
       delete childEnvironment.GITHUB_TOKEN
-      if (release.executable === 'actionlint') {
-        execFileSync(executablePath, workflowPaths, {
-          cwd: repoRoot,
-          env: childEnvironment,
-          stdio: 'inherit',
-        })
-      } else {
-        execFileSync(executablePath, ['--offline', path.join(repoRoot, '.github', 'workflows')], {
-          cwd: repoRoot,
-          env: childEnvironment,
-          stdio: 'inherit',
-        })
-      }
+      execFileSync(executablePath, validationArgs, {
+        cwd: repoRoot,
+        env: childEnvironment,
+        stdio: 'inherit',
+      })
     }
   } finally {
     rmSync(tempDirectory, { recursive: true, force: true })
@@ -193,7 +209,7 @@ async function updateWorkflowToolPinsFromReleases() {
     try {
       validateWorkflowsWithReleases(
         toolDefinitions.map((tool, index) => ({
-          executable: tool.executable,
+          tool,
           archive: latestReleases[index].archive,
         })),
       )

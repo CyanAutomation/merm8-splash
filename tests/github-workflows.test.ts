@@ -140,6 +140,30 @@ it('protects the shared Kaseki job with its environment and a bounded timeout', 
   expect(job).toContain('KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}')
 })
 
+it('allows only the approved Kaseki controller URL', () => {
+  const validationScript = runScript(
+    kasekiWorkflow,
+    'Validate Kaseki configuration and required tools',
+  )
+  const urlValidationScript = validationScript.split('command -v jq')[0]
+
+  expect(urlValidationScript).toContain(
+    '[[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]]',
+  )
+
+  const runUrlValidation = (baseUrl: string) => execFileSync(
+    'bash',
+    ['-c', urlValidationScript],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, KASEKI_BASE_URL: baseUrl },
+    },
+  )
+
+  expect(() => runUrlValidation('https://kaseki-tunnel.scheimann.xyz')).not.toThrow()
+  expect(() => runUrlValidation('https://attacker.example')).toThrow()
+})
+
 it('derives a stable UUIDv5 idempotency key from each workflow run', () => {
   const script = runScript(kasekiWorkflow, 'Submit Kaseki run').match(
     /idempotency_key="\$\(\s*node <<'NODE'\r?\n([\s\S]*?)\r?\n\s*NODE\r?\n\s*\)"/,
