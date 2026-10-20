@@ -11,22 +11,13 @@ export default function ResultsPanelHeader({ results, visible }: ResultsPanelHea
   const hasErrors = results.some((result) => result.severity === 'error')
 
   return (
-    <div className="panel-heading" style={{ marginBottom: '8px' }}>
-      ▦ Results{' '}
+    <h2 className="panel-heading" style={{ marginBottom: '8px' }}>
+      Results{' '}
       {results.length > 0 && (
-        <span
-          style={{
-            background: hasErrors ? 'var(--color-error)' : 'var(--color-warning)',
-            color: 'var(--color-bg-primary)',
-            padding: '0 6px',
-            fontSize: '12px',
-            borderRadius: '8px',
-            marginLeft: '4px',
-          }}
-        >
+        <span className="results-count" data-severity={hasErrors ? 'error' : 'warning'}>
           {results.length}
         </span>
       )}
-    </div>
+    </h2>
   )
 }

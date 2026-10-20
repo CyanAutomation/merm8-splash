@@ -2,9 +2,9 @@ import { expect, it } from 'vitest'
 import { getParseStatus, getParseStatusLabel } from '../lib/status'
 
 it('returns distinct user-facing labels for idle, valid, and error parse states', () => {
-  expect(getParseStatusLabel('valid')).toBe('✓ Syntax valid')
-  expect(getParseStatusLabel('error')).toBe('⚠ Syntax error')
-  expect(getParseStatusLabel('idle')).toBe('○ Idle')
+  expect(getParseStatusLabel('valid')).toBe('Syntax valid')
+  expect(getParseStatusLabel('error')).toBe('Syntax error')
+  expect(getParseStatusLabel('idle')).toBe('No diagram')
 })
 
 it('derives the parse state from parser feedback and current code', () => {

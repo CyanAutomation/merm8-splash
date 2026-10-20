@@ -44,19 +44,20 @@ describe('health hotspot panel rendering', () => {
 
     try {
       expect(view.container.textContent).toContain('The API denied this request.')
-      expect(view.container.textContent).toContain('Hints')
-      expect(view.container.textContent).toContain('Syntax Error')
+      expect(view.container.textContent).toContain('Suggestions')
+      expect(view.container.textContent).toContain('Syntax error')
       expect(view.container.textContent).toContain('Unexpected token on line 4')
       expect(view.container.querySelector('tbody tr')?.textContent).toContain('no-cycles')
 
       const hintAction = Array.from(view.container.querySelectorAll('button'))
-        .find((button) => button.textContent === 'Show me where')
-      const violationRow = view.container.querySelector('tbody tr')
+        .find((button) => button.textContent === 'Go to line 4')
+      const violationLineAction = Array.from(view.container.querySelectorAll('button'))
+        .find((button) => button.getAttribute('aria-label') === 'Go to line 4')
 
-      if (!hintAction || !violationRow) throw new Error('Expected line navigation controls to render.')
+      if (!hintAction || !violationLineAction) throw new Error('Expected line navigation controls to render.')
 
       act(() => hintAction.click())
-      act(() => violationRow.click())
+      act(() => violationLineAction.click())
 
       expect(onJumpToLine).toHaveBeenNthCalledWith(1, 4)
       expect(onJumpToLine).toHaveBeenNthCalledWith(2, 4)
@@ -79,9 +80,65 @@ describe('health hotspot panel rendering', () => {
       analysisHints: [],
     }))
 
-    expect(emptyMarkup).toContain('No violations found')
-    expect(loadingMarkup).toContain('Analyzing...')
+    expect(emptyMarkup).toContain('Run a check to see results.')
+    expect(emptyMarkup).not.toContain('No issues found')
+    expect(loadingMarkup).toContain('Checking your diagram…')
     expect(loadingMarkup).not.toContain('Old result')
+  })
+
+  it('keeps previous results visible with a clear notice while edits are debounced', () => {
+    const view = mount(createElement(ResultsPanel, {
+      results: [{ rule_id: 'no-cycles', severity: 'warning', message: 'Cycle found', line: 4 }],
+      resultState: 'violations',
+      resultsAreStale: true,
+      isAnalyzing: false,
+      analyzeError: null,
+      analysisHints: [],
+    }))
+
+    try {
+      expect(view.container.querySelector('[role="status"]')?.textContent)
+        .toContain('These results are from your previous edits.')
+      expect(view.container.querySelector('tbody tr')?.textContent).toContain('no-cycles')
+    } finally {
+      view.unmount()
+    }
+  })
+
+  it('explains when the connected API has no rules for the diagram type', () => {
+    const resultsMarkup = renderToStaticMarkup(createElement(ResultsPanel, {
+      results: [],
+      resultState: 'no-rules-available',
+      isAnalyzing: false,
+      analyzeError: null,
+      analysisHints: [],
+    }))
+    const rulesMarkup = renderToStaticMarkup(createElement(RulesPanel, {
+      rules: [],
+      enabledRules: [],
+      onToggleRule: vi.fn(),
+      onEnableAll: vi.fn(),
+      onDisableAll: vi.fn(),
+      isLoading: false,
+      isUnavailable: false,
+      rulesReady: true,
+      diagramType: 'flowchart',
+    }))
+    const statusMarkup = renderToStaticMarkup(createElement(StatusBar, {
+      connectionStatus: 'connected',
+      parseStatus: 'valid',
+      ruleCount: 0,
+      availableRuleCount: 0,
+      rulesReady: true,
+      violationCount: 0,
+      apiEndpoint: 'https://api.example.test',
+    }))
+
+    expect(resultsMarkup).toContain('The API hasn’t provided any rules for this diagram type.')
+    expect(resultsMarkup).not.toContain('No issues found.')
+    expect(rulesMarkup).toContain('The API hasn’t provided any rules for this diagram type.')
+    expect(rulesMarkup).not.toContain('Test API to load rules.')
+    expect(statusMarkup).toContain('No rules available')
   })
 
   it('copies a formatted violation and shows temporary success feedback', async () => {
@@ -113,7 +170,7 @@ describe('health hotspot panel rendering', () => {
       })
 
       expect(writeText).toHaveBeenCalledWith('[warning] no-cycles: Cycle found (line 4)')
-      expect(copyButton.textContent).toBe('✓')
+      expect(copyButton.textContent).toBe('Copied')
     } finally {
       view.unmount()
       if (originalClipboard) {
@@ -139,10 +196,10 @@ describe('health hotspot panel rendering', () => {
     expect(markup).toContain('class="status-bar"')
     expect(markup).toContain('class="status-bar-actions"')
 
-    expect(markup).toContain('Checking...')
+    expect(markup).toContain('Checking…')
     expect(markup).toContain('Syntax valid')
     expect(markup).toContain('Type: flowchart')
-    expect(markup).toContain('Syntax checked only')
+    expect(markup).toContain('Syntax only')
     expect(markup).toContain('2 rules enabled')
     expect(markup).toContain('1 violation')
     expect(markup).toContain('disabled=""')
@@ -165,11 +222,11 @@ describe('health hotspot panel rendering', () => {
     }))
 
     expect(markup).toContain('1/1')
-    expect(markup).toContain('Analysis uses your selected rules.')
+    expect(markup).toContain('Checks use the rules you’ve selected.')
     expect(markup).toContain('Universal Rule')
     expect(markup).toContain('A rule for every diagram type')
-    expect(markup).toContain('All visible')
-    expect(markup).toContain('None visible')
+    expect(markup).toContain('Enable all')
+    expect(markup).toContain('Disable all')
     expect(markup).toContain('checked=""')
   })
 
@@ -190,8 +247,8 @@ describe('health hotspot panel rendering', () => {
 
     try {
       const buttons = Array.from(view.container.querySelectorAll('button'))
-      const enableAll = buttons.find((button) => button.textContent === 'All visible')
-      const disableAll = buttons.find((button) => button.textContent === 'None visible')
+      const enableAll = buttons.find((button) => button.textContent === 'Enable all')
+      const disableAll = buttons.find((button) => button.textContent === 'Disable all')
       const ruleCheckbox = view.container.querySelector('input[type="checkbox"]') as HTMLInputElement | null
 
       if (!enableAll || !disableAll || !ruleCheckbox) {
@@ -242,8 +299,8 @@ describe('health hotspot panel rendering', () => {
 
     try {
       const buttons = Array.from(view.container.querySelectorAll('button'))
-      const testButton = buttons.find((button) => button.textContent === 'Test')
-      const saveButton = buttons.find((button) => button.textContent === 'Save')
+      const testButton = buttons.find((button) => button.textContent === 'Test API')
+      const saveButton = buttons.find((button) => button.textContent === 'Save endpoint')
 
       expect(view.container.textContent).toContain('Enter a valid URL')
       expect(testButton?.disabled).toBe(true)
@@ -293,7 +350,7 @@ describe('health hotspot panel rendering', () => {
     }))
 
     try {
-      expect(view.container.querySelector('.status-bar-connection')?.textContent).toBe('API Error')
+      expect(view.container.querySelector('.status-bar-connection')?.textContent).toBe('API: Couldn’t connect')
       expect(view.container.querySelector('.status-bar-message')?.textContent).toBe(message)
     } finally {
       view.unmount()
@@ -312,8 +369,7 @@ describe('health hotspot panel rendering', () => {
       diagramType: 'flowchart',
     }))
 
-    expect(markup).toContain('Rules metadata could not be loaded.')
-    expect(markup).toContain('Analysis can continue using the API')
-    expect(markup).toContain('server defaults.')
+    expect(markup).toContain('We couldn’t load the rules.')
+    expect(markup).toContain('Checks can still use the API’s defaults.')
   })
 })

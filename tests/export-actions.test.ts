@@ -72,9 +72,32 @@ describe('export actions', () => {
     expect(downloadFile).toHaveBeenCalledOnce()
     const [content, filename, mime] = downloadFile.mock.calls[0]
     expect(JSON.parse(content).version).toBe('2.1.0')
-    expect(filename).toBe('merm8-analysis.sarif.json')
+    expect(filename).toBe('merm8-check-results.sarif.json')
     expect(mime).toBe('application/json')
-    expect(showSnackbar).toHaveBeenCalledWith('Remote SARIF generation failed; exported local fallback.', 'error')
+    expect(showSnackbar).toHaveBeenCalledWith('The API couldn’t create a SARIF export, so I saved a local copy.', 'error')
+    expect(closeDropdown).toHaveBeenCalledOnce()
+  })
+
+  it('confirms when a SARIF file is downloaded successfully', async () => {
+    exportApiMocks.analyzeCodeSarif.mockResolvedValue({ version: '2.1.0', runs: [] })
+    const downloadFile = vi.fn()
+    const showSnackbar = vi.fn()
+    const closeDropdown = vi.fn()
+
+    await exportSarifWithFallback({
+      endpoint: 'https://api.example.test',
+      code: 'flowchart TD\nA --> B',
+      results: [],
+      enabledRules: [],
+      rulesMetadata: [],
+      isMounted: () => true,
+      closeDropdown,
+      showSnackbar,
+      downloadFile,
+    })
+
+    expect(downloadFile).toHaveBeenCalledOnce()
+    expect(showSnackbar).toHaveBeenCalledWith('SARIF file downloaded.', 'success')
     expect(closeDropdown).toHaveBeenCalledOnce()
   })
 })

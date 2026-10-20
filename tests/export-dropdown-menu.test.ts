@@ -15,9 +15,8 @@ function createProps(): Props {
     open: true,
     copying: null,
     isExporting: false,
-    hoveredItem: null,
     onToggleOpen: vi.fn(),
-    onHover: vi.fn(),
+    onClose: vi.fn(),
     onExportSarif: vi.fn(),
     onExportJson: vi.fn(),
     onExportMarkdown: vi.fn(),
@@ -51,7 +50,7 @@ it('runs the selected export action', () => {
   renderMenu()
 
   const jsonButton = Array.from(host!.querySelectorAll('button'))
-    .find((button) => button.textContent === '↓ JSON')
+    .find((button) => button.textContent === 'JSON')
   if (!jsonButton) throw new Error('Expected the JSON export action to render.')
 
   act(() => jsonButton.click())
@@ -71,19 +70,30 @@ it('forwards clicks on the export toggle', () => {
   expect(props.onToggleOpen).toHaveBeenCalledOnce()
 })
 
-it('reports the export item currently under the pointer', () => {
+it('closes the export menu when Escape is pressed', () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  props = createProps()
+  renderMenu()
+
+  const toggleButton = host?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')
+  if (!toggleButton) throw new Error('Expected the export toggle to render.')
+
+  act(() => toggleButton.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+  expect(props.onClose).toHaveBeenCalledOnce()
+})
+
+it('exposes the export actions as an accessible menu', () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   props = createProps()
   renderMenu()
 
   const jsonButton = Array.from(host!.querySelectorAll('button'))
-    .find((button) => button.textContent === '↓ JSON')
+    .find((button) => button.textContent === 'JSON')
   if (!jsonButton) throw new Error('Expected the JSON export action to render.')
 
-  act(() => jsonButton.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })))
-  expect(props.onHover).toHaveBeenCalledWith('↓ JSON')
-  act(() => jsonButton.dispatchEvent(new MouseEvent('mouseout', { bubbles: true })))
-  expect(props.onHover).toHaveBeenLastCalledWith(null)
+  expect(host?.querySelector('[role="menu"]')?.getAttribute('aria-label')).toBe('Export format')
+  expect(host?.querySelectorAll('[role="menuitem"]')).toHaveLength(4)
+  expect(host?.querySelector('[aria-haspopup="menu"]')?.getAttribute('aria-expanded')).toBe('true')
 })
 
 it('prevents export actions while an export is in progress', () => {
@@ -113,5 +123,5 @@ it('hides the actions when closed', () => {
   renderMenu({ open: false })
 
   expect(host?.querySelectorAll('button')).toHaveLength(1)
-  expect(host?.textContent).toContain('↓ Export')
+  expect(host?.textContent).toContain('Export')
 })

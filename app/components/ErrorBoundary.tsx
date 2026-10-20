@@ -53,8 +53,8 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
               fontSize: '12px',
             }}
           >
-            <div style={{ fontWeight: 600, marginBottom: '8px' }}>⚠ Component Error</div>
-            <div>{this.state.error?.message}</div>
+            <div style={{ fontWeight: 600, marginBottom: '8px' }}>This part of the page didn’t load.</div>
+            <div>Try refreshing the page. {this.state.error?.message}</div>
           </div>
         )
       )
