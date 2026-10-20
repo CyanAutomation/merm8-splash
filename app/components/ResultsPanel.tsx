@@ -10,6 +10,7 @@ import { useViolationCopyFeedback } from './useViolationCopyFeedback'
 interface ResultsPanelProps {
   results: Violation[]
   resultState?: AnalysisResultState
+  resultsAreStale?: boolean
   isAnalyzing: boolean
   analyzeError: string | null
   analysisHints: string[]
@@ -28,6 +29,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     {
       results,
       resultState,
+      resultsAreStale = false,
       isAnalyzing,
       analyzeError,
       analysisHints,
@@ -62,6 +64,7 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
           <ResultsPanelBody
             results={results}
             resultState={resolvedResultState}
+            resultsAreStale={resultsAreStale}
             analyzeError={analyzeError}
             analysisHints={analysisHints}
             lintSupported={lintSupported}

@@ -77,4 +77,27 @@ describe('export actions', () => {
     expect(showSnackbar).toHaveBeenCalledWith('The API couldn’t create a SARIF export, so I saved a local copy.', 'error')
     expect(closeDropdown).toHaveBeenCalledOnce()
   })
+
+  it('confirms when a SARIF file is downloaded successfully', async () => {
+    exportApiMocks.analyzeCodeSarif.mockResolvedValue({ version: '2.1.0', runs: [] })
+    const downloadFile = vi.fn()
+    const showSnackbar = vi.fn()
+    const closeDropdown = vi.fn()
+
+    await exportSarifWithFallback({
+      endpoint: 'https://api.example.test',
+      code: 'flowchart TD\nA --> B',
+      results: [],
+      enabledRules: [],
+      rulesMetadata: [],
+      isMounted: () => true,
+      closeDropdown,
+      showSnackbar,
+      downloadFile,
+    })
+
+    expect(downloadFile).toHaveBeenCalledOnce()
+    expect(showSnackbar).toHaveBeenCalledWith('SARIF file downloaded.', 'success')
+    expect(closeDropdown).toHaveBeenCalledOnce()
+  })
 })

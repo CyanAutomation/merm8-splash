@@ -1,12 +1,13 @@
 import type { Violation } from '@/lib/api'
 import type { AnalysisResultState } from '@/lib/analysisResultState'
-import { ANALYSIS_RESULT_MESSAGES } from '@/lib/uiCopy'
+import { ANALYSIS_RESULT_MESSAGES, RESULTS_STALE_MESSAGE } from '@/lib/uiCopy'
 import ResultsPanelFeedback from './ResultsPanelFeedback'
 import ViolationTable from './ViolationTable'
 
 interface ResultsPanelBodyProps {
   results: Violation[]
   resultState: AnalysisResultState
+  resultsAreStale: boolean
   analyzeError: string | null
   analysisHints: string[]
   lintSupported?: boolean | null
@@ -20,6 +21,7 @@ interface ResultsPanelBodyProps {
 export default function ResultsPanelBody({
   results,
   resultState,
+  resultsAreStale,
   analyzeError,
   analysisHints,
   lintSupported,
@@ -39,6 +41,11 @@ export default function ResultsPanelBody({
 
   return (
     <>
+      {resultsAreStale && resultState !== 'empty-code' && (
+        <div className="results-stale-notice" role="status">
+          {RESULTS_STALE_MESSAGE}
+        </div>
+      )}
       <ResultsPanelFeedback
         analyzeError={analyzeError}
         analysisHints={analysisHints}

@@ -5,6 +5,12 @@ export const PRODUCT_NAME = 'merm8'
 export const PRODUCT_TAGLINE = 'Mermaid diagram checker'
 export const PRODUCT_DESCRIPTION = 'Check and improve your Mermaid diagrams.'
 
+export const EXPORT_MESSAGES = {
+  sarifDownloaded: 'SARIF file downloaded.',
+} as const
+
+export const RESULTS_STALE_MESSAGE = 'These results are from your previous edits. A new check will run when you pause.'
+
 export const CONNECTION_STATUS_LABELS: Record<ConnectionStatus, string> = {
   connected: 'Connected',
   checking: 'Checking…',

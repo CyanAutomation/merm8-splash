@@ -46,10 +46,10 @@ export function getAnalysisResultState({
   enabledRuleCount,
   violationCount,
 }: AnalysisResultStateInput): AnalysisResultState {
+  if (!code.trim()) return 'empty-code'
   if (isAnalyzing) return 'analyzing'
   if (parseError) return 'parse-error'
   if (analyzeError || lastCompletedStatus === 'error') return 'analysis-error'
-  if (!code.trim()) return 'empty-code'
   if (connectionStatus === 'checking') return 'checking-connection'
   if (connectionStatus !== 'connected') return 'needs-connection'
   if (rulesLoading || (!rulesReady && !rulesUnavailable)) return 'loading-rules'
