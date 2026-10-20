@@ -1,17 +1,16 @@
-import { existsSync, readFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-import { join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { expect, it } from 'vitest'
 
 const repoRoot = process.cwd()
 const workflowDirectory = join(repoRoot, '.github', 'workflows')
 const dryWorkflow = readFileSync(join(workflowDirectory, 'kaseki-dry.yaml'), 'utf8')
 const docsWorkflow = readFileSync(join(workflowDirectory, 'kaseki-docs.yaml'), 'utf8')
+const kasekiWorkflow = readFileSync(join(workflowDirectory, 'kaseki-run.yml'), 'utf8')
 const ciWorkflow = readFileSync(join(workflowDirectory, 'ci.yml'), 'utf8')
 const readmeLinksWorkflow = readFileSync(join(workflowDirectory, 'readme-links.yml'), 'utf8')
-const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
-  scripts: Record<string, string>
-}
+const updaterWorkflow = readFileSync(join(workflowDirectory, 'update-workflow-tools.yml'), 'utf8')
 
 function yamlBlock(source: string, header: string): string {
   const lines = source.split(/\r?\n/)
@@ -39,10 +38,6 @@ function yamlBlock(source: string, header: string): string {
   return block.join('\n')
 }
 
-function stepBlock(name: string): string {
-  return workflowStepBlock(dryWorkflow, name)
-}
-
 function workflowStepBlock(source: string, name: string): string {
   return yamlBlock(source, `- name: ${name}`)
 }
@@ -65,188 +60,171 @@ function runScript(source: string, name: string): string {
   return script.join('\n')
 }
 
-function docsJobBlock(name: string): string {
-  return yamlBlock(docsWorkflow, `${name}:`)
-}
+it('keeps Kaseki preparation and secret-bearing execution on main', () => {
+  for (const workflow of [dryWorkflow, docsWorkflow]) {
+    expect(workflow).toContain("if: github.ref == 'refs/heads/main'")
+    expect(workflow).toContain('uses: ./.github/workflows/kaseki-run.yml')
+    expect(workflow).toContain('needs: prepare')
+  }
 
-function runIdFilter(source: string, submitStepName: string): string | null {
-  return workflowStepBlock(source, submitStepName).match(/\bjq -er\s*\\\s*'([^']+)'/)?.[1] ?? null
-}
-
-it('limits the secret-bearing Kaseki DRY job to main', () => {
-  const job = yamlBlock(dryWorkflow, 'dry_sweep:')
-  const jobConfiguration = job.split(/^ {4}steps:/m)[0]
-
-  expect(jobConfiguration).toContain("if: github.ref == 'refs/heads/main'")
+  expect(kasekiWorkflow).toContain("if: github.ref == 'refs/heads/main'")
 })
 
-it('runs only the Docs sweep job on the main branch', () => {
-  const jobs = yamlBlock(docsWorkflow, 'jobs:')
-  const docsJob = docsJobBlock('docs_sweep')
+it('uses one reusable workflow for Kaseki preflight, submission, and polling', () => {
+  expect(kasekiWorkflow).toContain('workflow_call:')
+  expect(kasekiWorkflow).toContain('Verify controller health')
+  expect(kasekiWorkflow).toContain('Verify controller readiness')
+  expect(kasekiWorkflow).toContain('Verify gateway connectivity and authentication')
+  expect(kasekiWorkflow).toContain('Submit Kaseki run')
+  expect(kasekiWorkflow).toContain('Wait for Kaseki completion')
 
-  expect(jobs.match(/^ {2}[A-Za-z0-9_-]+:$/gm)).toEqual(['  docs_sweep:'])
-  expect(docsJob).toContain("if: github.ref == 'refs/heads/main'")
+  for (const workflow of [dryWorkflow, docsWorkflow]) {
+    expect(workflow).not.toContain('/api/v1/runs')
+    expect(workflow).not.toContain('poll_deadline=')
+  }
 })
 
-it('protects the Docs sweep with its environment and a bounded job timeout', () => {
-  const docsJob = docsJobBlock('docs_sweep')
-
-  expect(docsJob.match(/^\s+environment: kaseki-agent$/gm)).toHaveLength(1)
-  expect(docsJob).toContain('timeout-minutes: 200')
-})
-
-it('verifies Docs controller readiness and authentication before submitting work', () => {
-  const healthStep = workflowStepBlock(docsWorkflow, 'Verify controller health')
-  const readinessStep = workflowStepBlock(docsWorkflow, 'Verify controller readiness')
-  const authenticationStep = workflowStepBlock(docsWorkflow, 'Verify gateway connectivity and authentication')
-  const submitStep = workflowStepBlock(docsWorkflow, 'Submit documentation sweep')
-  const readinessScript = runScript(docsWorkflow, 'Verify controller readiness')
-  const authenticationScript = runScript(docsWorkflow, 'Verify gateway connectivity and authentication')
+it('uses a single authoritative readiness check before authentication and submission', () => {
+  const healthStep = workflowStepBlock(kasekiWorkflow, 'Verify controller health')
+  const readinessStep = workflowStepBlock(kasekiWorkflow, 'Verify controller readiness')
+  const authenticationStep = workflowStepBlock(
+    kasekiWorkflow,
+    'Verify gateway connectivity and authentication',
+  )
+  const submitStep = workflowStepBlock(kasekiWorkflow, 'Submit Kaseki run')
 
   expect(healthStep).toContain(
     'uses: CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@30db5d15e117b8d8de13eb66766d48cf6b7d618b',
   )
-  expect(readinessScript).toContain("jq -e '.status == \"ready\"'")
-  expect(authenticationScript).toContain('--header "Authorization: Bearer $KASEKI_API_TOKEN"')
-  expect(authenticationScript).toContain("jq -e '.status == \"ok\"'")
-  expect(docsWorkflow.indexOf(healthStep)).toBeLessThan(docsWorkflow.indexOf(readinessStep))
-  expect(docsWorkflow.indexOf(readinessStep)).toBeLessThan(docsWorkflow.indexOf(authenticationStep))
-  expect(docsWorkflow.indexOf(authenticationStep)).toBeLessThan(docsWorkflow.indexOf(submitStep))
-})
-
-it('pins both Kaseki requests and run names to the triggering commit', () => {
-  for (const workflow of [dryWorkflow, docsWorkflow]) {
-    expect(workflow).toContain('REF: main')
-    expect(workflow).toContain('${{ github.repository }}@${{ github.sha }}')
-    expect(workflow).not.toContain('github.event.repository.default_branch')
-  }
-})
-
-it('pins the Kaseki DRY controller URL to the approved host', () => {
-  const configurationStep = stepBlock('Validate Kaseki configuration')
-
-  expect(configurationStep).toContain(
-    'KASEKI_BASE_URL" != "https://kaseki-tunnel.scheimann.xyz"',
+  expect(readinessStep).toContain("jq -e '.status == \"ready\"'")
+  expect(authenticationStep).toContain("jq -e '.status == \"ok\"'")
+  expect(kasekiWorkflow.match(/\/ready/g)).toHaveLength(1)
+  expect(kasekiWorkflow.indexOf(healthStep)).toBeLessThan(kasekiWorkflow.indexOf(readinessStep))
+  expect(kasekiWorkflow.indexOf(readinessStep)).toBeLessThan(
+    kasekiWorkflow.indexOf(authenticationStep),
+  )
+  expect(kasekiWorkflow.indexOf(authenticationStep)).toBeLessThan(
+    kasekiWorkflow.indexOf(submitStep),
   )
 })
 
-it('makes the Kaseki token available only to authenticated request steps', () => {
-  const job = yamlBlock(dryWorkflow, 'dry_sweep:')
-  const jobConfiguration = job.split(/^ {4}steps:/m)[0]
-
-  expect(jobConfiguration).not.toContain('KASEKI_API_TOKEN:')
-
-  for (const stepName of [
+it('keeps the Kaseki token in authenticated request steps only', () => {
+  const stepNames = [
     'Verify gateway connectivity and authentication',
-    'Submit DRY sweep',
+    'Submit Kaseki run',
     'Wait for Kaseki completion',
-  ]) {
-    expect(stepBlock(stepName)).toContain(
+  ]
+
+  for (const stepName of stepNames) {
+    expect(workflowStepBlock(kasekiWorkflow, stepName)).toContain(
       'KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}',
     )
   }
 
-  expect([...dryWorkflow.matchAll(/KASEKI_API_TOKEN: \$\{\{ secrets\.KASEKI_API_TOKEN \}\}/g)]).toHaveLength(3)
-  expect(stepBlock('Publish run details')).not.toContain('KASEKI_API_TOKEN')
-})
+  expect([...kasekiWorkflow.matchAll(/KASEKI_API_TOKEN: \$\{\{ secrets\.KASEKI_API_TOKEN \}\}/g)])
+    .toHaveLength(3)
+  expect(kasekiWorkflow).not.toContain('secrets: inherit')
 
-it('keeps the Kaseki Docs token scoped to authenticated request steps', () => {
-  const docsJob = docsJobBlock('docs_sweep')
-  const jobConfiguration = docsJob.split(/^ {4}steps:/m)[0]
-
-  expect(jobConfiguration).not.toContain('KASEKI_API_TOKEN:')
-
-  for (const stepName of [
-    'Verify gateway connectivity and authentication',
-    'Submit documentation sweep',
-    'Wait for Kaseki completion',
-  ]) {
-    expect(workflowStepBlock(docsWorkflow, stepName)).toContain(
-      'KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}',
-    )
+  for (const workflow of [dryWorkflow, docsWorkflow]) {
+    expect(workflow).not.toContain('KASEKI_API_TOKEN')
+    expect(yamlBlock(workflow, 'permissions:').trim()).toBe('permissions: {}')
   }
-
-  expect([...docsWorkflow.matchAll(/KASEKI_API_TOKEN: \$\{\{ secrets\.KASEKI_API_TOKEN \}\}/g)]).toHaveLength(3)
-  expect(workflowStepBlock(docsWorkflow, 'Publish run details')).not.toContain('KASEKI_API_TOKEN')
+  expect(yamlBlock(kasekiWorkflow, 'permissions:').trim()).toBe('permissions: {}')
 })
 
-it('limits the DRY sweep to existing source paths and defined npm scripts', () => {
-  const allowlist = dryWorkflow.match(/^\s+ALLOWLIST:\s*(.+)$/m)?.[1]
-  const validationCommand = dryWorkflow.match(/^\s+VALIDATION_COMMAND:\s*(.+)$/m)?.[1]
+it('protects the shared Kaseki job with its environment and a bounded timeout', () => {
+  const job = yamlBlock(kasekiWorkflow, 'run:')
 
-  expect(allowlist).toBeDefined()
-  expect(validationCommand).toBe('npm run lint && npm test && npm run build')
-
-  const allowedPaths = allowlist!.split(',').map((path) => path.trim())
-  expect(allowedPaths).toEqual(expect.arrayContaining([
-    'app/**/*',
-    'lib/**/*',
-    'tests/**/*',
-    'types/**/*',
-  ]))
-
-  for (const path of allowedPaths) {
-    expect(existsSync(resolve(repoRoot, path.split('/')[0]))).toBe(true)
-  }
-
-  const scriptNames = [...validationCommand!.matchAll(/\bnpm (?:run )?([\w:-]+)/g)]
-    .map((match) => match[1])
-
-  for (const scriptName of scriptNames) {
-    expect(packageJson.scripts[scriptName]).toBeDefined()
-  }
+  expect(job).toContain('environment: kaseki-agent')
+  expect(job).toContain('timeout-minutes: 200')
+  expect(job).toContain('KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}')
 })
 
-it('does not persist the checkout token into pull-request build commands', () => {
-  const checkoutStep = yamlBlock(ciWorkflow, '- uses: actions/checkout@')
+it('allows only the approved Kaseki controller URL', () => {
+  const validationScript = runScript(
+    kasekiWorkflow,
+    'Validate Kaseki configuration and required tools',
+  )
+  const urlValidationScript = validationScript.split('command -v jq')[0]
 
-  expect(checkoutStep).toContain('persist-credentials: false')
+  expect(urlValidationScript).toContain(
+    '[[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]]',
+  )
+
+  const runUrlValidation = (baseUrl: string) => execFileSync(
+    'bash',
+    ['-c', urlValidationScript],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, KASEKI_BASE_URL: baseUrl },
+    },
+  )
+
+  expect(() => runUrlValidation('https://kaseki-tunnel.scheimann.xyz')).not.toThrow()
+  expect(() => runUrlValidation('https://attacker.example')).toThrow()
 })
 
-it('fails the dependency check based on npm ls exit status instead of output text', () => {
-  const dependencyCheck = yamlBlock(ciWorkflow, '- name: Check for peer dependency conflicts')
+it('derives a stable UUIDv5 idempotency key from each workflow run', () => {
+  const script = runScript(kasekiWorkflow, 'Submit Kaseki run').match(
+    /idempotency_key="\$\(\s*node <<'NODE'\r?\n([\s\S]*?)\r?\n\s*NODE\r?\n\s*\)"/,
+  )?.[1]
 
-  expect(dependencyCheck.match(/\bnpm ls\b/g)).toHaveLength(1)
-  expect(dependencyCheck).toContain('if ! npm ls; then')
-  expect(dependencyCheck).not.toContain('grep -E')
-})
+  expect(script).toBeDefined()
 
-it('derives stable UUIDv5 idempotency keys from each Kaseki workflow run', () => {
   function keyForRun(workflow: string, runId: string): string {
-    const script = workflow.match(
-      /idempotency_key="\$\(\s*node <<'NODE'\r?\n([\s\S]*?)\r?\n\s*NODE\r?\n\s*\)"/,
-    )?.[1]
-
-    expect(script).toBeDefined()
-
     return execFileSync(process.execPath, ['-e', script!], {
       encoding: 'utf8',
       env: {
         ...process.env,
         GITHUB_REPOSITORY: 'CyanAutomation/merm8-splash',
-        GITHUB_WORKFLOW: workflow.includes('Kaseki Docs Sweep')
-          ? 'Kaseki Docs Sweep'
-          : 'Kaseki DRY Sweep',
+        GITHUB_WORKFLOW: workflow,
         GITHUB_RUN_ID: runId,
       },
     }).trim()
   }
 
-  for (const workflow of [dryWorkflow, docsWorkflow]) {
-    const first = keyForRun(workflow, '12345')
-
-    expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
-    expect(keyForRun(workflow, '12345')).toBe(first)
-    expect(keyForRun(workflow, '12346')).not.toBe(first)
-  }
-
-  expect(keyForRun(dryWorkflow, '12345')).not.toBe(keyForRun(docsWorkflow, '12345'))
+  const first = keyForRun('Kaseki Docs Sweep', '12345')
+  expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  expect(keyForRun('Kaseki Docs Sweep', '12345')).toBe(first)
+  expect(keyForRun('Kaseki Docs Sweep', '12346')).not.toBe(first)
+  expect(keyForRun('Kaseki DRY Sweep', '12345')).not.toBe(first)
 })
 
-it('keeps both Kaseki submit scripts valid after YAML block indentation is removed', () => {
+it('bounds run polling and validates controller run IDs before polling', () => {
+  const submitScript = runScript(kasekiWorkflow, 'Submit Kaseki run')
+  const waitScript = runScript(kasekiWorkflow, 'Wait for Kaseki completion')
+
+  expect(submitScript).toContain('^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$')
+  expect(waitScript).toContain('poll_deadline=$((SECONDS + 11100))')
+  expect(waitScript).toContain('timeout --foreground')
+  expect(waitScript).toContain('Kaseki status: failed')
+  expect(waitScript).toContain('echo "status=$status" >> "$GITHUB_OUTPUT"')
+})
+
+it('preserves the distinct task payloads and validation commands', () => {
+  expect(docsWorkflow).toContain('README.md,docs/**/*.md')
+  expect(docsWorkflow).toContain('npm run check:readme && npm run lint && npm test && npm run build')
+  expect(dryWorkflow).toContain('app/**/*,lib/**/*,tests/**/*,types/**/*')
+  expect(dryWorkflow).toContain('npm run lint && npm test && npm run build')
+
+  for (const workflow of [dryWorkflow, docsWorkflow]) {
+    expect(workflow).toContain('publishMode: "pr"')
+    expect(workflow).toContain('maxDiffBytes: 102400')
+    expect(workflow).toContain('taskMode: "patch"')
+    expect(workflow).toContain('REF: main')
+    expect(workflow).toContain('${{ github.repository }}@${{ github.sha }}')
+  }
+})
+
+it('keeps the Kaseki payload and shared request scripts valid Bash', () => {
   const scripts = [
-    runScript(dryWorkflow, 'Submit DRY sweep'),
-    runScript(docsWorkflow, 'Submit documentation sweep'),
+    runScript(dryWorkflow, 'Build DRY sweep payload'),
+    runScript(docsWorkflow, 'Build documentation sweep payload'),
+    runScript(kasekiWorkflow, 'Validate Kaseki configuration and required tools'),
+    runScript(kasekiWorkflow, 'Verify controller readiness'),
+    runScript(kasekiWorkflow, 'Verify gateway connectivity and authentication'),
+    runScript(kasekiWorkflow, 'Submit Kaseki run'),
+    runScript(kasekiWorkflow, 'Wait for Kaseki completion'),
   ]
 
   for (const script of scripts) {
@@ -255,61 +233,51 @@ it('keeps both Kaseki submit scripts valid after YAML block indentation is remov
   }
 })
 
-it('accepts only valid Kaseki run IDs in both workflows', () => {
-  const filters = [
-    runIdFilter(dryWorkflow, 'Submit DRY sweep'),
-    runIdFilter(docsWorkflow, 'Submit documentation sweep'),
-  ]
-
-  expect(filters[0]).not.toBeNull()
-  expect(filters[1]).toBe(filters[0])
-
-  const validation = filters[0]?.match(/^\.id \| strings \| select\(test\("([^"]+)"\)\)$/)
-  if (!validation) {
-    throw new Error('Expected both workflows to validate the response run ID as a string.')
-  }
-
-  const runIdPattern = new RegExp(validation[1])
-  for (const runId of ['1', 'a', 'Run_123', 'A-1']) {
-    expect(runIdPattern.test(runId)).toBe(true)
-  }
-  for (const runId of ['', '-starts-with-punctuation', 'contains/slash', 'a'.repeat(129)]) {
-    expect(runIdPattern.test(runId)).toBe(false)
-  }
-})
-
-it('checks DRY runner tools before contacting Kaseki and creates the output delimiter before submission', () => {
-  const requiredTools = stepBlock('Check required tools')
-  const submitStep = stepBlock('Submit DRY sweep')
-
-  expect(requiredTools).toContain('command -v jq >/dev/null')
-  expect(requiredTools).toContain('command -v uuidgen >/dev/null')
-  expect(requiredTools).toContain('command -v curl >/dev/null')
-  expect(dryWorkflow.indexOf(requiredTools)).toBeLessThan(
-    dryWorkflow.indexOf(stepBlock('Verify controller health')),
-  )
-
-  const delimiterPosition = submitStep.indexOf('output_delimiter="$(uuidgen)"')
-  const postPosition = submitStep.indexOf('--request POST')
-  expect(delimiterPosition).toBeGreaterThanOrEqual(0)
-  expect(delimiterPosition).toBeLessThan(postPosition)
-})
-
-it('serializes each Kaseki workflow independently for the same repository', () => {
-  const dryConcurrency = yamlBlock(dryWorkflow, 'concurrency:')
-  const docsConcurrency = yamlBlock(docsWorkflow, 'concurrency:')
+it('serializes each Kaseki workflow independently', () => {
   const expectedGroup = 'group: kaseki-${{ github.workflow }}-${{ github.repository }}'
-  const dryWorkflowName = dryWorkflow.match(/^name: (.+)$/m)?.[1]
-  const docsWorkflowName = docsWorkflow.match(/^name: (.+)$/m)?.[1]
 
-  expect(dryConcurrency).toContain(expectedGroup)
-  expect(docsConcurrency).toContain(expectedGroup)
-  expect(dryWorkflowName).not.toBe(docsWorkflowName)
-  expect(dryConcurrency).toContain('cancel-in-progress: false')
-  expect(docsConcurrency).toContain('cancel-in-progress: false')
+  for (const workflow of [dryWorkflow, docsWorkflow]) {
+    const concurrency = yamlBlock(workflow, 'concurrency:')
+    expect(concurrency).toContain(expectedGroup)
+    expect(concurrency).toContain('cancel-in-progress: false')
+  }
 })
 
-it('checks external README links on a schedule with read-only permissions', () => {
+it('names the main CI and scheduled README jobs', () => {
+  expect(yamlBlock(ciWorkflow, 'verify:')).toContain('name: Verify frontend')
+  expect(yamlBlock(readmeLinksWorkflow, 'verify:')).toContain('name: Check README links')
+})
+
+it('automates analyzer version and checksum updates behind a validated pull request', () => {
+  expect(updaterWorkflow).toContain("cron: '0 7 1 * *'")
+  expect(updaterWorkflow).toContain('workflow_dispatch:')
+  expect(updaterWorkflow).toContain('node scripts/update-workflow-tool-pins.mjs')
+  expect(updaterWorkflow).toContain('peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e')
+  expect(updaterWorkflow).toContain('contents: write')
+  expect(updaterWorkflow).toContain('pull-requests: write')
+
+  const validationJob = yamlBlock(updaterWorkflow, 'prepare:')
+  expect(validationJob).toContain('contents: read')
+  expect(validationJob).toContain('persist-credentials: false')
+  expect(validationJob).not.toContain('contents: write')
+  expect(validationJob).not.toContain('pull-requests: write')
+  expect(validationJob).toContain('Update and validate analyzer pins')
+  expect(validationJob).toContain('GITHUB_TOKEN: ${{ github.token }}')
+
+  const pullRequestJob = yamlBlock(updaterWorkflow, 'open-pull-request:')
+  expect(pullRequestJob).toContain("if: needs.prepare.outputs.changed == 'true'")
+})
+
+it('keeps analyzer versions and checksums together in CI download commands', () => {
+  expect(ciWorkflow).toContain("actionlint_version='1.7.12'")
+  expect(ciWorkflow).toContain('actionlint_sha256=')
+  expect(ciWorkflow).toContain('v${actionlint_version}/actionlint_${actionlint_version}_linux_amd64.tar.gz')
+  expect(ciWorkflow).toContain("zizmor_version='1.30.1'")
+  expect(ciWorkflow).toContain('zizmor_sha256=')
+  expect(ciWorkflow).toContain('v${zizmor_version}/zizmor-x86_64-unknown-linux-gnu.tar.gz')
+})
+
+it('runs external README link checks on a schedule with read-only permissions', () => {
   expect(readmeLinksWorkflow).toContain("cron: '0 6 * * 1'")
   expect(readmeLinksWorkflow).toContain('workflow_dispatch:')
   expect(readmeLinksWorkflow).toContain('permissions:\n  contents: read')
@@ -317,62 +285,7 @@ it('checks external README links on a schedule with read-only permissions', () =
   expect(readmeLinksWorkflow).toContain('run: npm run check:readme:links')
 })
 
-it('requests full pull requests with a bounded diff for both Kaseki sweeps', () => {
-  for (const workflow of [dryWorkflow, docsWorkflow]) {
-    expect(workflow).toContain('publishMode: "pr"')
-    expect(workflow).not.toContain('publishMode: "draft_pr"')
-    expect(workflow).toContain('maxDiffBytes: 102400')
-    expect(workflow).toContain('full PR (not draft)')
-  }
-})
-
-it('does not grant the Kaseki workflows an unused GitHub token scope', () => {
-  for (const workflow of [dryWorkflow, docsWorkflow]) {
-    expect(yamlBlock(workflow, 'permissions:').trim()).toBe('permissions: {}')
-  }
-})
-
-it('fails clearly when a Kaseki DRY authenticated step has no API token', () => {
-  for (const stepName of [
-    'Verify gateway connectivity and authentication',
-    'Submit DRY sweep',
-    'Wait for Kaseki completion',
-  ]) {
-    expect(stepBlock(stepName)).toContain(': "${KASEKI_API_TOKEN:?')
-  }
-})
-
-it('bounds Kaseki completion polling by elapsed time in both workflows', () => {
-  const dryWait = stepBlock('Wait for Kaseki completion')
-  const docsWait = workflowStepBlock(docsWorkflow, 'Wait for Kaseki completion')
-
-  for (const waitStep of [dryWait, docsWait]) {
-    expect(waitStep).toContain('poll_deadline=$((SECONDS + 11100))')
-    expect(waitStep).toContain('timeout --foreground')
-    expect(waitStep).not.toContain('seq 1 185')
-    expect(waitStep).toContain(': "${KASEKI_API_TOKEN:?')
-  }
-})
-
-it('waits for the Kaseki Docs run to finish before reporting workflow success', () => {
-  const dispatchJob = docsJobBlock('docs_sweep')
-  const submissionSummary = workflowStepBlock(docsWorkflow, 'Publish submission details')
-  const waitStep = workflowStepBlock(docsWorkflow, 'Wait for Kaseki completion')
-  const resultSummary = workflowStepBlock(docsWorkflow, 'Publish run details')
-
-  expect(dispatchJob).toContain('timeout-minutes: 200')
-  expect(dispatchJob.indexOf(submissionSummary)).toBeLessThan(dispatchJob.indexOf(waitStep))
-  expect(waitStep).toContain('echo "status=$status" >> "$GITHUB_OUTPUT"')
-  expect(waitStep).toContain('Kaseki status: failed')
-  expect(resultSummary).toContain('FINAL_STATUS: ${{ steps.wait.outputs.status || \'not completed\' }}')
-})
-
-it('runs actionlint over every workflow file in CI with a checksummed release', () => {
-  const lintStep = workflowStepBlock(ciWorkflow, 'Lint GitHub Actions workflows')
-
-  expect(lintStep).toContain('actionlint_1.7.12_linux_amd64.tar.gz')
-  expect(lintStep).toContain('8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8')
-  expect(lintStep).toContain('sha256sum --check')
-  expect(lintStep).toContain('.github/workflows/*.yml')
-  expect(lintStep).toContain('.github/workflows/*.yaml')
+it('does not persist the checkout token into pull-request build commands', () => {
+  const checkoutStep = yamlBlock(ciWorkflow, '- uses: actions/checkout@')
+  expect(checkoutStep).toContain('persist-credentials: false')
 })
