@@ -215,6 +215,83 @@ it('forceAnalysis runs immediately and bypasses pending debounce', async () => {
   expect(calls).toEqual(['graph TD\nA-->C'])
 })
 
+it('keeps the last successful results visible as stale while edits are debounced', async () => {
+  const latest = createDeferred()
+  let callCount = 0
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      callCount += 1
+      if (callCount === 1) {
+        return {
+          diagram_type: 'flowchart',
+          results: [{ rule_id: 'previous', severity: 'warning', message: 'Previous result', line: 1 }],
+        }
+      }
+      return latest.promise
+    },
+  })
+
+  reactMock.__prepareRender()
+  const initialHook = useDiagramAnalysis()
+  initialHook.forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const completedHook = useDiagramAnalysis()
+  expect(completedHook.violations[0]?.rule_id).toBe('previous')
+
+  completedHook.setCode('graph TD\nA-->C')
+  completedHook.triggerAnalysis('https://example.test', 'graph TD\nA-->C', [], [])
+
+  reactMock.__prepareRender()
+  const debouncingHook = useDiagramAnalysis()
+  expect(debouncingHook.violations[0]?.rule_id).toBe('previous')
+  expect(debouncingHook.resultsAreStale).toBe(true)
+  expect(debouncingHook.isAnalyzing).toBe(false)
+
+  await timerControls.advanceBy(timerControls.getLastScheduledDelay())
+  reactMock.__prepareRender()
+  const analyzingHook = useDiagramAnalysis()
+  expect(analyzingHook.isAnalyzing).toBe(true)
+  expect(analyzingHook.violations[0]?.rule_id).toBe('previous')
+
+  latest.resolve({
+    diagram_type: 'flowchart',
+    results: [{ rule_id: 'latest', severity: 'error', message: 'Latest result', line: 2 }],
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const refreshedHook = useDiagramAnalysis()
+  expect(refreshedHook.violations[0]?.rule_id).toBe('latest')
+  expect(refreshedHook.resultsAreStale).toBe(false)
+})
+
+it('ignores an in-flight response for code that was edited during the debounce window', async () => {
+  const oldRequest = createDeferred()
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: () => oldRequest.promise,
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  hook.setCode('graph TD\nA-->C')
+  hook.triggerAnalysis('https://example.test', 'graph TD\nA-->C', [], [])
+
+  oldRequest.resolve({
+    diagram_type: 'flowchart',
+    results: [{ rule_id: 'stale', severity: 'error', message: 'Stale result', line: 1 }],
+  })
+  await new Promise((resolve) => setImmediate(resolve))
+
+  reactMock.__prepareRender()
+  const updatedHook = useDiagramAnalysis()
+  expect(updatedHook.violations).toEqual([])
+  expect(updatedHook.lastCompletedRun).toBe(null)
+  expect(updatedHook.resultsAreStale).toBe(true)
+})
+
 it('stale responses are ignored and latest analysis wins', async () => {
   const first = createDeferred()
   const second = createDeferred()
@@ -280,7 +357,7 @@ it('cancelAnalysis aborts in-flight analysis and resets state', async () => {
   expect(rerenderedHook.analyzeError).toBe(null)
 })
 
-it('clears completed results as soon as the diagram code changes', async () => {
+it('preserves completed results and marks them stale as soon as the diagram code changes', async () => {
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async () => ({
       diagram_type: 'flowchart',
@@ -302,8 +379,9 @@ it('clears completed results as soon as the diagram code changes', async () => {
 
   reactMock.__prepareRender()
   const editedHook = useDiagramAnalysis()
-  expect(editedHook.lastCompletedRun).toBe(null)
-  expect(editedHook.violations).toEqual([])
+  expect(editedHook.lastCompletedRun?.status).toBe('success')
+  expect(editedHook.violations).toHaveLength(1)
+  expect(editedHook.resultsAreStale).toBe(true)
 })
 
 

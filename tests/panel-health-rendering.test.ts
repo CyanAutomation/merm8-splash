@@ -86,6 +86,25 @@ describe('health hotspot panel rendering', () => {
     expect(loadingMarkup).not.toContain('Old result')
   })
 
+  it('keeps previous results visible with a clear notice while edits are debounced', () => {
+    const view = mount(createElement(ResultsPanel, {
+      results: [{ rule_id: 'no-cycles', severity: 'warning', message: 'Cycle found', line: 4 }],
+      resultState: 'violations',
+      resultsAreStale: true,
+      isAnalyzing: false,
+      analyzeError: null,
+      analysisHints: [],
+    }))
+
+    try {
+      expect(view.container.querySelector('[role="status"]')?.textContent)
+        .toContain('These results are from your previous edits.')
+      expect(view.container.querySelector('tbody tr')?.textContent).toContain('no-cycles')
+    } finally {
+      view.unmount()
+    }
+  })
+
   it('explains when the connected API has no rules for the diagram type', () => {
     const resultsMarkup = renderToStaticMarkup(createElement(ResultsPanel, {
       results: [],

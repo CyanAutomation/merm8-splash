@@ -694,6 +694,16 @@ a {
     color: var(--color-success);
   }
 
+  .results-stale-notice {
+    margin: 8px 12px 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 10px 12px;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+  }
+
   .results-suggestions,
   .syntax-only-notice,
   .parse-error-feedback {

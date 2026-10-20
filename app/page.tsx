@@ -41,6 +41,7 @@ function HomeContent() {
     violations,
     isAnalyzing,
     lastCompletedRun,
+    resultsAreStale,
     analyzeError,
     analysisHints,
     diagramType,
@@ -119,6 +120,7 @@ function HomeContent() {
           analysis: {
             violations,
             resultState,
+            resultsAreStale: resultsAreStale && lastCompletedRun?.status === 'success',
             isAnalyzing,
             analyzeError,
             analysisHints,

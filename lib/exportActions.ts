@@ -1,6 +1,7 @@
 import { analyzeCodeSarif, validateApiEndpoint, type Rule, type Violation } from './api'
 import { copyTextWithFallback } from './clipboard'
 import { createFallbackSarif } from './exportFormats'
+import { EXPORT_MESSAGES } from './uiCopy'
 
 export interface CopyExportOptions {
   text: string
@@ -65,6 +66,7 @@ export async function exportSarifWithFallback(options: SarifExportOptions): Prom
 
     const sarif = await analyzeCodeSarif(options.endpoint, options.code, options.enabledRules, options.rulesMetadata)
     options.downloadFile(JSON.stringify(sarif, null, 2), 'merm8-check-results.sarif.json', 'application/json')
+    options.showSnackbar(EXPORT_MESSAGES.sarifDownloaded, 'success')
   } catch {
     options.downloadFile(JSON.stringify(fallback, null, 2), 'merm8-check-results.sarif.json', 'application/json')
     options.showSnackbar('The API couldn’t create a SARIF export, so I saved a local copy.', 'error')

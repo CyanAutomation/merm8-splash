@@ -17,6 +17,7 @@ export interface WorkspaceResultsProps {
   analysis: {
     violations: Violation[]
     resultState?: AnalysisResultState
+    resultsAreStale?: boolean
     isAnalyzing: boolean
     analyzeError: string | null
     analysisHints: string[]
@@ -174,6 +175,7 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
               ref={analysis.resultsRef}
               results={analysis.violations}
               resultState={resultState}
+              resultsAreStale={analysis.resultsAreStale}
               isAnalyzing={analysis.isAnalyzing}
               analyzeError={analysis.analyzeError}
               analysisHints={analysis.analysisHints}

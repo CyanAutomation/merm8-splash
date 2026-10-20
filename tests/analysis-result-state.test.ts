@@ -81,3 +81,14 @@ it('prompts for diagram code and rules metadata when those are the current block
   expect(getAnalysisResultState({ ...readyState, code: '' })).toBe('empty-code')
   expect(getAnalysisResultState({ ...readyState, rulesReady: false })).toBe('loading-rules')
 })
+
+it('treats empty code as idle even when the previous analysis failed', () => {
+  expect(getAnalysisResultState({
+    ...readyState,
+    code: '  ',
+    isAnalyzing: true,
+    parseError: 'Previous syntax error',
+    analyzeError: 'API unavailable',
+    lastCompletedStatus: 'error',
+  })).toBe('empty-code')
+})

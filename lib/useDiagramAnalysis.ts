@@ -29,6 +29,7 @@ export interface UseDiagramAnalysisReturn {
   lintSupported: boolean | null
   metrics: AnalysisMetrics | null
   lastCompletedRun: AnalysisRunResult | null
+  resultsAreStale: boolean
   triggerAnalysis: (
     endpoint: string,
     code: string,
@@ -276,7 +277,10 @@ interface AnalysisStateActions {
   setDiagramType: (diagramType: string | null) => void
   setLintSupported: (lintSupported: boolean | null) => void
   setMetrics: (metrics: AnalysisMetrics | null) => void
-  setLastCompletedRun: (run: AnalysisRunResult | null) => void
+  setLastCompletedRun: (
+    run: AnalysisRunResult | null | ((previous: AnalysisRunResult | null) => AnalysisRunResult | null)
+  ) => void
+  setResultsAreStale: (isStale: boolean) => void
 }
 
 interface AnalysisRequestArgs {
@@ -327,6 +331,17 @@ class AnalysisRequestCoordinator {
     this.state.setMetrics(null)
     this.state.setIsAnalyzing(false)
     this.state.setLastCompletedRun(null)
+    this.state.setResultsAreStale(false)
+  }
+
+  invalidateForChange(): void {
+    this.requestSeq += 1
+    this.stopActiveRequest()
+    this.state.setAnalyzeError(null)
+    this.state.setAnalysisHints([])
+    this.state.setIsAnalyzing(false)
+    this.state.setLastCompletedRun((previous) => previous?.status === 'error' ? null : previous)
+    this.state.setResultsAreStale(true)
   }
 
   pruneCache(now: number): void {
@@ -346,6 +361,7 @@ class AnalysisRequestCoordinator {
     this.state.setMetrics(result.metrics ?? null)
     this.state.setAnalyzeError(null)
     this.state.setAnalysisHints(normalizeHints(result.hints))
+    this.state.setResultsAreStale(false)
     this.state.setLastCompletedRun({
       id: runId,
       source,
@@ -363,6 +379,7 @@ class AnalysisRequestCoordinator {
     this.state.setDiagramType(null)
     this.state.setLintSupported(null)
     this.state.setMetrics(null)
+    this.state.setResultsAreStale(false)
     this.state.setLastCompletedRun({
       id: runId,
       source,
@@ -554,6 +571,7 @@ function useAnalysisViewState() {
   const [lintSupported, setLintSupported] = useState<boolean | null>(null)
   const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null)
   const [lastCompletedRun, setLastCompletedRun] = useState<AnalysisRunResult | null>(null)
+  const [resultsAreStale, setResultsAreStale] = useState(false)
 
   return {
     values: {
@@ -565,6 +583,7 @@ function useAnalysisViewState() {
       lintSupported,
       metrics,
       lastCompletedRun,
+      resultsAreStale,
     },
     actions: {
       setViolations,
@@ -575,6 +594,7 @@ function useAnalysisViewState() {
       setLintSupported,
       setMetrics,
       setLastCompletedRun,
+      setResultsAreStale,
     },
   }
 }
@@ -620,8 +640,11 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
     options: AnalyzeRequestOptions = {},
     scheduling: AnalysisSchedulingOptions = {}
   ) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    coordinatorRef.current.cancel()
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    coordinatorRef.current.invalidateForChange()
 
     const source = scheduling.source ?? 'input'
     const schedule = getScheduledDelay(
@@ -666,9 +689,13 @@ export function useDiagramAnalysis(): UseDiagramAnalysisReturn {
   }, [])
 
   const setCode = useCallback((newCode: string) => {
-    cancelAnalysis()
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+      debounceRef.current = null
+    }
+    coordinatorRef.current.invalidateForChange()
     setCodeState(newCode)
-  }, [cancelAnalysis])
+  }, [])
 
   return {
     code,
