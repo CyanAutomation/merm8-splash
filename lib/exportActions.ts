@@ -1,6 +1,7 @@
 import { analyzeCodeSarif, validateApiEndpoint, type Rule, type Violation } from './api'
 import { copyTextWithFallback } from './clipboard'
 import { createFallbackSarif } from './exportFormats'
+import { EXPORT_MESSAGES } from './uiCopy'
 
 export interface CopyExportOptions {
   text: string
@@ -58,16 +59,17 @@ export async function exportSarifWithFallback(options: SarifExportOptions): Prom
 
   try {
     if (!endpointValidation.valid) {
-      options.downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
-      options.showSnackbar('Endpoint invalid; exported local fallback SARIF.', 'success')
+      options.downloadFile(JSON.stringify(fallback, null, 2), 'merm8-check-results.sarif.json', 'application/json')
+      options.showSnackbar('The endpoint is invalid, so I saved a local SARIF file.', 'success')
       return
     }
 
     const sarif = await analyzeCodeSarif(options.endpoint, options.code, options.enabledRules, options.rulesMetadata)
-    options.downloadFile(JSON.stringify(sarif, null, 2), 'merm8-analysis.sarif.json', 'application/json')
+    options.downloadFile(JSON.stringify(sarif, null, 2), 'merm8-check-results.sarif.json', 'application/json')
+    options.showSnackbar(EXPORT_MESSAGES.sarifDownloaded, 'success')
   } catch {
-    options.downloadFile(JSON.stringify(fallback, null, 2), 'merm8-analysis.sarif.json', 'application/json')
-    options.showSnackbar('Remote SARIF generation failed; exported local fallback.', 'error')
+    options.downloadFile(JSON.stringify(fallback, null, 2), 'merm8-check-results.sarif.json', 'application/json')
+    options.showSnackbar('The API couldn’t create a SARIF export, so I saved a local copy.', 'error')
   } finally {
     if (options.isMounted()) options.closeDropdown()
   }

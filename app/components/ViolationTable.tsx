@@ -1,5 +1,7 @@
+import type { CSSProperties } from 'react'
 import type { Violation } from '@/lib/api'
 import { severityColor } from '@/lib/severity'
+import Button from './Button'
 
 interface ViolationTableProps {
   violations: Violation[]
@@ -22,14 +24,15 @@ export default function ViolationTable({
   onJumpToLine,
 }: ViolationTableProps) {
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+    <div className="results-table-scroll">
+      <table className="results-table">
       <thead>
-        <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', fontSize: '11px', textAlign: 'left' }}>
-          <th style={{ padding: '4px 8px', whiteSpace: 'nowrap' }}>Rule</th>
-          <th style={{ padding: '4px 8px' }}>Sev</th>
-          <th style={{ padding: '4px 8px', width: '100%' }}>Message</th>
-          <th style={{ padding: '4px 8px', whiteSpace: 'nowrap' }}>Line</th>
-          <th style={{ padding: '4px 4px' }}></th>
+        <tr>
+          <th scope="col">Rule</th>
+          <th scope="col">Severity</th>
+          <th scope="col">Message</th>
+          <th scope="col">Line</th>
+          <th scope="col" aria-label="Actions"></th>
         </tr>
       </thead>
       <tbody>
@@ -38,54 +41,48 @@ export default function ViolationTable({
           const color = severityColor(violation.severity)
 
           return (
-            <tr
-              key={key}
-              style={{
-                borderBottom: '1px solid rgba(68,68,68,0.3)',
-                cursor: violation.line != null ? 'pointer' : 'default',
-              }}
-              onClick={() => violation.line != null && onJumpToLine?.(violation.line)}
-            >
-              <td style={{ padding: '6px 8px', color: 'var(--color-accent-primary)', whiteSpace: 'nowrap', fontWeight: 600 }}>
+            <tr key={key}>
+              <td className="violation-rule">
                 {violation.rule_id}
               </td>
-              <td style={{ padding: '6px 8px' }}>
-                <span
-                  style={{
-                    color,
-                    border: `1px solid ${color}`,
-                    padding: '2px 8px',
-                    fontSize: '12px',
-                    borderRadius: '8px',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+              <td>
+                <span className="severity-label" style={{ '--severity-color': color } as CSSProperties}>
                   {violation.severity}
                 </span>
               </td>
-              <td style={{ padding: '6px 8px', color: 'var(--color-text-primary)' }}>
+              <td className="violation-message">
                 {violation.message}
               </td>
-              <td style={{ padding: '6px 8px', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                {violation.line ?? '—'}
+              <td className="violation-line">
+                {violation.line != null && onJumpToLine ? (
+                  <Button
+                    size="small"
+                    variant="quiet"
+                    aria-label={`Go to line ${violation.line}`}
+                    onClick={() => onJumpToLine(violation.line!)}
+                  >
+                    {violation.line}
+                  </Button>
+                ) : violation.line ?? '—'}
               </td>
-              <td style={{ padding: '6px 4px' }}>
-                <button
-                  className="btn"
-                  style={{ fontSize: '10px', padding: '1px 4px' }}
+              <td className="violation-actions">
+                <Button
+                  size="small"
+                  variant="quiet"
+                  aria-label={copiedKey === key ? `Copied ${violation.rule_id}` : `Copy ${violation.rule_id} result`}
                   onClick={(event) => {
                     event.stopPropagation()
                     onCopy(violation, key)
                   }}
-                  title="Copy"
                 >
-                  {copiedKey === key ? '✓' : copyErrorKey === key ? '⚠' : '⎘'}
-                </button>
+                  {copiedKey === key ? 'Copied' : copyErrorKey === key ? 'Try again' : 'Copy'}
+                </Button>
               </td>
             </tr>
           )
         })}
       </tbody>
-    </table>
+      </table>
+    </div>
   )
 }

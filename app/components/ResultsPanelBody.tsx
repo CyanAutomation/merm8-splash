@@ -1,10 +1,13 @@
 import type { Violation } from '@/lib/api'
+import type { AnalysisResultState } from '@/lib/analysisResultState'
+import { ANALYSIS_RESULT_MESSAGES, RESULTS_STALE_MESSAGE } from '@/lib/uiCopy'
 import ResultsPanelFeedback from './ResultsPanelFeedback'
 import ViolationTable from './ViolationTable'
 
 interface ResultsPanelBodyProps {
   results: Violation[]
-  isAnalyzing: boolean
+  resultState: AnalysisResultState
+  resultsAreStale: boolean
   analyzeError: string | null
   analysisHints: string[]
   lintSupported?: boolean | null
@@ -17,7 +20,8 @@ interface ResultsPanelBodyProps {
 
 export default function ResultsPanelBody({
   results,
-  isAnalyzing,
+  resultState,
+  resultsAreStale,
   analyzeError,
   analysisHints,
   lintSupported,
@@ -27,27 +31,29 @@ export default function ResultsPanelBody({
   copyErrorKey,
   onCopy,
 }: ResultsPanelBodyProps) {
-  if (isAnalyzing) {
-    return <div style={{ padding: '12px', color: 'var(--color-accent-primary)', fontSize: '12px' }}>⠋ Analyzing...</div>
+  if (resultState === 'analyzing') {
+    return <div className="results-message" role="status">Checking your diagram…</div>
   }
 
-  const hasViolations = results.length > 0
-  const shouldShowEmptyState = !hasViolations && !parseError && !analyzeError
+  const message = resultState in ANALYSIS_RESULT_MESSAGES
+    ? ANALYSIS_RESULT_MESSAGES[resultState as keyof typeof ANALYSIS_RESULT_MESSAGES]
+    : null
 
   return (
     <>
+      {resultsAreStale && resultState !== 'empty-code' && (
+        <div className="results-stale-notice" role="status">
+          {RESULTS_STALE_MESSAGE}
+        </div>
+      )}
       <ResultsPanelFeedback
         analyzeError={analyzeError}
         analysisHints={analysisHints}
-        lintSupported={lintSupported}
+        lintSupported={resultState === 'violations' ? lintSupported : null}
         parseError={parseError}
         onJumpToLine={onJumpToLine}
       />
-      {shouldShowEmptyState ? (
-        <div style={{ padding: '16px', color: 'var(--color-success)', fontSize: '13px', textAlign: 'center' }}>
-          ✓ No violations found
-        </div>
-      ) : hasViolations ? (
+      {resultState === 'violations' ? (
         <ViolationTable
           violations={results}
           copiedKey={copiedKey}
@@ -55,6 +61,13 @@ export default function ResultsPanelBody({
           onCopy={onCopy}
           onJumpToLine={onJumpToLine}
         />
+      ) : message ? (
+        <div
+          className={`results-message${resultState === 'clean' ? ' results-message-success' : ''}`}
+          role={resultState === 'clean' ? 'status' : undefined}
+        >
+          {message}
+        </div>
       ) : null}
     </>
   )

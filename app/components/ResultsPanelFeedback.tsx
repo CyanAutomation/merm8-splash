@@ -1,4 +1,5 @@
 import { extractLineNumber } from '@/lib/errorUtils'
+import Button from './Button'
 
 interface ResultsPanelFeedbackProps {
   analyzeError: string | null
@@ -19,6 +20,7 @@ export default function ResultsPanelFeedback({
     <>
       {analyzeError && (
         <div
+          role="alert"
           style={{
             padding: '12px',
             color: 'var(--color-error)',
@@ -27,53 +29,27 @@ export default function ResultsPanelFeedback({
             marginBottom: analysisHints.length > 0 ? '8px' : '0',
           }}
         >
-          <div>⚠ {analyzeError}</div>
+          <div>{analyzeError}</div>
         </div>
       )}
 
       {analysisHints.length > 0 && (
-        <div
-          style={{
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            padding: '10px 12px',
-            marginBottom: '8px',
-            background: 'var(--color-bg-secondary)',
-          }}
-        >
-          <div
-            style={{
-              color: 'var(--color-text-secondary)',
-              fontSize: '11px',
-              fontWeight: 600,
-              marginBottom: '6px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.02em',
-            }}
-          >
-            Hints
-          </div>
-          <ol
-            style={{
-              margin: 0,
-              paddingLeft: '18px',
-              color: 'var(--color-text-primary)',
-              fontSize: '12px',
-            }}
-          >
+        <div className="results-suggestions">
+          <h3 className="results-suggestions-title">Suggestions</h3>
+          <ol className="results-suggestions-list">
             {analysisHints.map((hint, index) => {
               const line = extractLineNumber(hint)
               return (
-                <li key={`hint-${index}`} style={{ marginBottom: '4px' }}>
+                <li key={`hint-${index}`}>
                   {hint}{' '}
                   {line != null && onJumpToLine && (
-                    <button
-                      className="btn"
-                      style={{ fontSize: '10px', padding: '1px 6px', marginLeft: '6px' }}
+                    <Button
+                      size="small"
+                      style={{ marginLeft: '6px' }}
                       onClick={() => onJumpToLine(line)}
                     >
-                      Show me where
-                    </button>
+                      Go to line {line}
+                    </Button>
                   )}
                 </li>
               )
@@ -83,53 +59,15 @@ export default function ResultsPanelFeedback({
       )}
 
       {lintSupported === false && !analyzeError && (
-        <div
-          style={{
-            border: '1px solid var(--color-info)',
-            borderRadius: '8px',
-            padding: '10px 12px',
-            marginBottom: '8px',
-            background: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)',
-            fontSize: '12px',
-          }}
-        >
-          ℹ Syntax is valid, but this API has no lint rules for this diagram type.
+        <div className="syntax-only-notice">
+          Syntax is valid. This API doesn’t have lint rules for this diagram type.
         </div>
       )}
 
       {parseError && (
-        <div
-          style={{
-            border: '1px solid var(--color-error)',
-            borderRadius: '8px',
-            padding: '10px 12px',
-            marginBottom: '8px',
-            background: 'var(--color-bg-secondary)',
-          }}
-        >
-          <div
-            style={{
-              color: 'var(--color-error)',
-              fontSize: '11px',
-              fontWeight: 600,
-              marginBottom: '6px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.02em',
-            }}
-          >
-            Syntax Error
-          </div>
-          <div
-            style={{
-              color: 'var(--color-error)',
-              fontSize: '12px',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}
-          >
-            {parseError}
-          </div>
+        <div className="parse-error-feedback" role="alert">
+          <h3 className="parse-error-title">Syntax error</h3>
+          <div className="parse-error-copy">{parseError}</div>
         </div>
       )}
     </>

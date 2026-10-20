@@ -1,6 +1,6 @@
 'use client'
 
-import type { RefObject } from 'react'
+import { useState, type RefObject } from 'react'
 import type { LayoutPreferences } from '@/lib/useLayoutPreferences'
 import type { DiagramEditorRef } from './DiagramEditor'
 import type { WorkspaceResultsProps } from './WorkspaceResults'
@@ -9,6 +9,7 @@ import DiagramPreview from './DiagramPreview'
 import ErrorBoundary from './ErrorBoundary'
 import WorkspaceDivider from './WorkspaceDivider'
 import WorkspaceResults from './WorkspaceResults'
+import Button from './Button'
 
 export interface WorkspaceAreaProps {
   layout: {
@@ -31,11 +32,30 @@ export interface WorkspaceAreaProps {
 
 export default function WorkspaceArea({ layout, editor, preview, results }: WorkspaceAreaProps) {
   const { preferences, savePreferences } = layout
+  const [mobileView, setMobileView] = useState<'editor' | 'preview' | 'results'>('editor')
 
   return (
     <div className="app-main" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div className="mobile-workspace-tabs" role="group" aria-label="Workspace view">
+        {([
+          ['editor', 'Edit', 'workspace-editor'],
+          ['preview', 'Preview', 'workspace-preview'],
+          ['results', 'Results', 'workspace-results-panel'],
+        ] as const).map(([view, label, controls]) => (
+          <Button
+            key={view}
+            variant={mobileView === view ? 'primary' : 'secondary'}
+            aria-pressed={mobileView === view}
+            aria-controls={controls}
+            onClick={() => setMobileView(view)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
       <div
         className="workspace-grid"
+        data-mobile-view={mobileView}
         style={{
           display: 'grid',
           gridTemplateColumns: `${preferences.leftPanelSize}% 4px 1fr`,
@@ -45,7 +65,7 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
           gap: 0,
         }}
       >
-        <div className="workspace-pane" style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
+        <div id="workspace-editor" className="workspace-pane workspace-editor-pane" style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
           <div className="workspace-pane-content" style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
             <ErrorBoundary>
               <DiagramEditor ref={editor.ref} value={editor.code} onChange={editor.onChange} />
@@ -68,7 +88,7 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
           onResize={(leftPanelSize) => savePreferences({ leftPanelSize })}
         />
 
-        <div className="workspace-pane" style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
+        <div id="workspace-preview" className="workspace-pane workspace-preview-pane" style={{ overflow: 'hidden', gridColumn: 3, gridRow: 1 }}>
           <div className="workspace-pane-content" style={{ padding: '8px', height: '100%', overflow: 'auto' }}>
             <ErrorBoundary resetKey={preview.resetKey}>
               <DiagramPreview
@@ -85,7 +105,7 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
           </div>
         </div>
 
-        <div className="workspace-results" style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
+        <div id="workspace-results-panel" className="workspace-results" style={{ overflow: 'hidden', gridColumn: '1 / 4', gridRow: 3 }}>
           <WorkspaceResults {...results} />
         </div>
       </div>

@@ -4,6 +4,7 @@ import { useRef, useState, useImperativeHandle, forwardRef, useEffect, useCallba
 import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
 import { copyTextWithMountedCompletion } from '@/lib/clipboard'
 import { useSnackbar } from '@/app/components/Snackbar'
+import Button from './Button'
 
 interface DiagramEditorProps {
   value: string
@@ -92,7 +93,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       onChange(nextExample.code)
       persistHighlightOnBlurRef.current = false
       setHighlightedLine(null)
-      snackbar.show(`Loaded example ${nextIndex + 1} (${nextExample.type}).`)
+          snackbar.show(`Example ${nextIndex + 1} (${nextExample.type}) loaded.`)
     }
 
     const handleCopyClick = async () => {
@@ -113,7 +114,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
         }
 
         setCopyStatus('error')
-        snackbar.show('Copy failed.', 'error')
+          snackbar.show('Couldn’t copy the diagram code.', 'error')
         copyStatusTimeoutRef.current = setTimeout(() => {
           if (!mountedRef.current) return
           setCopyStatus('idle')
@@ -137,80 +138,40 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     }
 
     return (
-      <div className="panel" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <div className="panel-heading" style={{ marginBottom: 0 }}>✎ Diagram Editor</div>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button
-              className="btn"
-              style={{ fontSize: '12px', padding: '4px 12px' }}
-              onClick={handleExampleClick}
-            >
-              Example
-            </button>
-            <button
-              className="btn"
-              style={{ fontSize: '12px', padding: '4px 8px' }}
+      <div className="panel diagram-editor-panel">
+        <div className="diagram-editor-toolbar">
+          <h2 className="panel-heading">Diagram editor</h2>
+          <div className="diagram-editor-actions">
+            <Button onClick={handleExampleClick}>Load example</Button>
+            <Button
               onClick={handleCopyClick}
-              title="Copy diagram code"
+              disabled={!value}
               aria-label="Copy diagram code"
+              title="Copy diagram code"
             >
-              {copyStatus === 'success' ? '✓' : copyStatus === 'error' ? '⚠' : '⎘'}
-            </button>
-            <button
-              className="btn"
-              style={{ fontSize: '12px', padding: '4px 12px' }}
+              {copyStatus === 'success' ? 'Copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy code'}
+            </Button>
+            <Button
               onClick={() => {
                 onChange('')
-                snackbar.show('Editor cleared.')
+                snackbar.show('Diagram code cleared.')
               }}
             >
-              Clear
-            </button>
+              Clear code
+            </Button>
           </div>
         </div>
 
-        <div
-          style={{
-            fontSize: '12px',
-            color: 'var(--color-text-secondary)',
-            marginBottom: '6px',
-          }}
-        >
-          Paste Mermaid diagram code below
-        </div>
+        <label className="field-label" htmlFor="diagram-code">Mermaid code</label>
 
         <div
           ref={editorContainerRef}
-          style={{
-            flex: 1,
-            display: 'flex',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            background: 'var(--color-bg-primary)',
-          }}
+          className="diagram-editor-field"
         >
           <div
             data-gutter
+            className="editor-gutter"
             aria-hidden="true"
-            style={{
-              width: '40px',
-              minWidth: '40px',
-              background: 'var(--color-bg-secondary)',
-              borderRight: '1px solid var(--color-border)',
-              padding: '12px 0',
-              textAlign: 'right',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '13px',
-              lineHeight: '1.5',
-              color: 'var(--color-text-secondary)',
-              userSelect: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              overflowY: 'auto',
-              scrollbarWidth: 'none',
-            }}
           >
             {Array.from({ length: lineCount }).map((_, i) => (
               <div
@@ -233,7 +194,9 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
           </div>
 
           <textarea
+            id="diagram-code"
             ref={textareaRef}
+            className="diagram-code-input"
             value={value}
             onChange={(e) => {
               onChange(e.target.value)
@@ -241,29 +204,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
             }}
             spellCheck={false}
             onScroll={handleScroll}
-            style={{
-              flex: 1,
-              width: '100%',
-              background: 'var(--color-bg-primary)',
-              border: 'none',
-              color: 'var(--color-text-primary)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '13px',
-              lineHeight: '1.5',
-              padding: '12px',
-              resize: 'none',
-              outline: 'none',
-              tabSize: 2,
-            }}
-            onFocus={() => {
-              if (editorContainerRef.current) {
-                editorContainerRef.current.style.borderColor = 'var(--color-accent-secondary)'
-              }
-            }}
             onBlur={() => {
-              if (editorContainerRef.current) {
-                editorContainerRef.current.style.borderColor = 'var(--color-border)'
-              }
               if (!persistHighlightOnBlurRef.current) {
                 setHighlightedLine(null)
               }
@@ -272,15 +213,8 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
           />
         </div>
 
-        <div
-          style={{
-            fontSize: '11px',
-            color: 'var(--color-text-secondary)',
-            marginTop: '4px',
-            textAlign: 'right',
-          }}
-        >
-          {value.split('\n').length} lines · {value.length} chars
+        <div className="diagram-line-count">
+          {value.split('\n').length} lines · {value.length} characters
         </div>
       </div>
     )

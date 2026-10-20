@@ -2,7 +2,9 @@
 
 import { useRef, useImperativeHandle, forwardRef, useState, type RefObject } from 'react'
 import { validateApiEndpoint } from '@/lib/api'
-import { ConnectionStatus } from '@/lib/useApiEndpoint'
+import type { ConnectionStatus } from '@/lib/useApiEndpoint'
+import { getConnectionStatusLabel } from '@/lib/uiCopy'
+import Button from './Button'
 
 interface ApiConfigPanelProps {
   endpoint: string
@@ -16,13 +18,6 @@ interface ApiConfigPanelProps {
 
 export interface ApiConfigPanelRef {
   focusInput: () => void
-}
-
-const STATUS_LABELS: Record<ConnectionStatus, string> = {
-  connected: 'Connected',
-  checking: 'Checking...',
-  error: 'Error',
-  disconnected: 'Not tested',
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -48,19 +43,10 @@ function getStatusColor(status: ConnectionStatus): string {
 
 function ApiConfigHeader({ status, source }: { status: ConnectionStatus; source: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-      <div className="panel-heading">⚙ API Configuration</div>
-      <div
-        style={{
-          fontSize: '11px',
-          color: 'var(--color-text-secondary)',
-          display: 'flex',
-          gap: '16px',
-          alignItems: 'center',
-        }}
-      >
+    <div className="api-config-header">
+      <div className="api-config-status">
         <span>
-          Status: <span style={{ color: getStatusColor(status) }}>{STATUS_LABELS[status]}</span>
+          Status: <span style={{ color: getStatusColor(status) }}>{getConnectionStatusLabel(status)}</span>
         </span>
         <span>Source: {SOURCE_LABELS[source] ?? source}</span>
       </div>
@@ -76,25 +62,18 @@ function EndpointInput({ endpoint, invalid, status, inputRef, onEndpointChange }
   onEndpointChange: (url: string) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flex: 1, minWidth: '200px' }}>
-      <span className={`status-dot status-dot-${status}`} />
+    <div className="api-endpoint-row">
+      <span className={`status-dot status-dot-${status}`} aria-hidden="true" />
       <input
+        id="api-endpoint"
         ref={inputRef}
         type="url"
         value={endpoint}
         onChange={(event) => onEndpointChange(event.target.value)}
         placeholder="https://merm8.scheimann.workers.dev"
-        style={{
-          flex: 1,
-          background: 'var(--color-bg-primary)',
-          border: invalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
-          color: 'var(--color-text-primary)',
-          fontFamily: 'var(--font-sans)',
-          fontSize: '12px',
-          padding: '6px 8px',
-          borderRadius: '8px',
-          outline: 'none',
-        }}
+        className="field-control api-endpoint-input"
+        aria-invalid={invalid || undefined}
+        aria-describedby="api-endpoint-feedback"
       />
     </div>
   )
@@ -113,16 +92,9 @@ function EndpointPresets({
     <select
       value={selectedPreset}
       onChange={(event) => onSelect(event.target.value)}
-      style={{
-        background: 'var(--color-bg-primary)',
-        border: invalid ? '1px solid var(--color-error)' : '1px solid var(--color-border)',
-        color: 'var(--color-text-secondary)',
-        fontFamily: 'var(--font-sans)',
-        fontSize: '12px',
-        padding: '6px 8px',
-        borderRadius: '8px',
-        cursor: 'pointer',
-      }}
+      className="field-control api-endpoint-presets"
+      aria-label="Choose an API endpoint preset"
+      aria-invalid={invalid || undefined}
     >
       <option value="" disabled>Presets</option>
       {PRESETS.map((preset) => (
@@ -150,12 +122,12 @@ function EndpointActions({
   return (
     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
       <EndpointPresets selectedPreset={selectedPreset} invalid={invalid} onSelect={onSelectPreset} />
-      <button className="btn" onClick={onTestConnection} disabled={checking || invalid}>
-        Test
-      </button>
-      <button className="btn" onClick={onSave} disabled={invalid}>
-        Save
-      </button>
+      <Button onClick={onTestConnection} disabled={checking || invalid}>
+        {checking ? 'Testing…' : 'Test API'}
+      </Button>
+      <Button variant="primary" onClick={onSave} disabled={invalid}>
+        Save endpoint
+      </Button>
     </div>
   )
 }
@@ -167,7 +139,7 @@ function EndpointFeedback({ message, invalid, status }: {
 }) {
   if (!message) return null
   const color = invalid ? 'var(--color-error)' : getStatusColor(status)
-  return <div style={{ marginTop: '6px', fontSize: '11px', color }}>{message}</div>
+  return <div id="api-endpoint-feedback" role="status" className="api-endpoint-feedback" style={{ color }}>{message}</div>
 }
 
 const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
@@ -197,8 +169,9 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
     }
 
     return (
-      <div className="panel" style={{ borderColor: 'var(--color-border)' }}>
+      <div className="panel api-config-panel">
         <ApiConfigHeader status={connectionStatus} source={configSource} />
+        <label className="field-label" htmlFor="api-endpoint">API endpoint</label>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <EndpointInput
             endpoint={endpoint}

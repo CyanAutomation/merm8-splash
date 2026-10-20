@@ -2,12 +2,15 @@
 
 import { useImperativeHandle, useRef, forwardRef } from 'react'
 import type { Violation } from '@/lib/api'
+import type { AnalysisResultState } from '@/lib/analysisResultState'
 import ResultsPanelBody from './ResultsPanelBody'
 import ResultsPanelHeader from './ResultsPanelHeader'
 import { useViolationCopyFeedback } from './useViolationCopyFeedback'
 
 interface ResultsPanelProps {
   results: Violation[]
+  resultState?: AnalysisResultState
+  resultsAreStale?: boolean
   isAnalyzing: boolean
   analyzeError: string | null
   analysisHints: string[]
@@ -25,6 +28,8 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
   (
     {
       results,
+      resultState,
+      resultsAreStale = false,
       isAnalyzing,
       analyzeError,
       analysisHints,
@@ -35,6 +40,11 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
     },
     ref,
   ) => {
+    const resolvedResultState = resultState ?? (isAnalyzing
+      ? 'analyzing'
+      : results.length > 0
+        ? 'violations'
+        : 'ready')
     const panelRef = useRef<HTMLDivElement>(null)
     const { copiedKey, copyErrorKey, copyViolation } = useViolationCopyFeedback()
 
@@ -53,7 +63,8 @@ const ResultsPanel = forwardRef<ResultsPanelRef, ResultsPanelProps>(
         <div style={{ flex: 1, overflow: 'auto' }}>
           <ResultsPanelBody
             results={results}
-            isAnalyzing={isAnalyzing}
+            resultState={resolvedResultState}
+            resultsAreStale={resultsAreStale}
             analyzeError={analyzeError}
             analysisHints={analysisHints}
             lintSupported={lintSupported}
