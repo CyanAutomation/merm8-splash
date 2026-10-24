@@ -41,6 +41,7 @@ export interface WorkspaceResultsProps {
     canRecheck: boolean
     onRecheck: () => void
     onOpenRules: () => void
+    onApplySuggestedCode?: (code: string) => void
   }
 }
 
@@ -165,8 +166,14 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
               result={semanticReviewResult}
               error={semanticReviewError}
               isLoading={semanticReviewLoading}
+              code={exportOptions.code}
               onBack={() => setShowSemanticReview(false)}
               onReviewAgain={retrySemanticReview}
+              onJumpToLine={analysis.onJumpToLine}
+              onApplySuggestedCode={(code) => {
+                actions.onApplySuggestedCode?.(code)
+                setShowSemanticReview(false)
+              }}
             />
           </ErrorBoundary>
         ) : (

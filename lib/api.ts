@@ -96,8 +96,28 @@ export interface SemanticReview {
   'review-priority': { value: string; confidence: number }
 }
 
+export interface SemanticReviewEvidence {
+  nodeId?: string
+  label?: string
+  from?: string
+  to?: string
+  line?: number
+}
+
+export interface SemanticReviewFinding {
+  id?: string
+  category?: string
+  priority?: 'low' | 'medium' | 'high'
+  title: string
+  explanation: string
+  suggestion?: string
+  evidence: SemanticReviewEvidence[]
+  suggestedCode?: string
+}
+
 export interface SemanticReviewResponse extends AnalyzeResponse {
   'semantic-review': SemanticReview
+  'review-findings'?: SemanticReviewFinding[]
   meta: { source: 'jev'; model: string }
 }
 
@@ -388,6 +408,60 @@ function isSemanticReviewResponse(value: unknown): value is SemanticReviewRespon
     && hasScoredValue(review['review-priority'], 'string', 'confidence')
 }
 
+function normalizeSemanticReviewEvidence(value: unknown): SemanticReviewEvidence[] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((rawEvidence) => {
+    if (!isRecord(rawEvidence)) return []
+
+    const evidence: SemanticReviewEvidence = {}
+    const nodeId = rawEvidence['node-id'] ?? rawEvidence.nodeId
+    const from = rawEvidence.from
+    const to = rawEvidence.to
+    const line = rawEvidence.line ?? rawEvidence['source-line']
+
+    if (typeof nodeId === 'string') evidence.nodeId = nodeId
+    if (typeof rawEvidence.label === 'string') evidence.label = rawEvidence.label
+    if (typeof from === 'string') evidence.from = from
+    if (typeof to === 'string') evidence.to = to
+    if (typeof line === 'number' && Number.isInteger(line) && line > 0) evidence.line = line
+
+    return [evidence]
+  })
+}
+
+function normalizeSemanticReviewFindings(value: unknown): SemanticReviewFinding[] | undefined {
+  if (!Array.isArray(value)) return undefined
+
+  return value.flatMap((rawFinding, index) => {
+    if (!isRecord(rawFinding)) return []
+
+    const title = rawFinding.title
+    const explanation = rawFinding.explanation ?? rawFinding.rationale
+    if (typeof title !== 'string' || typeof explanation !== 'string') return []
+
+    const finding: SemanticReviewFinding = {
+      title,
+      explanation,
+      evidence: normalizeSemanticReviewEvidence(rawFinding.evidence),
+    }
+    const id = rawFinding.id
+    const category = rawFinding.category
+    const priority = rawFinding.priority
+    const suggestion = rawFinding.suggestion
+    const suggestedCode = rawFinding['suggested-code'] ?? rawFinding.suggestedCode
+
+    if (typeof id === 'string') finding.id = id
+    else finding.id = `review-finding-${index + 1}`
+    if (typeof category === 'string') finding.category = category
+    if (priority === 'low' || priority === 'medium' || priority === 'high') finding.priority = priority
+    if (typeof suggestion === 'string') finding.suggestion = suggestion
+    if (typeof suggestedCode === 'string') finding.suggestedCode = suggestedCode
+
+    return [finding]
+  })
+}
+
 export interface HealthzResponse {
   status: 'ok'
 }
@@ -493,5 +567,17 @@ export async function reviewCodeSemantics(
     throw new Error('The API returned an invalid semantic review response.')
   }
 
-  return response
+  const normalizedAnalysis = normalizeAnalyzeResponse(response)
+  const findings = normalizeSemanticReviewFindings(response['review-findings'])
+  const metaSource = response.meta.source
+
+  return {
+    ...normalizedAnalysis,
+    'semantic-review': response['semantic-review'],
+    ...(findings === undefined ? {} : { 'review-findings': findings }),
+    meta: {
+      source: metaSource === 'jev' ? metaSource : 'jev',
+      model: response.meta.model,
+    },
+  }
 }
