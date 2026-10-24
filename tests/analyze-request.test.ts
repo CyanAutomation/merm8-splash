@@ -530,7 +530,6 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
     valid: true,
     'diagram-type': 'flowchart',
     'lint-supported': true,
-    issues: [],
     'semantic-review': {
       purpose: { value: 'process', confidence: 0.91 },
       'label-clarity': { value: true, probability: 0.88 },
@@ -539,6 +538,29 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
       ambiguity: { value: false, probability: 0.12 },
       'review-priority': { value: 'low', confidence: 0.84 },
     },
+    'issues': [{ 'rule-id': 'no-cycles', severity: 'warning', message: 'Cycle detected', 'node-id': 'A', line: 2 }],
+    metrics: {
+      'node-count': 2,
+      'edge-count': 1,
+      'max-fanout': 1,
+      'diagram-type': 'flowchart',
+      'issue-counts': { 'by-severity': { warning: 1 }, 'by-rule': { 'no-cycles': 1 } },
+    },
+    'review-findings': [{
+      id: 'unclear-decision',
+      category: 'branch-clarity',
+      priority: 'medium',
+      title: 'Name the decision',
+      rationale: 'The branch label does not state what is being decided.',
+      suggestion: 'Replace the generic label with the question being evaluated.',
+      evidence: [
+        { 'node-id': 'A', label: 'Decision', line: 2 },
+        { source: 'unknown field' },
+        { line: 0 },
+        null,
+      ],
+      'suggested-code': 'flowchart TD\nA[Is the request valid?] --> B',
+    }],
     meta: { source: 'jev', model: 'test-model' },
   })
   const { reviewCodeSemantics } = loadApiModule({ fetchImpl })
@@ -550,6 +572,22 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
   expect(calls[0].init.headers.Authorization).toBe('Bearer secret-key')
   expect(calls[0].init.body).toBe(JSON.stringify({ code: 'flowchart TD\nA --> B' }))
   expect(response['semantic-review'].purpose.value).toBe('process')
+  expect(response.results).toEqual([{
+    rule_id: 'no-cycles',
+    severity: 'warning',
+    message: 'Cycle detected',
+    node_id: 'A',
+    line: 2,
+  }])
+  expect(response.metrics?.maxFanout).toBe(1)
+  expect(response['review-findings']?.[0]).toMatchObject({
+    id: 'unclear-decision',
+    explanation: 'The branch label does not state what is being decided.',
+    suggestedCode: 'flowchart TD\nA[Is the request valid?] --> B',
+  })
+  expect(response['review-findings']?.[0].evidence).toEqual([
+    { nodeId: 'A', label: 'Decision', line: 2 },
+  ])
   expect(JSON.stringify(calls[0].init.body)).not.toContain('secret-key')
 })
 
