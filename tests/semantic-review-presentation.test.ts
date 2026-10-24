@@ -46,6 +46,21 @@ it('marks branch clarity not applicable when the flow has no branch', () => {
   })
 })
 
+it('does not suggest clarifying branches when the flow has no branch', () => {
+  const actions = getReviewActions({
+    ...review,
+    'label-clarity': { value: true, probability: 0.9 },
+    'branch-clarity': { value: false, probability: 0.9 },
+    'abstraction-consistency': { value: true, probability: 0.9 },
+    ambiguity: { value: false, probability: 0.9 },
+    'review-priority': { value: 'low', confidence: 0.9 },
+  }, { hasBranching: false })
+
+  expect(actions.map((action) => action.title)).toEqual([
+    'Check the diagram with a new reader',
+  ])
+})
+
 it('provides next steps that match the semantic concerns', () => {
   const actions = getReviewActions(review)
 

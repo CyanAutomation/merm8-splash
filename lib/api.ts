@@ -426,6 +426,7 @@ function normalizeSemanticReviewEvidence(value: unknown): SemanticReviewEvidence
     if (typeof to === 'string') evidence.to = to
     if (typeof line === 'number' && Number.isInteger(line) && line > 0) evidence.line = line
 
+    if (Object.keys(evidence).length === 0) return []
     return [evidence]
   })
 }

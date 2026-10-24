@@ -95,7 +95,10 @@ export function getReviewItems(
   ]
 }
 
-export function getReviewActions(review: SemanticReview): SemanticReviewAction[] {
+export function getReviewActions(
+  review: SemanticReview,
+  { hasBranching }: ReviewItemOptions = {}
+): SemanticReviewAction[] {
   const actions: SemanticReviewAction[] = []
 
   if (!review['label-clarity'].value) {
@@ -105,7 +108,7 @@ export function getReviewActions(review: SemanticReview): SemanticReviewAction[]
     })
   }
 
-  if (!review['branch-clarity'].value) {
+  if (!review['branch-clarity'].value && hasBranching !== false) {
     actions.push({
       title: 'Clarify branch outcomes',
       description: 'Label each outgoing path with the condition or outcome that distinguishes it.',

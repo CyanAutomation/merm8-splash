@@ -268,7 +268,7 @@ export default function SemanticReviewResults({
             <section className="semantic-review-actions" aria-labelledby="semantic-review-actions-title">
               <h3 id="semantic-review-actions-title">Suggested checks</h3>
               <ul>
-                {getReviewActions(review).map((action) => (
+                {getReviewActions(review, { hasBranching }).map((action) => (
                   <li key={action.title}>
                     <strong>{action.title}:</strong> {action.description}
                   </li>
