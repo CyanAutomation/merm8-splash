@@ -193,6 +193,126 @@ it('runs semantic review directly from the toolbar and displays the API result i
   expect(view.textContent).toContain('Run a check to see results.')
 })
 
+it('shows actionable findings, selected-answer likelihoods, rule issues, and a safe code-diff apply flow', async () => {
+  const onJumpToLine = vi.fn()
+  const onApplySuggestedCode = vi.fn()
+  semanticReviewMock.reviewCodeSemantics.mockResolvedValueOnce({
+    'semantic-review': {
+      purpose: { value: 'decision-tree', confidence: 0.76 },
+      'label-clarity': { value: false, probability: 0.11 },
+      'branch-clarity': { value: true, probability: 0.59 },
+      'abstraction-consistency': { value: true, probability: 0.82 },
+      ambiguity: { value: true, probability: 0.75 },
+      'review-priority': { value: 'none', confidence: 0.08 },
+    },
+    'review-findings': [{
+      id: 'unclear-decision',
+      title: 'Name the decision',
+      explanation: 'The current label does not say what is being decided.',
+      priority: 'medium',
+      evidence: [{ nodeId: 'B', label: 'Decision', line: 2 }],
+      suggestion: 'Replace the generic label with the question being evaluated.',
+      suggestedCode: 'flowchart TD\nB[Is the request valid?] --> C',
+    }, {
+      id: 'critical-ambiguity',
+      title: 'Resolve the critical ambiguity',
+      explanation: 'The path could be misunderstood before the diagram is used.',
+      priority: 'high',
+      evidence: [],
+    }],
+    valid: true,
+    lintSupported: true,
+    diagram_type: 'flowchart',
+    metrics: { ...metricData, maxFanout: 2 },
+    results: [{ rule_id: 'no-cycles', severity: 'warning', message: 'Cycle detected', line: 4 }],
+    meta: { model: 'review-model' },
+  })
+  const view = mount(createElement(WorkspaceResults, {
+    analysis: {
+      violations: [], isAnalyzing: false, analyzeError: null, analysisHints: [], lintSupported: true,
+      parseErrorDetail: null, onJumpToLine, resultsRef: createRef<ResultsPanelRef>(),
+    },
+    exportOptions: { code: 'flowchart TD\nB[Decision] --> C', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
+    metrics: { data: null, visible: false, onToggle: vi.fn() },
+    actions: {
+      canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn(), onApplySuggestedCode,
+    },
+  }))
+
+  const reviewButton = Array.from(view.querySelectorAll('button'))
+    .find((button) => button.title === 'Review the diagram’s clarity')
+  if (!reviewButton) throw new Error('Expected the semantic review action to render.')
+
+  await act(async () => reviewButton.click())
+
+  expect(view.textContent).toContain('Needs clarification')
+  expect(view.textContent).toContain('Estimated likelihood: 89%')
+  expect(view.textContent).toContain('Model confidence: 8%')
+  expect(view.textContent).toContain('Mixed signals')
+  expect(view.textContent).toContain('Suggested change:')
+  expect(view.textContent).toContain('Rule check')
+  expect(view.textContent).toContain('Cycle detected')
+  expect(view.textContent).toContain('Review again')
+  expect(Array.from(view.querySelectorAll('.semantic-review-finding-heading h4')).map((heading) => heading.textContent))
+    .toEqual(['Resolve the critical ambiguity', 'Name the decision'])
+
+  const goToEvidence = Array.from(view.querySelectorAll('button'))
+    .find((button) => button.textContent === 'Go to line 2')
+  if (!goToEvidence) throw new Error('Expected a button to jump to the finding evidence.')
+  act(() => goToEvidence.click())
+  expect(onJumpToLine).toHaveBeenCalledWith(2)
+
+  const preview = Array.from(view.querySelectorAll('summary'))
+    .find((summary) => summary.textContent === 'Preview suggested code change')
+  if (!preview) throw new Error('Expected a suggested code diff preview.')
+  expect(view.textContent).toContain('Remove')
+  expect(view.textContent).toContain('Add')
+
+  const apply = Array.from(view.querySelectorAll('button'))
+    .find((button) => button.textContent === 'Apply suggested code')
+  if (!apply) throw new Error('Expected the option to apply the reviewed code suggestion.')
+  act(() => apply.click())
+  expect(onApplySuggestedCode).toHaveBeenCalledWith('flowchart TD\nB[Is the request valid?] --> C')
+  expect(view.textContent).toContain('Run a check to see results.')
+})
+
+it('marks branch clarity not applicable for a flowchart with no branching', async () => {
+  semanticReviewMock.reviewCodeSemantics.mockResolvedValueOnce({
+    'semantic-review': {
+      purpose: { value: 'process', confidence: 0.9 },
+      'label-clarity': { value: true, probability: 0.8 },
+      'branch-clarity': { value: false, probability: 0.1 },
+      'abstraction-consistency': { value: true, probability: 0.8 },
+      ambiguity: { value: false, probability: 0.1 },
+      'review-priority': { value: 'none', confidence: 0.9 },
+    },
+    valid: true,
+    lintSupported: true,
+    diagram_type: 'flowchart',
+    metrics: { ...metricData, maxFanout: 1 },
+    results: [],
+    meta: { model: 'review-model' },
+  })
+  const view = mount(createElement(WorkspaceResults, {
+    analysis: {
+      violations: [], isAnalyzing: false, analyzeError: null, analysisHints: [], lintSupported: true,
+      parseErrorDetail: null, onJumpToLine: vi.fn(), resultsRef: createRef<ResultsPanelRef>(),
+    },
+    exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
+    metrics: { data: null, visible: false, onToggle: vi.fn() },
+    actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
+  }))
+  const reviewButton = Array.from(view.querySelectorAll('button'))
+    .find((button) => button.title === 'Review the diagram’s clarity')
+  if (!reviewButton) throw new Error('Expected the semantic review action to render.')
+
+  await act(async () => reviewButton.click())
+
+  expect(view.textContent).toContain('Not applicable')
+  expect(view.textContent).toContain('No branching was detected in this flowchart.')
+  expect(view.textContent).not.toContain('Clarify branch outcomes')
+})
+
 it('shows a request error and lets the user retry from the results pane', async () => {
   semanticReviewMock.reviewCodeSemantics
     .mockRejectedValueOnce(new TypeError('Failed to fetch'))

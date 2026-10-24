@@ -12,7 +12,8 @@ function normalizeViolation(rawViolation: unknown): Violation | null {
   const rule_id = typeof rawViolation.rule_id === 'string'
     ? rawViolation.rule_id
     : rawViolation['rule-id']
-  const { severity, message, node_id, line } = rawViolation
+  const { severity, message, line } = rawViolation
+  const node_id = rawViolation.node_id ?? rawViolation['node-id']
 
   if (typeof rule_id !== 'string') return null
   if (!isSeverity(severity)) return null
