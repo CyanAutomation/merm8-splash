@@ -65,14 +65,19 @@ afterEach(() => {
 
 it('reports both the short error and the full renderer details to shared parse state', async () => {
   const fullMessage = 'Unexpected token\nParse error on line 7\nDetailed parser trace'
-  const onParseStateChange = vi.fn()
+  let resolveParseState!: () => void
+  const parseStateReported = new Promise<void>((resolve) => {
+    resolveParseState = resolve
+  })
+  const onParseStateChange = vi.fn(() => resolveParseState())
   rendererMocks.renderDiagramSvg.mockRejectedValue(new Error(fullMessage))
   root = createRoot(container)
 
-  await act(async () => {
+  act(() => {
     root?.render(createElement(RenderErrorHarness, { onParseStateChange }))
-    await Promise.resolve()
-    await Promise.resolve()
+  })
+  await act(async () => {
+    await parseStateReported
   })
 
   expect(onParseStateChange).toHaveBeenCalledWith({
