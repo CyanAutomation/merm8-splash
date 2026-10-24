@@ -736,6 +736,202 @@ a {
     margin-top: 4px;
   }
 
+  .semantic-review-intro,
+  .semantic-review-note,
+  .semantic-review-model {
+    color: var(--color-text-secondary);
+    font-size: 13px;
+  }
+
+  .semantic-review-intro {
+    margin: 0 0 10px;
+  }
+
+  .semantic-review-mixed-signals {
+    margin: 0 0 10px;
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-control);
+    padding: 10px 12px;
+    color: var(--color-text-primary);
+    font-size: 13px;
+  }
+
+  .semantic-review-score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 8px;
+  }
+
+  .semantic-review-score {
+    border-radius: var(--radius-control);
+    padding: 10px 12px;
+    background: var(--color-bg-secondary);
+  }
+
+  .semantic-review-score[data-concern='true'] {
+    border-left: 3px solid var(--color-warning);
+  }
+
+  .semantic-review-score-label,
+  .semantic-review-score-explanation {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+  }
+
+  .semantic-review-score-value {
+    margin-top: 2px;
+    color: var(--color-text-primary);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .semantic-review-score-explanation {
+    margin-top: 4px;
+  }
+
+  .semantic-review-actions,
+  .semantic-review-findings,
+  .semantic-rule-findings {
+    margin-top: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 10px 12px;
+    background: var(--color-bg-secondary);
+  }
+
+  .semantic-review-actions h3,
+  .semantic-review-findings h3,
+  .semantic-rule-findings h3 {
+    margin: 0 0 8px;
+    color: var(--color-text-primary);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .semantic-review-actions ul,
+  .semantic-review-findings ol,
+  .semantic-rule-findings ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--color-text-primary);
+    font-size: 13px;
+  }
+
+  .semantic-review-actions li + li,
+  .semantic-review-finding + .semantic-review-finding,
+  .semantic-rule-findings li + li {
+    margin-top: 8px;
+  }
+
+  .semantic-review-finding p,
+  .semantic-rule-findings p {
+    margin: 6px 0 0;
+  }
+
+  .semantic-review-finding-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .semantic-review-finding-heading h4 {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 13px;
+  }
+
+  .semantic-review-priority {
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+  }
+
+  .semantic-review-evidence {
+    color: var(--color-text-secondary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .semantic-review-evidence .btn {
+    margin-left: 6px;
+  }
+
+  .semantic-review-evidence ul {
+    margin-top: 4px;
+    padding-left: 18px;
+  }
+
+  .semantic-review-evidence li + li {
+    margin-top: 4px;
+  }
+
+  .semantic-review-suggestion {
+    color: var(--color-text-primary);
+  }
+
+  .semantic-review-code-change {
+    margin-top: 8px;
+  }
+
+  .semantic-review-code-change summary {
+    width: fit-content;
+    color: var(--color-accent-primary);
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .semantic-review-diff {
+    max-height: 280px;
+    overflow: auto;
+    margin: 8px 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    padding: 8px 8px 8px 34px;
+    background: var(--color-bg-primary);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .semantic-review-diff li {
+    padding: 2px 4px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .semantic-review-diff li[data-change='remove'] {
+    background: color-mix(in srgb, var(--color-error) 14%, transparent);
+    text-decoration: line-through;
+  }
+
+  .semantic-review-diff li[data-change='add'] {
+    background: color-mix(in srgb, var(--color-success) 14%, transparent);
+  }
+
+  .semantic-review-diff-kind {
+    display: inline-block;
+    width: 44px;
+    color: var(--color-text-secondary);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-decoration: none;
+    text-transform: uppercase;
+  }
+
+  .semantic-rule-findings li .severity-label {
+    margin-right: 6px;
+  }
+
+  .semantic-rule-findings li .btn {
+    margin-left: 6px;
+  }
+
+  .semantic-review-model {
+    margin: 12px 0 0;
+  }
+
   .syntax-only-notice {
     color: var(--color-info);
     font-size: 13px;

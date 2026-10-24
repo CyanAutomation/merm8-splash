@@ -135,6 +135,7 @@ function HomeContent() {
             canRecheck,
             onRecheck: handleRecheck,
             onOpenRules: dialogState.openRules,
+            onApplySuggestedCode: setCode,
           },
         },
       }}
