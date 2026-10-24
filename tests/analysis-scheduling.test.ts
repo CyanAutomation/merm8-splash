@@ -6,10 +6,12 @@ it('uses the large-diagram idle boundary when a diagram has many lines', () => {
     .toBe(1_000)
 })
 
-it('resets the rapid-input streak for configuration changes', () => {
-  expect(getScheduledDelay('A --> B', 'config', 1_200, 1_100, 1)).toEqual({
-    delayMs: 250,
-    lastInputAt: 1_100,
-    rapidInputStreak: 0,
-  })
+it('does not apply rapid-input backoff to configuration changes', () => {
+  const now = 1_200
+  const normalInputDelay = getScheduledDelay('A --> B', 'input', now, 0, 0).delayMs
+  const rapidInputDelay = getScheduledDelay('A --> B', 'input', now, 1_100, 1).delayMs
+  const configurationDelay = getScheduledDelay('A --> B', 'config', now, 1_100, 1).delayMs
+
+  expect(rapidInputDelay).toBeGreaterThan(normalInputDelay)
+  expect(configurationDelay).toBe(normalInputDelay)
 })
