@@ -11,39 +11,12 @@ import type { ApiConfigPanelRef } from '../app/components/ApiConfigPanel'
 import type { DiagramEditorRef } from '../app/components/DiagramEditor'
 import type { ResultsPanelRef } from '../app/components/ResultsPanel'
 
-vi.mock('../app/components/HomeHeader', async () => {
-  const { createElement } = await import('react')
-  return {
-    default: ({ onOpenApiConfiguration }: { onOpenApiConfiguration: () => void }) =>
-      createElement('section', { 'data-region': 'header' },
-        createElement('button', { 'aria-label': 'Open API configuration', onClick: onOpenApiConfiguration }, 'API configuration')),
-  }
-})
-
 vi.mock('../app/components/WorkspaceArea', async () => {
   const { createElement } = await import('react')
   return {
     default: ({ preview }: { preview: { onJumpToLine: (line: number) => void } }) =>
-      createElement('section', { 'data-region': 'workspace' },
+      createElement('div', { className: 'app-main' },
         createElement('button', { 'aria-label': 'Jump to diagram line', onClick: () => preview.onJumpToLine(7) }, 'Jump to line 7')),
-  }
-})
-
-vi.mock('../app/components/StatusBar', async () => {
-  const { createElement } = await import('react')
-  return {
-    default: ({ onTestConnection }: { onTestConnection: () => void }) =>
-      createElement('section', { 'data-region': 'status-bar' },
-        createElement('button', { 'aria-label': 'Test API connection', onClick: onTestConnection }, 'Test connection')),
-  }
-})
-
-vi.mock('../app/components/HomeDialogs', async () => {
-  const { createElement } = await import('react')
-  return {
-    default: ({ reset }: { reset: { onReset: () => void } }) =>
-      createElement('section', { 'data-region': 'dialogs' },
-        createElement('button', { 'aria-label': 'Confirm layout reset', onClick: reset.onReset }, 'Reset layout')),
   }
 })
 
@@ -162,8 +135,10 @@ function createLayoutProps(callbacks: {
   }
 }
 
-function clickAction(label: string) {
-  const button = container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+function clickAction(label: string, within: ParentNode = container) {
+  const button = Array.from(within.querySelectorAll('button'))
+    .find((candidate) => candidate.textContent?.trim() === label
+      || candidate.getAttribute('aria-label') === label)
   if (!button) throw new Error(`Expected the “${label}” action to render.`)
   act(() => button.click())
 }
@@ -178,13 +153,22 @@ it('renders page regions in order and routes each section action to its callback
 
   act(() => root?.render(createElement(HomePageLayout, createLayoutProps(callbacks))))
 
-  expect([...container.querySelectorAll('[data-region]')].map((region) => region.getAttribute('data-region')))
-    .toEqual(['header', 'workspace', 'status-bar', 'dialogs'])
+  const appShell = container.querySelector('.app-shell')
+  if (!appShell) throw new Error('Expected the home page shell to render.')
+  expect([...appShell.children].map((region) => {
+    if (region.matches('header')) return 'header'
+    if (region.matches('.app-main')) return 'workspace'
+    if (region.matches('.status-bar')) return 'status-bar'
+    if (region.querySelector('[role="dialog"]')) return 'dialogs'
+    return 'unknown'
+  })).toEqual(['header', 'workspace', 'status-bar', 'dialogs'])
 
-  clickAction('Open API configuration')
+  clickAction('API settings')
   clickAction('Jump to diagram line')
   clickAction('Test API connection')
-  clickAction('Confirm layout reset')
+  const resetDialog = appShell.querySelector('[role="dialog"]')
+  if (!resetDialog) throw new Error('Expected the layout reset confirmation dialog to render.')
+  clickAction('Reset layout', resetDialog)
 
   expect(callbacks.onOpenApiConfiguration).toHaveBeenCalledOnce()
   expect(callbacks.onJumpToLine).toHaveBeenCalledWith(7)

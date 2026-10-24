@@ -71,7 +71,8 @@ it('reports both the short error and the full renderer details to shared parse s
 
   await act(async () => {
     root?.render(createElement(RenderErrorHarness, { onParseStateChange }))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await Promise.resolve()
+    await Promise.resolve()
   })
 
   expect(onParseStateChange).toHaveBeenCalledWith({

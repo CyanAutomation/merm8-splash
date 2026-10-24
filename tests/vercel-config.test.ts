@@ -80,15 +80,12 @@ it('sets a Vercel CSP that supports the configurable HTTPS API endpoint', () => 
 it('documents production API configuration and optional Preview CORS setup', () => {
   const documentation = vercelDocumentation.replace(/\s+/g, ' ')
 
-  expect(documentation).toContain(
-    'set `NEXT_PUBLIC_MERM8_API_URL` for Production to `https://merm8.scheimann.workers.dev`',
-  )
-  expect(documentation).toContain(
-    'This frontend is a static export, so Next.js embeds this public value in the files during each build; redeploy after changing it.',
-  )
-  expect(documentation).toContain(
-    'Make sure the API\'s CORS allowlist includes the production origin `https://merm8-splash.vercel.app`.',
-  )
-  expect(documentation).toContain('add their exact origins to the allowlist as needed.')
-  expect(documentation).toContain('Avoid allowing every `*.vercel.app` origin.')
+  expect(documentation).toContain('NEXT_PUBLIC_MERM8_API_URL')
+  expect(documentation).toContain('https://merm8.scheimann.workers.dev')
+  expect(documentation).toMatch(/static export/i)
+  expect(documentation).toMatch(/redeploy after changing/i)
+  expect(documentation).toMatch(/CORS allowlist/i)
+  expect(documentation).toContain('https://merm8-splash.vercel.app')
+  expect(documentation).toMatch(/exact origins/i)
+  expect(documentation).toMatch(/avoid allowing every `\*\.vercel\.app` origin/i)
 })

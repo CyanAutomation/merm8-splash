@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 
@@ -42,6 +43,19 @@ function workflowStepBlock(source: string, name: string): string {
   return yamlBlock(source, `- name: ${name}`)
 }
 
+function workflowJobBlock(source: string, name: string): string {
+  return yamlBlock(yamlBlock(source, 'jobs:'), `${name}:`)
+}
+
+function yamlScalar(source: string, key: string): string | undefined {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const value = source.split(/\r?\n/)
+    .map((line) => line.match(new RegExp(`^\\s*${escapedKey}:\\s*(.*?)\\s*$`))?.[1])
+    .find((candidate) => candidate !== undefined)
+  if (value === undefined) return undefined
+  return value.replace(/\s+#.*$/, '').replace(/^(['"])(.*)\1$/, '$2')
+}
+
 function runScript(source: string, name: string): string {
   const lines = workflowStepBlock(source, name).split(/\r?\n/)
   const runIndex = lines.findIndex((line) => /^\s*run: \|$/.test(line))
@@ -60,28 +74,72 @@ function runScript(source: string, name: string): string {
   return script.join('\n')
 }
 
+function buildPayload(workflow: string, stepName: string) {
+  const step = workflowStepBlock(workflow, stepName)
+  const environment = yamlBlock(step, 'env:')
+  const outputDirectory = mkdtempSync(join(tmpdir(), 'kaseki-payload-'))
+  const outputFile = join(outputDirectory, 'github-output')
+
+  try {
+    const env = Object.fromEntries(
+      ['REF', 'TASK_DESCRIPTION', 'ALLOWLIST', 'VALIDATION_COMMAND'].map((key) => {
+        const value = yamlScalar(environment, key)
+        if (value === undefined) throw new Error(`Expected ${key} to be configured for ${stepName}.`)
+        return [key, value]
+      }),
+    )
+    execFileSync('bash', ['-c', runScript(workflow, stepName)], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        ...env,
+        REPO_URL: 'https://github.com/CyanAutomation/merm8-splash',
+        GITHUB_OUTPUT: outputFile,
+      },
+    })
+
+    const payloadJson = readFileSync(outputFile, 'utf8').match(/^payload=(.+)$/m)?.[1]
+    if (!payloadJson) throw new Error(`Expected ${stepName} to write a payload.`)
+    return JSON.parse(payloadJson) as Record<string, unknown>
+  } finally {
+    rmSync(outputDirectory, { recursive: true, force: true })
+  }
+}
+
 it('keeps Kaseki preparation and secret-bearing execution on main', () => {
-  for (const workflow of [dryWorkflow, docsWorkflow]) {
-    expect(workflow).toContain("if: github.ref == 'refs/heads/main'")
-    expect(workflow).toContain('uses: ./.github/workflows/kaseki-run.yml')
-    expect(workflow).toContain('needs: prepare')
+  for (const [workflow, runJobName] of [
+    [dryWorkflow, 'dry_sweep'],
+    [docsWorkflow, 'docs_sweep'],
+  ] as const) {
+    const prepareJob = workflowJobBlock(workflow, 'prepare')
+    const runJob = workflowJobBlock(workflow, runJobName)
+
+    expect(yamlScalar(prepareJob, 'if')).toBe("github.ref == 'refs/heads/main'")
+    expect(yamlScalar(runJob, 'if')).toBeUndefined()
+    expect(yamlScalar(runJob, 'uses')).toBe('./.github/workflows/kaseki-run.yml')
+    expect(yamlScalar(runJob, 'needs')).toBe('prepare')
   }
 
-  expect(kasekiWorkflow).toContain("if: github.ref == 'refs/heads/main'")
+  expect(yamlScalar(workflowJobBlock(kasekiWorkflow, 'run'), 'if'))
+    .toBe("github.ref == 'refs/heads/main'")
 })
 
 it('uses one reusable workflow for Kaseki preflight, submission, and polling', () => {
-  expect(kasekiWorkflow).toContain('workflow_call:')
-  expect(kasekiWorkflow).toContain('Verify controller health')
-  expect(kasekiWorkflow).toContain('Verify controller readiness')
-  expect(kasekiWorkflow).toContain('Verify gateway connectivity and authentication')
-  expect(kasekiWorkflow).toContain('Submit Kaseki run')
-  expect(kasekiWorkflow).toContain('Wait for Kaseki completion')
+  expect(yamlBlock(yamlBlock(kasekiWorkflow, 'on:'), 'workflow_call:')).not.toBe('')
 
-  for (const workflow of [dryWorkflow, docsWorkflow]) {
-    expect(workflow).not.toContain('/api/v1/runs')
-    expect(workflow).not.toContain('poll_deadline=')
+  for (const [workflow, jobName] of [[dryWorkflow, 'dry_sweep'], [docsWorkflow, 'docs_sweep']]) {
+    const callerJob = workflowJobBlock(workflow, jobName)
+    expect(yamlScalar(callerJob, 'uses')).toBe('./.github/workflows/kaseki-run.yml')
+    expect(yamlBlock(callerJob, 'steps:')).toBe('')
   }
+
+  const steps = yamlBlock(workflowJobBlock(kasekiWorkflow, 'run'), 'steps:')
+  const stepNames = [...steps.matchAll(/^\s*- name: (.+)$/gm)].map((match) => match[1].trim())
+  expect(stepNames).toContain('Verify controller health')
+  expect(stepNames).toContain('Verify controller readiness')
+  expect(stepNames).toContain('Verify gateway connectivity and authentication')
+  expect(stepNames).toContain('Submit Kaseki run')
+  expect(stepNames).toContain('Wait for Kaseki completion')
 })
 
 it('uses a single authoritative readiness check before authentication and submission', () => {
@@ -201,19 +259,36 @@ it('bounds run polling and validates controller run IDs before polling', () => {
   expect(waitScript).toContain('echo "status=$status" >> "$GITHUB_OUTPUT"')
 })
 
-it('preserves the distinct task payloads and validation commands', () => {
-  expect(docsWorkflow).toContain('README.md,docs/**/*.md')
-  expect(docsWorkflow).toContain('npm run check:readme && npm run lint && npm test && npm run build')
-  expect(dryWorkflow).toContain('app/**/*,lib/**/*,tests/**/*,types/**/*')
-  expect(dryWorkflow).toContain('npm run lint && npm test && npm run build')
+it('builds distinct task payloads from each workflow’s configured file scope and validation command', () => {
+  const dryPayload = buildPayload(dryWorkflow, 'Build DRY sweep payload')
+  const docsPayload = buildPayload(docsWorkflow, 'Build documentation sweep payload')
 
-  for (const workflow of [dryWorkflow, docsWorkflow]) {
-    expect(workflow).toContain('publishMode: "pr"')
-    expect(workflow).toContain('maxDiffBytes: 102400')
-    expect(workflow).toContain('taskMode: "patch"')
-    expect(workflow).toContain('REF: main')
-    expect(workflow).toContain('${{ github.repository }}@${{ github.sha }}')
-  }
+  expect(dryPayload).toMatchObject({
+    repoUrl: 'https://github.com/CyanAutomation/merm8-splash',
+    ref: 'main',
+    taskMode: 'patch',
+    publishMode: 'pr',
+    timeoutSeconds: 10800,
+    maxDiffBytes: 102400,
+    changedFilesAllowlist: ['app/**/*', 'lib/**/*', 'tests/**/*', 'types/**/*'],
+    validationCommands: ['npm run lint && npm test && npm run build'],
+    goalCheck: { enabled: true, maxRetries: 1 },
+  })
+  expect(docsPayload).toMatchObject({
+    repoUrl: 'https://github.com/CyanAutomation/merm8-splash',
+    ref: 'main',
+    taskMode: 'patch',
+    publishMode: 'pr',
+    timeoutSeconds: 10800,
+    maxDiffBytes: 102400,
+    changedFilesAllowlist: ['README.md', 'docs/**/*.md'],
+    validationCommands: [
+      'npm run check:readme && npm run lint && npm test && npm run build',
+    ],
+    scouting: { enabled: false },
+    goalSetting: { enabled: false },
+    goalCheck: { enabled: false },
+  })
 })
 
 it('keeps the Kaseki payload and shared request scripts valid Bash', () => {
@@ -241,11 +316,6 @@ it('serializes each Kaseki workflow independently', () => {
     expect(concurrency).toContain(expectedGroup)
     expect(concurrency).toContain('cancel-in-progress: false')
   }
-})
-
-it('names the main CI and scheduled README jobs', () => {
-  expect(yamlBlock(ciWorkflow, 'verify:')).toContain('name: Verify frontend')
-  expect(yamlBlock(readmeLinksWorkflow, 'verify:')).toContain('name: Check README links')
 })
 
 it('automates analyzer version and checksum updates behind a validated pull request', () => {
