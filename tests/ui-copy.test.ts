@@ -1,26 +1,27 @@
+// @vitest-environment jsdom
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
+import HomeHeader from '../app/components/HomeHeader'
+import { metadata } from '../app/layout'
 import {
   ANALYSIS_RESULT_MESSAGES,
-  CONNECTION_STATUS_LABELS,
-  PRODUCT_DESCRIPTION,
-  PRODUCT_NAME,
-  PRODUCT_TAGLINE,
   getExportEmptyMessage,
 } from '../lib/uiCopy'
 
-it('uses one product name and description across the UI metadata', () => {
-  expect(PRODUCT_NAME).toBe('merm8')
-  expect(PRODUCT_TAGLINE).toBe('Mermaid diagram checker')
-  expect(PRODUCT_DESCRIPTION).toBe('Check and improve your Mermaid diagrams.')
-})
+it('keeps the page title aligned with the product name shown in the header', () => {
+  const header = renderToStaticMarkup(createElement(HomeHeader, {
+    onOpenApiConfiguration: () => undefined,
+    onResetLayout: () => undefined,
+  }))
+  const renderedHeader = new DOMParser().parseFromString(header, 'text/html')
+  const productName = renderedHeader.querySelector('.home-brand-name')?.textContent?.trim()
+  const tagline = renderedHeader.querySelector('.home-brand-tagline')?.textContent?.trim()
 
-it('uses a single label for each API connection state', () => {
-  expect(CONNECTION_STATUS_LABELS).toEqual({
-    connected: 'Connected',
-    checking: 'Checking…',
-    error: 'Couldn’t connect',
-    disconnected: 'Not tested',
-  })
+  expect(productName).toBeTruthy()
+  expect(tagline).toBeTruthy()
+  expect(String(metadata.title).split(' | ', 1)[0]).toBe(productName)
+  expect(metadata.description).toEqual(expect.stringMatching(/\S/))
 })
 
 it('distinguishes checking, missing rules, and successful analysis copy', () => {

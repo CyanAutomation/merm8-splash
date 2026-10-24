@@ -205,6 +205,23 @@ describe('health hotspot panel rendering', () => {
     expect(markup).toContain('disabled=""')
   })
 
+  it.each([
+    ['connected', 'Connected'],
+    ['checking', 'Checking…'],
+    ['error', 'Couldn’t connect'],
+    ['disconnected', 'Not tested'],
+  ] as const)('shows the %s API connection state to the user', (connectionStatus, label) => {
+    const markup = renderToStaticMarkup(createElement(StatusBar, {
+      connectionStatus,
+      parseStatus: 'idle',
+      ruleCount: 0,
+      violationCount: 0,
+      apiEndpoint: 'https://api.example.test',
+    }))
+
+    expect(markup).toContain(`API: ${label}`)
+  })
+
   it('renders the selected-rule count and applicable rule details', () => {
     const markup = renderToStaticMarkup(createElement(RulesPanel, {
       rules: [{
