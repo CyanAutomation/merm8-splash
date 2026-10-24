@@ -281,7 +281,7 @@ it('marks branch clarity not applicable for a flowchart with no branching', asyn
     'semantic-review': {
       purpose: { value: 'process', confidence: 0.9 },
       'label-clarity': { value: true, probability: 0.8 },
-      'branch-clarity': { value: true, probability: 0.9 },
+      'branch-clarity': { value: false, probability: 0.1 },
       'abstraction-consistency': { value: true, probability: 0.8 },
       ambiguity: { value: false, probability: 0.1 },
       'review-priority': { value: 'none', confidence: 0.9 },
@@ -310,6 +310,7 @@ it('marks branch clarity not applicable for a flowchart with no branching', asyn
 
   expect(view.textContent).toContain('Not applicable')
   expect(view.textContent).toContain('No branching was detected in this flowchart.')
+  expect(view.textContent).not.toContain('Clarify branch outcomes')
 })
 
 it('shows a request error and lets the user retry from the results pane', async () => {

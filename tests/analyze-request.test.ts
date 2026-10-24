@@ -553,7 +553,12 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
       title: 'Name the decision',
       rationale: 'The branch label does not state what is being decided.',
       suggestion: 'Replace the generic label with the question being evaluated.',
-      evidence: [{ 'node-id': 'A', label: 'Decision', line: 2 }],
+      evidence: [
+        { 'node-id': 'A', label: 'Decision', line: 2 },
+        { source: 'unknown field' },
+        { line: 0 },
+        null,
+      ],
       'suggested-code': 'flowchart TD\nA[Is the request valid?] --> B',
     }],
     meta: { source: 'jev', model: 'test-model' },
@@ -578,9 +583,11 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
   expect(response['review-findings']?.[0]).toMatchObject({
     id: 'unclear-decision',
     explanation: 'The branch label does not state what is being decided.',
-    evidence: [{ nodeId: 'A', label: 'Decision', line: 2 }],
     suggestedCode: 'flowchart TD\nA[Is the request valid?] --> B',
   })
+  expect(response['review-findings']?.[0].evidence).toEqual([
+    { nodeId: 'A', label: 'Decision', line: 2 },
+  ])
   expect(JSON.stringify(calls[0].init.body)).not.toContain('secret-key')
 })
 
