@@ -612,6 +612,9 @@ a {
   }
 
   .diagram-editor-field {
+    --diagram-editor-font-size: 14px;
+    --diagram-editor-line-height: 21px;
+
     display: flex;
     flex: 1;
     min-height: 160px;
@@ -635,8 +638,8 @@ a {
     background: var(--color-bg-secondary);
     color: var(--color-text-secondary);
     font-family: var(--font-mono);
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: var(--diagram-editor-font-size);
+    line-height: var(--diagram-editor-line-height);
     text-align: right;
     user-select: none;
     scrollbar-width: none;
@@ -668,9 +671,12 @@ a {
     background: var(--color-bg-primary);
     color: var(--color-text-primary);
     font-family: var(--font-mono);
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: var(--diagram-editor-font-size);
+    line-height: var(--diagram-editor-line-height);
     padding: 12px;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
     resize: none;
     outline: none;
     tab-size: 2;
