@@ -38,53 +38,31 @@ jobs:
           set -euo pipefail
 
           payload="$(
-            jq -cn \
-              --arg repoUrl "$REPO_URL" \
-              --arg ref "$REF" \
-              --arg taskDescription "$TASK_DESCRIPTION" \
-              --arg validationCommand "$VALIDATION_COMMAND" \
-              --arg allowlist "$ALLOWLIST" \
-              '{
-                repoUrl: $repoUrl,
-                ref: $ref,
-                taskMode: "patch",
-                publishMode: "pr",
-                timeoutSeconds: 10800,
-                maxDiffBytes: 102400,
+            node <<'NODE'
+            const allowlist = process.env.ALLOWLIST.split(',')
+              .map((path) => path.trim())
+              .filter(Boolean);
+            const validationCommand = process.env.VALIDATION_COMMAND;
 
-                scouting: { enabled: false },
-                goalSetting: { enabled: false },
-                goalCheck: { enabled: false },
+            const payload = {
+              repoUrl: process.env.REPO_URL,
+              ref: process.env.REF,
+              taskMode: 'patch',
+              publishMode: 'pr',
+              timeoutSeconds: 10800,
+              maxDiffBytes: 102400,
+              scouting: { enabled: false },
+              goalSetting: { enabled: false },
+              goalCheck: { enabled: false },
+              changedFilesAllowlist: allowlist,
+              validationCommands: validationCommand ? [validationCommand] : [],
+              taskPrompt: `${process.env.TASK_DESCRIPTION}
 
-                changedFilesAllowlist: (
-                  $allowlist
-                  | split(",")
-                  | map(gsub("^\\s+|\\s+$"; ""))
-                  | map(select(length > 0))
-                ),
+          Perform the documentation sweep for this repository. First read repository instructions, then inspect the current implementation and compare it against README.md and documentation under docs/. Update documentation only where inaccurate, incomplete, or stale. Do not modify application code, tests, configuration, dependencies, lockfiles, CI workflows, or generated files. Do not invent behavior. Avoid cosmetic rewrites. Before finishing, review the diff to confirm it contains documentation-only changes. If documentation is already accurate, make no changes and do not open a pull request.`,
+            };
 
-                validationCommands: (
-                  if $validationCommand == "" then
-                    []
-                  else
-                    [$validationCommand]
-                  end
-                ),
-
-                taskPrompt: (
-                  $taskDescription
-                  + "\n\nPerform the documentation sweep for this repository. "
-                  + "First read repository instructions, then inspect the current "
-                  + "implementation and compare it against README.md and documentation "
-                  + "under docs/. Update documentation only where inaccurate, incomplete, "
-                  + "or stale. Do not modify application code, tests, configuration, "
-                  + "dependencies, lockfiles, CI workflows, or generated files. "
-                  + "Do not invent behavior. Avoid cosmetic rewrites. Before finishing, "
-                  + "review the diff to confirm it contains documentation-only changes. "
-                  + "If documentation is already accurate, make no changes and do not "
-                  + "open a pull request."
-                )
-              }'
+            process.stdout.write(JSON.stringify(payload));
+          NODE
           )"
 
           printf 'payload=%s\n' "$payload" >> "$GITHUB_OUTPUT"
