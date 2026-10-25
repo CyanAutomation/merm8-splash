@@ -197,6 +197,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
             id="diagram-code"
             ref={textareaRef}
             className="diagram-code-input"
+            wrap="off"
             value={value}
             onChange={(e) => {
               onChange(e.target.value)
