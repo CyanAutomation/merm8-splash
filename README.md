@@ -1,4 +1,4 @@
-[![Frontend CI](https://github.com/CyanAutomation/merm8-splash/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CyanAutomation/merm8-splash/actions/workflows/ci.yml)
+[![Frontend CI](https://github.com/CyanAutomation/merm8-splash/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CyanAutomation/merm8-splash/actions/workflows/ci.yml) [![README Link Check](https://github.com/CyanAutomation/merm8-splash/actions/workflows/readme-links.yml/badge.svg?branch=main)](https://github.com/CyanAutomation/merm8-splash/actions/workflows/readme-links.yml)
 
 # merm8-splash
 
