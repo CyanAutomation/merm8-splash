@@ -241,7 +241,7 @@ For custom deployments:
 - **[React](https://react.dev/)** 19 — UI library
 - **[TypeScript](https://www.typescriptlang.org/)** — Type-safe development
 - **[Mermaid](https://mermaid.js.org/)** — Diagram rendering
-- **[beautiful-mermaid](https://www.npmjs.com/package/beautiful-mermaid)** ^1.1.3 — Beautiful Mermaid rendering enhancements
+- **beautiful-mermaid** ^1.1.3 — Beautiful Mermaid rendering enhancements
 
 The application is a **pure frontend** that communicates with a remote merm8 API instance via REST API. No backend server required. For the hosted Worker’s endpoints, request limits, CORS behavior, and live contract, see the [Worker API reference](https://github.com/CyanAutomation/merm8/blob/main/docs/worker-api.md); a deployed API also exposes its current specification at `/v1/spec`.
 
