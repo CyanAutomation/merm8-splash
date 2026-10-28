@@ -149,6 +149,7 @@ function HomeContent() {
         rulesLoading: rulesLoading && !rulesReadyForEndpoint,
         violationCount: violations.length,
         apiEndpoint: endpoint,
+        apiEndpointFromUrl: configSource === 'URL parameter',
         diagramType,
         lintSupported,
         onTestConnection: handleTestConnection,
