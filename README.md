@@ -152,6 +152,8 @@ localStorage.removeItem('merm8_api_endpoint')
 
 Diagram source is sent to the selected API endpoint for regular analysis and optional semantic review. Semantic review requests do not include a client API key. The hosted semantic review endpoint applies a per-IP request limit. The endpoint operator controls how requests are processed and retained, so choose an endpoint you trust with your diagrams.
 
+The API Configuration panel displays the selected endpoint and repeats this data-handling notice. When a `?api=` URL parameter selects the endpoint, the panel calls that out explicitly.
+
 ### Local API Setup
 
 For development against a local merm8 API instance:

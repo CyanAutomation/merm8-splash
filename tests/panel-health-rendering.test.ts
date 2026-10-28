@@ -205,6 +205,21 @@ describe('health hotspot panel rendering', () => {
     expect(markup).toContain('disabled=""')
   })
 
+  it('shows a persistent notice when the page URL selected the API endpoint', () => {
+    const markup = renderToStaticMarkup(createElement(StatusBar, {
+      connectionStatus: 'disconnected',
+      parseStatus: 'idle',
+      ruleCount: 0,
+      violationCount: 0,
+      apiEndpoint: 'https://untrusted.example/api',
+      apiEndpointFromUrl: true,
+    }))
+
+    expect(markup).toContain('URL selected this API')
+    expect(markup).toContain('diagram source will be sent there')
+    expect(markup).toContain('https://untrusted.example/api')
+  })
+
   it.each([
     ['connected', 'Connected'],
     ['checking', 'Checking…'],
@@ -301,6 +316,23 @@ describe('health hotspot panel rendering', () => {
     expect(markup).toContain('Official API')
     expect(markup).toContain('Localhost 8080')
     expect(markup).toContain('Localhost 3000')
+  })
+
+  it('discloses when a page URL selected the API that receives diagram source', () => {
+    const markup = renderToStaticMarkup(createElement(ApiConfigPanel, {
+      endpoint: 'https://untrusted.example/api',
+      onEndpointChange: vi.fn(),
+      connectionStatus: 'disconnected',
+      onTestConnection: vi.fn(),
+      onSave: vi.fn(),
+      configSource: 'URL parameter',
+      statusMessage: '',
+    }))
+
+    expect(markup).toContain('This endpoint was selected by the page URL')
+    expect(markup).toContain('Diagram source is sent to this endpoint')
+    expect(markup).toContain('Only continue if you trust this endpoint')
+    expect(markup).toContain('https://untrusted.example/api')
   })
 
   it('disables endpoint actions and displays validation feedback for an invalid URL', () => {

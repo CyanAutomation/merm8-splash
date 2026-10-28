@@ -14,6 +14,8 @@ const vercelConfig = JSON.parse(readFileSync(join(repoRoot, 'vercel.json'), 'utf
     headers: Array<{ key: string; value: string }>
   }>
 }
+const netlifyConfig = readFileSync(join(repoRoot, 'netlify.toml'), 'utf8')
+const nginxConfig = readFileSync(join(repoRoot, 'nginx.conf'), 'utf8')
 const packageJson = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
   scripts: Record<string, string>
 }
@@ -75,6 +77,30 @@ it('sets a Vercel CSP that supports the configurable HTTPS API endpoint', () => 
   expect(directives['object-src']).toEqual(["'none'"])
   expect(directives['connect-src']).toEqual(["'self'", 'https:'])
   expect(directives['frame-ancestors']).toEqual(["'none'"])
+  expect(directives['script-src']).toEqual(["'self'", "'unsafe-inline'"])
+})
+
+it('applies a consistent CSP to Netlify and Docker deployments', () => {
+  const netlifyCsp = netlifyConfig.match(/^\s*Content-Security-Policy\s*=\s*"([^"]+)"$/m)?.[1]
+  const nginxCsp = nginxConfig.match(/add_header Content-Security-Policy "([^"]+)" always;/)?.[1]
+  const vercelCsp = vercelConfig.headers
+    .flatMap((rule) => rule.headers)
+    .find((header) => header.key.toLowerCase() === 'content-security-policy')?.value
+
+  expect(netlifyCsp).toBeTruthy()
+  expect(nginxCsp).toBeTruthy()
+  expect(vercelCsp).toBeTruthy()
+
+  for (const policy of [netlifyCsp!, nginxCsp!, vercelCsp!]) {
+    const directives = parseContentSecurityPolicy(policy)
+    expect(directives['default-src']).toEqual(["'self'"])
+    expect(directives['base-uri']).toEqual(["'self'"])
+    expect(directives['object-src']).toEqual(["'none'"])
+    expect(directives['frame-ancestors']).toEqual(["'none'"])
+    expect(directives['form-action']).toEqual(["'self'"])
+    expect(directives['connect-src']).toEqual(["'self'", 'https:'])
+    expect(directives['script-src']).toEqual(["'self'", "'unsafe-inline'"])
+  }
 })
 
 it('documents production API configuration and optional Preview CORS setup', () => {

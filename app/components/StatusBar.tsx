@@ -16,6 +16,7 @@ interface StatusBarProps {
   rulesLoading?: boolean
   violationCount: number
   apiEndpoint: string
+  apiEndpointFromUrl?: boolean
   diagramType?: string | null
   lintSupported?: boolean | null
   onTestConnection?: () => void
@@ -129,6 +130,7 @@ export default function StatusBar({
   rulesLoading = false,
   violationCount,
   apiEndpoint,
+  apiEndpointFromUrl = false,
   diagramType,
   lintSupported,
   onTestConnection,
@@ -166,6 +168,11 @@ export default function StatusBar({
       </div>
 
       <div className="status-bar-details" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        {apiEndpointFromUrl && (
+          <span className="status-bar-api-warning" role="note">
+            URL selected this API ({truncateEndpoint(apiEndpoint)}); diagram source will be sent there.
+          </span>
+        )}
         <StatusMessage status={connectionStatus} message={statusMessage} />
         <ConnectionActions
           status={connectionStatus}

@@ -58,6 +58,11 @@ it('requires HTML and SPA fallback responses to be revalidated', () => {
     .toContain('try_files $uri $uri/ /index.html;')
 })
 
+it('denies framing and omits the obsolete XSS protection header', () => {
+  expect(nginxConfig).toMatch(/add_header X-Frame-Options "DENY" always;/)
+  expect(nginxConfig).not.toMatch(/X-XSS-Protection/i)
+})
+
 it('preserves the required container Content-Security-Policy directives', () => {
   const contentSecurityPolicyMatch = nginxConfig.match(
     /add_header Content-Security-Policy "([^"]+)" always;/,
@@ -70,9 +75,15 @@ it('preserves the required container Content-Security-Policy directives', () => 
   const directives = parseContentSecurityPolicy(contentSecurityPolicyMatch[1])
   expect(directives).toMatchObject({
     'default-src': ["'self'"],
-    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+    'script-src': ["'self'", "'unsafe-inline'"],
     'style-src': ["'self'", "'unsafe-inline'"],
-    'img-src': ["'self'"],
-    'connect-src': ["'self'"],
+    'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+    'font-src': ["'self'", 'data:', 'https:'],
+    'worker-src': ["'self'", 'blob:'],
+    'connect-src': ["'self'", 'https:'],
+    'base-uri': ["'self'"],
+    'object-src': ["'none'"],
+    'frame-ancestors': ["'none'"],
+    'form-action': ["'self'"],
   })
 })
