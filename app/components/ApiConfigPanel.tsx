@@ -189,6 +189,12 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
             onSave={onSave}
           />
         </div>
+        <p className="api-endpoint-security-note" role="note">
+          Diagram source is sent to this endpoint when you run an analysis or semantic review.{' '}
+          Only continue if you trust this endpoint.{' '}
+          {configSource === 'URL parameter' && <strong>This endpoint was selected by the page URL. </strong>}
+          <code>{endpoint}</code>
+        </p>
         <EndpointFeedback
           message={feedbackMessage}
           invalid={invalid}

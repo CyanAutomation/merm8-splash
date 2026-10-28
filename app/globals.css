@@ -496,6 +496,19 @@ a {
     font-size: 13px;
   }
 
+  .api-endpoint-security-note {
+    margin: 8px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .status-bar-api-warning {
+    color: var(--color-warning);
+    font-size: 11px;
+  }
+
   .diagram-editor-panel,
   .diagram-preview-panel {
     display: flex;
