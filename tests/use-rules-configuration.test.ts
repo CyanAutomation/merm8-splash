@@ -3,6 +3,7 @@ import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useRulesConfiguration } from '../lib/useRulesConfiguration'
+import { rulesCache } from '../lib/api/rulesCache'
 
 const apiMocks = vi.hoisted(() => ({
   fetchRules: vi.fn(),
@@ -35,12 +36,14 @@ function Harness({
 beforeEach(() => {
   currentState = null
   apiMocks.fetchRules.mockReset()
+  rulesCache.clear()
   root = createRoot(document.createElement('div'))
 })
 
 afterEach(() => {
   if (root) act(() => root?.unmount())
   root = null
+  vi.restoreAllMocks()
 })
 
 it('keeps an endpoint available after a successful response with no rules', async () => {
@@ -59,7 +62,7 @@ it('keeps an endpoint available after a successful response with no rules', asyn
   })
 })
 
-it('keeps a manually changed selection when rules are refreshed', async () => {
+it('reuses recently fetched rules on reconnect and refreshes them after the cache expires', async () => {
   const firstRules = [
     { id: 'first', description: 'First rule', severity: 'warning' as const },
     { id: 'second', description: 'Second rule', severity: 'error' as const },
@@ -84,6 +87,20 @@ it('keeps a manually changed selection when rules are refreshed', async () => {
     root?.render(createElement(Harness, { connectionStatus: 'connected' }))
   })
 
+  expect(apiMocks.fetchRules).toHaveBeenCalledTimes(1)
+  expect(currentState?.rules.map((rule) => rule.id)).toEqual(['first', 'second'])
+  expect(currentState?.enabledRules).toEqual(['second'])
+
+  const now = Date.now()
+  vi.spyOn(Date, 'now').mockReturnValue(now + 5 * 60_000 + 1)
+  await act(async () => {
+    root?.render(createElement(Harness, { connectionStatus: 'disconnected' }))
+  })
+  await act(async () => {
+    root?.render(createElement(Harness, { connectionStatus: 'connected' }))
+  })
+
+  expect(apiMocks.fetchRules).toHaveBeenCalledTimes(2)
   expect(currentState?.rules.map((rule) => rule.id)).toEqual(['first', 'second', 'third'])
   expect(currentState?.enabledRules).toEqual(['second'])
 })

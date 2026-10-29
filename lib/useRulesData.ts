@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchRules, type Rule } from './api'
+import { rulesCache } from './api/rulesCache'
 import { isCurrentRulesRequest, type PreparedRulesResponse } from './rulesState'
 import type { ConnectionStatus } from './useApiEndpoint'
 
@@ -25,14 +26,9 @@ export function useRulesData(
     if (!endpoint) return
 
     abortControllerRef.current?.abort()
-    const controller = new AbortController()
-    abortControllerRef.current = controller
     const requestId = ++rulesRequestRef.current
     const requestEndpoint = endpoint
     latestEndpointRef.current = endpoint
-
-    setRulesLoading(true)
-    setRulesUnavailableEndpoint(null)
 
     const isCurrentRequest = () => isCurrentRulesRequest(
       requestId,
@@ -41,10 +37,27 @@ export function useRulesData(
       latestEndpointRef.current
     )
 
+    const cached = rulesCache.get(requestEndpoint, Date.now())
+    if (cached) {
+      const prepared = applyFetchedRules(cached, requestEndpoint)
+      if (!isCurrentRequest()) return
+      setRules(prepared.rules)
+      setRulesLoadedEndpoint(prepared.isUnavailable ? null : requestEndpoint)
+      setRulesUnavailableEndpoint(prepared.isUnavailable ? requestEndpoint : null)
+      setRulesLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+    setRulesLoading(true)
+    setRulesUnavailableEndpoint(null)
+
     try {
       const fetched = await fetchRules(requestEndpoint, controller.signal)
       if (!isCurrentRequest()) return
 
+      rulesCache.set(requestEndpoint, fetched, Date.now())
       const prepared = applyFetchedRules(fetched, requestEndpoint)
       setRules(prepared.rules)
       setRulesLoadedEndpoint(prepared.isUnavailable ? null : requestEndpoint)
