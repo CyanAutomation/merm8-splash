@@ -42,9 +42,10 @@ function parseCacheControlMap(): Record<string, string> {
 
 it('caches fingerprinted Next.js static files as immutable', () => {
   const cachePolicy = parseCacheControlMap()
-  const staticLocation = extractBlock(nginxConfig, 'location ^~ /_next/static/')
+  const staticLocation = extractBlock(nginxConfig, 'location ~ ^/')
 
-  expect(cachePolicy['~^/_next/static/']).toBe('public, max-age=31536000, immutable')
+  expect(cachePolicy['~^/(?:.*/)?_next/static/']).toBe('public, max-age=31536000, immutable')
+  expect(staticLocation).toContain('(?:.*/)?_next/static/')
   expect(staticLocation.split(/\r?\n/).map((line) => line.trim()))
     .toContain('try_files $uri =404;')
 })
