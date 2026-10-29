@@ -100,7 +100,7 @@ it('sets explicit cache lifetimes for static assets and HTML on Vercel and Netli
   })
   expect(vercelCacheHeaders).toContainEqual({ source: '/', cacheControl: 'no-cache' })
   expect(vercelCacheHeaders).toContainEqual({
-    source: '/(.*).html',
+    source: '/(.*)\\.html',
     cacheControl: 'no-cache',
   })
   expect(netlifyConfig).toMatch(/for\s*=\s*"\/_next\/static\/\*"[\s\S]*?Cache-Control\s*=\s*"public, max-age=31536000, immutable"/)
