@@ -80,6 +80,36 @@ it('sets a Vercel CSP that supports the configurable HTTPS API endpoint', () => 
   expect(directives['script-src']).toEqual(["'self'", "'unsafe-inline'"])
 })
 
+it('sets explicit cache lifetimes for static assets and HTML on Vercel and Netlify', () => {
+  const vercelCacheHeaders = vercelConfig.headers.map((rule) => ({
+    source: rule.source,
+    cacheControl: rule.headers.find((header) => header.key.toLowerCase() === 'cache-control')?.value,
+  }))
+
+  expect(vercelCacheHeaders).toContainEqual({
+    source: '/(.*)',
+    cacheControl: 'no-cache',
+  })
+  expect(vercelCacheHeaders).toContainEqual({
+    source: '/favicon.svg',
+    cacheControl: 'public, max-age=300, must-revalidate',
+  })
+  expect(vercelCacheHeaders).toContainEqual({
+    source: '/_next/static/(.*)',
+    cacheControl: 'public, max-age=31536000, immutable',
+  })
+  expect(vercelCacheHeaders).toContainEqual({ source: '/', cacheControl: 'no-cache' })
+  expect(vercelCacheHeaders).toContainEqual({
+    source: '/(.*).html',
+    cacheControl: 'no-cache',
+  })
+  expect(netlifyConfig).toMatch(/for\s*=\s*"\/_next\/static\/\*"[\s\S]*?Cache-Control\s*=\s*"public, max-age=31536000, immutable"/)
+  expect(netlifyConfig).toMatch(/for\s*=\s*"\/\*"[\s\S]*?Cache-Control\s*=\s*"no-cache"/)
+  expect(netlifyConfig).toMatch(/for\s*=\s*"\/favicon\.svg"[\s\S]*?Cache-Control\s*=\s*"public, max-age=300, must-revalidate"/)
+  expect(netlifyConfig).toMatch(/for\s*=\s*"\/\*\.html"[\s\S]*?Cache-Control\s*=\s*"no-cache"/)
+  expect(netlifyConfig).toMatch(/for\s*=\s*"\/"[\s\S]*?Cache-Control\s*=\s*"no-cache"/)
+})
+
 it('applies a consistent CSP to Netlify and Docker deployments', () => {
   const netlifyCsp = netlifyConfig.match(/^\s*Content-Security-Policy\s*=\s*"([^"]+)"$/m)?.[1]
   const nginxCsp = nginxConfig.match(/add_header Content-Security-Policy "([^"]+)" always;/)?.[1]
