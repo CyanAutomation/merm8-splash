@@ -33,6 +33,20 @@ export interface WorkspaceAreaProps {
 export default function WorkspaceArea({ layout, editor, preview, results }: WorkspaceAreaProps) {
   const { preferences, savePreferences } = layout
   const [mobileView, setMobileView] = useState<'editor' | 'preview' | 'results'>('editor')
+  const resultState = results.analysis.resultState
+  let resultsIndicator: string | null = null
+  if (results.analysis.violations.length > 0) {
+    resultsIndicator = String(results.analysis.violations.length)
+  } else if (resultState === 'clean') {
+    resultsIndicator = 'Clear'
+  } else if (resultState === 'parse-error' || resultState === 'analysis-error') {
+    resultsIndicator = 'Issue'
+  } else if (resultState === 'needs-connection') {
+    resultsIndicator = 'Setup'
+  }
+  const resultsTabAriaLabel = resultsIndicator === 'Issue'
+    ? 'Results, attention needed'
+    : resultsIndicator ? `Results, ${resultsIndicator}` : 'Results'
 
   return (
     <div className="app-main" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -47,9 +61,13 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
             variant={mobileView === view ? 'primary' : 'secondary'}
             aria-pressed={mobileView === view}
             aria-controls={controls}
+            aria-label={view === 'results' ? resultsTabAriaLabel : label}
             onClick={() => setMobileView(view)}
           >
             {label}
+            {view === 'results' && resultsIndicator && (
+              <span className="mobile-workspace-tab-status">{resultsIndicator}</span>
+            )}
           </Button>
         ))}
       </div>

@@ -34,7 +34,7 @@ export function getExportEmptyMessage(resultState: AnalysisResultState): string 
 }
 
 export const ANALYSIS_RESULT_MESSAGES = {
-  'needs-connection': 'Test the API connection to run a check.',
+  'needs-connection': 'Connect to the API to run a check.',
   'checking-connection': 'Checking the API connection…',
   'loading-rules': 'Loading rules…',
   'empty-code': 'Add Mermaid code to run a check.',

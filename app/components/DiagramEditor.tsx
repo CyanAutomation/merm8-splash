@@ -141,25 +141,29 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       <div className="panel diagram-editor-panel">
         <div className="diagram-editor-toolbar">
           <h2 className="panel-heading">Diagram editor</h2>
-          <div className="diagram-editor-actions">
-            <Button onClick={handleExampleClick}>Load example</Button>
-            <Button
-              onClick={handleCopyClick}
-              disabled={!value}
-              aria-label="Copy diagram code"
-              title="Copy diagram code"
-            >
-              {copyStatus === 'success' ? 'Copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy code'}
-            </Button>
-            <Button
-              onClick={() => {
-                onChange('')
-                snackbar.show('Diagram code cleared.')
-              }}
-            >
-              Clear code
-            </Button>
-          </div>
+          <details className="editor-actions-disclosure">
+            <summary aria-label="More editor actions">Actions</summary>
+            <div className="more-actions-menu" role="group" aria-label="Editor actions">
+              <Button onClick={handleExampleClick}>Load example</Button>
+              <Button
+                onClick={handleCopyClick}
+                disabled={!value}
+                aria-label="Copy diagram code"
+                title="Copy diagram code"
+              >
+                {copyStatus === 'success' ? 'Copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy code'}
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!window.confirm('Clear all Mermaid code? This action cannot be undone.')) return
+                  onChange('')
+                  snackbar.show('Diagram code cleared.')
+                }}
+              >
+                Clear code
+              </Button>
+            </div>
+          </details>
         </div>
 
         <label className="field-label" htmlFor="diagram-code">Mermaid code</label>

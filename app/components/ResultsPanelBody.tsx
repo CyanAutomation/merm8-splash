@@ -54,16 +54,31 @@ export default function ResultsPanelBody({
         onJumpToLine={onJumpToLine}
       />
       {resultState === 'violations' ? (
-        <ViolationTable
-          violations={results}
-          copiedKey={copiedKey}
-          copyErrorKey={copyErrorKey}
-          onCopy={onCopy}
-          onJumpToLine={onJumpToLine}
-        />
+        <>
+          <section className="results-overview" aria-label="Check summary" role="status">
+            <strong>{results.length} {results.length === 1 ? 'finding' : 'findings'}</strong>
+            <div className="results-overview-severities">
+              {(['error', 'warning', 'info'] as const).map((severity) => {
+                const count = results.filter((result) => result.severity === severity).length
+                return count > 0 ? (
+                  <span key={severity} className={`results-overview-severity results-overview-${severity}`}>
+                    {count} {severity}{count === 1 ? '' : 's'}
+                  </span>
+                ) : null
+              })}
+            </div>
+          </section>
+          <ViolationTable
+            violations={results}
+            copiedKey={copiedKey}
+            copyErrorKey={copyErrorKey}
+            onCopy={onCopy}
+            onJumpToLine={onJumpToLine}
+          />
+        </>
       ) : message ? (
         <div
-          className={`results-message${resultState === 'clean' ? ' results-message-success' : ''}`}
+          className={`results-overview results-message${resultState === 'clean' ? ' results-message-success' : ''}`}
           role={resultState === 'clean' ? 'status' : undefined}
         >
           {message}

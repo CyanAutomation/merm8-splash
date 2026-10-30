@@ -181,7 +181,7 @@ describe('health hotspot panel rendering', () => {
     }
   })
 
-  it('renders status summaries and disables connection testing while checking', () => {
+  it('keeps the primary status visible and discloses secondary status details', () => {
     const markup = renderToStaticMarkup(createElement(StatusBar, {
       connectionStatus: 'checking',
       parseStatus: 'valid',
@@ -190,11 +190,11 @@ describe('health hotspot panel rendering', () => {
       apiEndpoint: 'https://api.example.test',
       diagramType: 'flowchart',
       lintSupported: false,
-      onTestConnection: vi.fn(),
       statusMessage: 'Checking endpoint',
     }))
     expect(markup).toContain('class="status-bar"')
-    expect(markup).toContain('class="status-bar-actions"')
+    expect(markup).toContain('class="status-bar-disclosure"')
+    expect(markup).toContain('aria-label="Show status details"')
 
     expect(markup).toContain('Checking…')
     expect(markup).toContain('Syntax valid')
@@ -202,7 +202,7 @@ describe('health hotspot panel rendering', () => {
     expect(markup).toContain('Syntax only')
     expect(markup).toContain('2 rules enabled')
     expect(markup).toContain('1 violation')
-    expect(markup).toContain('disabled=""')
+    expect(markup).toContain('API endpoint: https://api.example.test')
   })
 
   it('shows a persistent notice when the page URL selected the API endpoint', () => {
@@ -394,7 +394,6 @@ describe('health hotspot panel rendering', () => {
       ruleCount: 0,
       violationCount: 0,
       apiEndpoint: 'https://api.example.test',
-      onTestConnection: vi.fn(),
       statusMessage: message,
     }))
 

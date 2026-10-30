@@ -40,7 +40,6 @@ afterEach(() => {
 function createLayoutProps(callbacks: {
   onOpenApiConfiguration: () => void
   onJumpToLine: (line: number) => void
-  onTestConnection: () => void
   onResetLayout: () => void
 }): HomePageLayoutProps {
   return {
@@ -95,7 +94,6 @@ function createLayoutProps(callbacks: {
       ruleCount: 0,
       violationCount: 0,
       apiEndpoint: 'https://api.example.test',
-      onTestConnection: callbacks.onTestConnection,
     } satisfies ComponentProps<typeof StatusBar>,
     dialogs: {
       reset: { isOpen: true, onClose: vi.fn(), onReset: callbacks.onResetLayout },
@@ -147,7 +145,6 @@ it('renders page regions in order and routes each section action to its callback
   const callbacks = {
     onOpenApiConfiguration: vi.fn(),
     onJumpToLine: vi.fn(),
-    onTestConnection: vi.fn(),
     onResetLayout: vi.fn(),
   }
 
@@ -165,13 +162,14 @@ it('renders page regions in order and routes each section action to its callback
 
   clickAction('API settings')
   clickAction('Jump to diagram line')
-  clickAction('Test API connection')
+  const statusDetails = appShell.querySelector('.status-bar-disclosure summary')
+  if (!statusDetails) throw new Error('Expected a status details disclosure.')
+  act(() => statusDetails.click())
   const resetDialog = appShell.querySelector('[role="dialog"]')
   if (!resetDialog) throw new Error('Expected the layout reset confirmation dialog to render.')
   clickAction('Reset layout', resetDialog)
 
   expect(callbacks.onOpenApiConfiguration).toHaveBeenCalledOnce()
   expect(callbacks.onJumpToLine).toHaveBeenCalledWith(7)
-  expect(callbacks.onTestConnection).toHaveBeenCalledOnce()
   expect(callbacks.onResetLayout).toHaveBeenCalledOnce()
 })
