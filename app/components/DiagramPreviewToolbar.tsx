@@ -61,13 +61,6 @@ function DiagramToolbarActions({
 
   return (
     <>
-      <ToolbarButton
-        onClick={onToggleColorMode}
-        title={`Switch to ${colorMode === 'dark' ? 'light' : 'dark'} diagram mode`}
-        ariaLabel={`Use ${colorMode === 'dark' ? 'light' : 'dark'} diagram colors`}
-      >
-        {colorMode === 'dark' ? 'Dark diagram' : 'Light diagram'}
-      </ToolbarButton>
       <ToolbarButton onClick={onFit} title="Fit the diagram in the preview">
         Fit diagram
       </ToolbarButton>
@@ -76,14 +69,26 @@ function DiagramToolbarActions({
           Full screen
         </ToolbarButton>
       )}
-      {canToggleBeautifulRenderer && onToggleBeautifulRenderer && (
-        <ToggleSlider
-          value={useBeautifulRenderer}
-          onChange={onToggleBeautifulRenderer}
-          label="Styled renderer"
-          title="Use the styled Mermaid renderer"
-        />
-      )}
+      <details className="preview-display-options">
+        <summary>Display</summary>
+        <div className="more-actions-menu" role="group" aria-label="Diagram display options">
+          <ToolbarButton
+            onClick={onToggleColorMode}
+            title={`Switch to ${colorMode === 'dark' ? 'light' : 'dark'} diagram mode`}
+            ariaLabel={`Use ${colorMode === 'dark' ? 'light' : 'dark'} diagram colors`}
+          >
+            {colorMode === 'dark' ? 'Dark diagram' : 'Light diagram'}
+          </ToolbarButton>
+          {canToggleBeautifulRenderer && onToggleBeautifulRenderer && (
+            <ToggleSlider
+              value={useBeautifulRenderer}
+              onChange={onToggleBeautifulRenderer}
+              label="Styled renderer"
+              title="Use the styled Mermaid renderer"
+            />
+          )}
+        </div>
+      </details>
     </>
   )
 }

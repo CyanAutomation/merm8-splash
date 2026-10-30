@@ -4,7 +4,6 @@ import type { ConnectionStatus } from '@/lib/useApiEndpoint'
 import { getParseStatusLabel } from '@/lib/status'
 import type { ParseStatus } from '@/lib/status'
 import { getConnectionStatusLabel } from '@/lib/uiCopy'
-import Button from './Button'
 
 interface StatusBarProps {
   connectionStatus: ConnectionStatus
@@ -19,7 +18,6 @@ interface StatusBarProps {
   apiEndpointFromUrl?: boolean
   diagramType?: string | null
   lintSupported?: boolean | null
-  onTestConnection?: () => void
   statusMessage?: string
 }
 
@@ -98,28 +96,6 @@ function StatusMessage({ status, message }: { status: ConnectionStatus; message?
   return <span className="status-bar-message" style={{ color: getConnectionColor(status) }}>{message}</span>
 }
 
-function ConnectionActions({ status, endpoint, onTestConnection }: {
-  status: ConnectionStatus
-  endpoint: string
-  onTestConnection?: () => void
-}) {
-  return (
-    <div className="status-bar-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-      {onTestConnection && (
-        <Button
-          size="small"
-          aria-label="Test API connection"
-          onClick={onTestConnection}
-          disabled={status === 'checking' || !endpoint}
-        >
-          {status === 'checking' ? 'Testing…' : 'Test API'}
-        </Button>
-      )}
-      <div className="status-bar-endpoint" aria-label={`API endpoint ${endpoint}`} style={{ color: 'var(--color-text-secondary)' }}>{truncateEndpoint(endpoint)}</div>
-    </div>
-  )
-}
-
 export default function StatusBar({
   connectionStatus,
   parseStatus,
@@ -133,7 +109,6 @@ export default function StatusBar({
   apiEndpointFromUrl = false,
   diagramType,
   lintSupported,
-  onTestConnection,
   statusMessage,
 }: StatusBarProps) {
   return (
@@ -155,16 +130,6 @@ export default function StatusBar({
       <div className="status-bar-summary" style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
         <ConnectionSummary status={connectionStatus} />
         <ParseSummary status={parseStatus} />
-        <DiagramTypeSummary diagramType={diagramType} />
-        <LintSupportSummary lintSupported={lintSupported} />
-        <RuleSummary
-          ruleCount={ruleCount}
-          availableRuleCount={availableRuleCount}
-          violationCount={violationCount}
-          rulesUnavailable={rulesUnavailable}
-          rulesReady={rulesReady}
-          rulesLoading={rulesLoading}
-        />
       </div>
 
       <div className="status-bar-details" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -173,12 +138,25 @@ export default function StatusBar({
             URL selected this API ({truncateEndpoint(apiEndpoint)}); diagram source will be sent there.
           </span>
         )}
-        <StatusMessage status={connectionStatus} message={statusMessage} />
-        <ConnectionActions
-          status={connectionStatus}
-          endpoint={apiEndpoint}
-          onTestConnection={onTestConnection}
-        />
+        <details className="status-bar-disclosure">
+          <summary aria-label="Show status details">Details</summary>
+          <div className="status-bar-detail-content">
+            <RuleSummary
+              ruleCount={ruleCount}
+              availableRuleCount={availableRuleCount}
+              violationCount={violationCount}
+              rulesUnavailable={rulesUnavailable}
+              rulesReady={rulesReady}
+              rulesLoading={rulesLoading}
+            />
+            <DiagramTypeSummary diagramType={diagramType} />
+            <LintSupportSummary lintSupported={lintSupported} />
+            <span className="status-bar-endpoint" aria-label={`API endpoint ${apiEndpoint}`}>
+              API endpoint: {apiEndpoint ? truncateEndpoint(apiEndpoint) : 'Not configured'}
+            </span>
+            <StatusMessage status={connectionStatus} message={statusMessage} />
+          </div>
+        </details>
       </div>
     </div>
   )

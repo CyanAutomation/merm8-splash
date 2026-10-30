@@ -16,6 +16,8 @@ const violationKey = (violation: Violation, index: number): string => {
   return [rule_id, severity, message, line ?? '', node_id ?? '', index].join('::')
 }
 
+const severityOrder: Record<Violation['severity'], number> = { error: 0, warning: 1, info: 2 }
+
 export default function ViolationTable({
   violations,
   copiedKey,
@@ -23,28 +25,29 @@ export default function ViolationTable({
   onCopy,
   onJumpToLine,
 }: ViolationTableProps) {
+  const orderedViolations = violations
+    .map((violation, originalIndex) => ({ violation, originalIndex }))
+    .sort((left, right) => severityOrder[left.violation.severity] - severityOrder[right.violation.severity]
+      || left.originalIndex - right.originalIndex)
+
   return (
     <div className="results-table-scroll">
       <table className="results-table">
       <thead>
         <tr>
-          <th scope="col">Rule</th>
           <th scope="col">Severity</th>
           <th scope="col">Message</th>
           <th scope="col">Line</th>
-          <th scope="col" aria-label="Actions"></th>
+          <th scope="col" aria-label="Finding details">Details</th>
         </tr>
       </thead>
       <tbody>
-        {violations.map((violation, index) => {
-          const key = violationKey(violation, index)
+        {orderedViolations.map(({ violation, originalIndex }) => {
+          const key = violationKey(violation, originalIndex)
           const color = severityColor(violation.severity)
 
           return (
             <tr key={key}>
-              <td className="violation-rule">
-                {violation.rule_id}
-              </td>
               <td>
                 <span className="severity-label" style={{ '--severity-color': color } as CSSProperties}>
                   {violation.severity}
@@ -66,17 +69,20 @@ export default function ViolationTable({
                 ) : violation.line ?? '—'}
               </td>
               <td className="violation-actions">
-                <Button
-                  size="small"
-                  variant="quiet"
-                  aria-label={copiedKey === key ? `Copied ${violation.rule_id}` : `Copy ${violation.rule_id} result`}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onCopy(violation, key)
-                  }}
-                >
-                  {copiedKey === key ? 'Copied' : copyErrorKey === key ? 'Try again' : 'Copy'}
-                </Button>
+                <details className="violation-details">
+                  <summary>{violation.rule_id}</summary>
+                  <Button
+                    size="small"
+                    variant="quiet"
+                    aria-label={copiedKey === key ? `Copied ${violation.rule_id}` : `Copy ${violation.rule_id} result`}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onCopy(violation, key)
+                    }}
+                  >
+                    {copiedKey === key ? 'Copied' : copyErrorKey === key ? 'Try again' : 'Copy result'}
+                  </Button>
+                </details>
               </td>
             </tr>
           )
