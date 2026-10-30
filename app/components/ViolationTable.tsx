@@ -42,8 +42,8 @@ export default function ViolationTable({
         </tr>
       </thead>
       <tbody>
-        {orderedViolations.map(({ violation }, index) => {
-          const key = violationKey(violation, index)
+        {orderedViolations.map(({ violation, originalIndex }) => {
+          const key = violationKey(violation, originalIndex)
           const color = severityColor(violation.severity)
 
           return (

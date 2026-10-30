@@ -173,16 +173,96 @@ it('shows API setup or connection as the primary step until the API is ready', (
   act(() => setupButton.click())
   expect(onOpenApiConfiguration).toHaveBeenCalledOnce()
 
-  act(() => root?.render(createElement(WorkspaceResults, {
+  act(() => root?.render(createElement(SnackbarProvider, null, createElement(WorkspaceResults, {
     ...baseProps,
     analysis: { ...baseProps.analysis, connectionStatus: 'error' },
     exportOptions: { ...baseProps.exportOptions, endpoint: 'https://api.example.test' },
-  })))
+  }))))
+  expect(view.textContent).not.toContain('This part of the page didn’t load.')
   const testButton = Array.from(view.querySelectorAll('button'))
     .find((button) => button.textContent?.trim() === 'Test API')
   if (!testButton) throw new Error('Expected API testing to be the primary action.')
   act(() => testButton.click())
   expect(onTestConnection).toHaveBeenCalledOnce()
+})
+
+it('keeps copy feedback attached to a finding when a higher-severity row is added', async () => {
+  const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+  const warning = { rule_id: 'clear-label', severity: 'warning' as const, message: 'Use a clear label', line: 2 }
+  const view = mount(createElement(WorkspaceResults, {
+    analysis: {
+      violations: [warning],
+      resultState: 'violations',
+      connectionStatus: 'connected',
+      isAnalyzing: false,
+      analyzeError: null,
+      analysisHints: [],
+      lintSupported: true,
+      parseErrorDetail: null,
+      onJumpToLine: vi.fn(),
+      resultsRef: createRef<ResultsPanelRef>(),
+    },
+    exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
+    metrics: { data: null, visible: false, onToggle: vi.fn() },
+    actions: {
+      canRecheck: true,
+      onRecheck: vi.fn(),
+      onOpenRules: vi.fn(),
+      onOpenApiConfiguration: vi.fn(),
+      onTestConnection: vi.fn(),
+    },
+  }))
+
+  try {
+    const firstRow = view.querySelector('tbody tr')
+    firstRow?.querySelector('details')?.setAttribute('open', '')
+    const copyButton = firstRow?.querySelector<HTMLButtonElement>('button[aria-label="Copy clear-label result"]')
+    if (!copyButton) throw new Error('Expected a copy action for the warning finding.')
+
+    await act(async () => {
+      copyButton.click()
+      await Promise.resolve()
+    })
+    expect(copyButton.textContent).toBe('Copied')
+    expect(writeText).toHaveBeenCalledWith('[warning] clear-label: Use a clear label (line 2)')
+
+    const props = {
+      analysis: {
+        violations: [warning, { rule_id: 'no-cycles', severity: 'error' as const, message: 'Cycle detected', line: 4 }],
+        resultState: 'violations' as const,
+        connectionStatus: 'connected' as const,
+        isAnalyzing: false,
+        analyzeError: null,
+        analysisHints: [],
+        lintSupported: true,
+        parseErrorDetail: null,
+        onJumpToLine: vi.fn(),
+        resultsRef: createRef<ResultsPanelRef>(),
+      },
+      exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
+      metrics: { data: null, visible: false, onToggle: vi.fn() },
+      actions: {
+        canRecheck: true,
+        onRecheck: vi.fn(),
+        onOpenRules: vi.fn(),
+        onOpenApiConfiguration: vi.fn(),
+        onTestConnection: vi.fn(),
+      },
+    }
+    act(() => root?.render(createElement(SnackbarProvider, null, createElement(WorkspaceResults, props))))
+
+    const warningRow = Array.from(view.querySelectorAll('tbody tr'))
+      .find((row) => row.querySelector('.violation-message')?.textContent === warning.message)
+    expect(warningRow?.querySelector('.violation-actions button')?.textContent).toBe('Copied')
+  } finally {
+    if (originalClipboard) {
+      Object.defineProperty(navigator, 'clipboard', originalClipboard)
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard')
+    }
+  }
 })
 
 it('summarizes findings before showing rule details in a disclosure', () => {
