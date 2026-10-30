@@ -4,6 +4,7 @@ import type { RefObject } from 'react'
 import { useCallback, useState } from 'react'
 import type { AnalysisMetrics, Rule, Violation } from '@/lib/api'
 import type { AnalysisResultState } from '@/lib/analysisResultState'
+import type { ConnectionStatus } from '@/lib/useApiEndpoint'
 import { getExportEmptyMessage } from '@/lib/uiCopy'
 import type { ResultsPanelRef } from './ResultsPanel'
 import ErrorBoundary from './ErrorBoundary'
@@ -17,6 +18,7 @@ export interface WorkspaceResultsProps {
   analysis: {
     violations: Violation[]
     resultState?: AnalysisResultState
+    connectionStatus?: ConnectionStatus
     resultsAreStale?: boolean
     isAnalyzing: boolean
     analyzeError: string | null
@@ -40,6 +42,8 @@ export interface WorkspaceResultsProps {
   actions: {
     canRecheck: boolean
     onRecheck: () => void
+    onOpenApiConfiguration?: () => void
+    onTestConnection?: () => void
     onOpenRules: () => void
     onApplySuggestedCode?: (code: string) => void
   }
@@ -81,6 +85,22 @@ function MetricItem({ label, value }: { label: string; value: string | number })
 export default function WorkspaceResults({ analysis, exportOptions, metrics, actions }: WorkspaceResultsProps) {
   const hasErrors = analysis.violations.some((violation) => violation.severity === 'error')
   const resultState = analysis.resultState ?? (analysis.violations.length > 0 ? 'violations' : 'ready')
+  const hasEndpoint = Boolean(exportOptions.endpoint.trim())
+  const connectionStatus = analysis.connectionStatus ?? 'connected'
+  const isConnected = connectionStatus === 'connected'
+  const primaryActionLabel = isConnected
+    ? analysis.isAnalyzing
+      ? 'Checking…'
+      : resultState === 'loading-rules' ? 'Loading rules…' : 'Run check'
+    : connectionStatus === 'checking' ? 'Testing…' : hasEndpoint ? 'Test API' : 'Set up API'
+  const runPrimaryAction = isConnected
+    ? actions.onRecheck
+    : hasEndpoint ? actions.onTestConnection : actions.onOpenApiConfiguration
+  const primaryActionDisabled = isConnected
+    ? !actions.canRecheck
+    : connectionStatus === 'checking'
+      || (hasEndpoint && !actions.onTestConnection)
+      || (!hasEndpoint && !actions.onOpenApiConfiguration)
   const [showSemanticReview, setShowSemanticReview] = useState(false)
   const [semanticReviewAttempt, setSemanticReviewAttempt] = useState(0)
   const {
@@ -111,6 +131,14 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
           )}
         </h2>
         <div className="workspace-results-actions">
+          <Button
+            variant="primary"
+            onClick={runPrimaryAction ?? (() => undefined)}
+            disabled={primaryActionDisabled}
+            title={isConnected ? 'Run a check on this diagram' : hasEndpoint ? 'Test the API connection' : 'Configure the API endpoint'}
+          >
+            {primaryActionLabel}
+          </Button>
           <ErrorBoundary>
             <ExportDropdown
               results={analysis.violations}
@@ -121,33 +149,30 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
               emptyResultMessage={getExportEmptyMessage(resultState)}
             />
           </ErrorBoundary>
-          <Button
-            variant={metrics.visible ? 'primary' : 'secondary'}
-            aria-pressed={metrics.visible}
-            onClick={metrics.onToggle}
-            title="Toggle diagram metrics"
-            disabled={!metrics.data}
-          >
-            Metrics
-          </Button>
-          <Button
-            onClick={openSemanticReview}
-            disabled={!exportOptions.code.trim() || analysis.isAnalyzing || semanticReviewLoading}
-            title="Review the diagram’s clarity"
-          >
-            Diagram review
-          </Button>
-          <Button onClick={actions.onOpenRules} title="Manage enabled rules">
-            Rules
-          </Button>
-          <Button
-            variant="primary"
-            onClick={actions.onRecheck}
-            disabled={!actions.canRecheck}
-            title="Run a check on this diagram"
-          >
-            Run check
-          </Button>
+          <details className="workspace-results-more">
+            <summary aria-label="More result actions">More</summary>
+            <div className="more-actions-menu" role="group" aria-label="More result actions">
+              <Button
+                variant={metrics.visible ? 'primary' : 'secondary'}
+                aria-pressed={metrics.visible}
+                onClick={metrics.onToggle}
+                title="Toggle diagram metrics"
+                disabled={!metrics.data}
+              >
+                Metrics
+              </Button>
+              <Button
+                onClick={openSemanticReview}
+                disabled={!exportOptions.code.trim() || analysis.isAnalyzing || semanticReviewLoading}
+                title="Review the diagram’s clarity"
+              >
+                Diagram review
+              </Button>
+              <Button onClick={actions.onOpenRules} title="Manage enabled rules">
+                Rules
+              </Button>
+            </div>
+          </details>
         </div>
       </div>
       <div className="workspace-results-body">

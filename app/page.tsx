@@ -120,6 +120,7 @@ function HomeContent() {
           analysis: {
             violations,
             resultState,
+            connectionStatus,
             resultsAreStale: resultsAreStale && lastCompletedRun?.status === 'success',
             isAnalyzing,
             analyzeError,
@@ -134,6 +135,8 @@ function HomeContent() {
           actions: {
             canRecheck,
             onRecheck: handleRecheck,
+            onOpenApiConfiguration: openApiConfigAndFocus,
+            onTestConnection: handleTestConnection,
             onOpenRules: dialogState.openRules,
             onApplySuggestedCode: setCode,
           },
@@ -152,7 +155,6 @@ function HomeContent() {
         apiEndpointFromUrl: configSource === 'URL parameter',
         diagramType,
         lintSupported,
-        onTestConnection: handleTestConnection,
         statusMessage: rulesUnavailableForEndpoint
           ? 'Rules unavailable; using API defaults.'
           : statusMessage,

@@ -25,7 +25,7 @@ it('keeps the page title aligned with the product name shown in the header', () 
 })
 
 it('distinguishes checking, missing rules, and successful analysis copy', () => {
-  expect(ANALYSIS_RESULT_MESSAGES['needs-connection']).toBe('Test the API connection to run a check.')
+  expect(ANALYSIS_RESULT_MESSAGES['needs-connection']).toBe('Connect to the API to run a check.')
   expect(ANALYSIS_RESULT_MESSAGES['no-enabled-rules']).toContain('No rules are enabled.')
   expect(ANALYSIS_RESULT_MESSAGES['no-rules-available']).toContain('API hasn’t provided any rules')
   expect(ANALYSIS_RESULT_MESSAGES.clean).toBe('No issues found.')

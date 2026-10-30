@@ -33,7 +33,7 @@ export default function ExportDropdownMenu({
   return (
     <div className="export-dropdown">
       <Button
-        variant="primary"
+        variant="secondary"
         onClick={onToggleOpen}
         aria-haspopup="menu"
         aria-expanded={open}
