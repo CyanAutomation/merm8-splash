@@ -24,9 +24,14 @@ export default function HomeHeader({ onOpenApiConfiguration, onResetLayout }: Ho
         <Button variant="secondary" onClick={onOpenApiConfiguration}>
           API settings
         </Button>
-        <Button variant="secondary" onClick={onResetLayout}>
-          Reset layout
-        </Button>
+        <details className="home-header-more">
+          <summary aria-label="More workspace actions">More</summary>
+          <div className="more-actions-menu" role="group" aria-label="Workspace actions">
+            <Button variant="secondary" onClick={onResetLayout}>
+              Reset layout
+            </Button>
+          </div>
+        </details>
       </div>
     </header>
   )
