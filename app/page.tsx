@@ -30,8 +30,9 @@ function HomeContent() {
     connectionStatus,
     configSource,
     statusMessage,
-    handleTestConnection,
-    handleSaveEndpoint,
+    testConnection,
+    testConnectionWithNotice,
+    saveEndpoint,
     showSnackbar,
   } = useHomeEndpointController()
   const { hasParseError, parseErrorDetail, parseErrorFullDetail, onParseStateChange } = useHomeParseState()
@@ -57,7 +58,7 @@ function HomeContent() {
     disableAllRules,
     handleRecheck,
     canRecheck,
-  } = useHomeAnalysisController({ endpoint, connectionStatus, hasParseError, showSnackbar })
+  } = useHomeAnalysisController({ endpoint, connectionStatus, hasParseError })
 
   const openApiConfigAndFocus = useCallback(() => {
     dialogState.openApiConfiguration()
@@ -136,7 +137,7 @@ function HomeContent() {
             canRecheck,
             onRecheck: handleRecheck,
             onOpenApiConfiguration: openApiConfigAndFocus,
-            onTestConnection: handleTestConnection,
+            onTestConnection: testConnectionWithNotice,
             onOpenRules: dialogState.openRules,
             onApplySuggestedCode: setCode,
           },
@@ -172,8 +173,8 @@ function HomeContent() {
           endpoint,
           onEndpointChange: setEndpoint,
           connectionStatus,
-          onTestConnection: handleTestConnection,
-          onSave: handleSaveEndpoint,
+          onTestConnection: testConnection,
+          onSave: saveEndpoint,
           configSource,
           statusMessage,
         },

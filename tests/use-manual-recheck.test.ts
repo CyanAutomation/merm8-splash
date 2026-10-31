@@ -40,9 +40,7 @@ function createOptions(overrides: Partial<ManualRecheckOptions> = {}): ManualRec
     enabledRules: ['no-cycles'],
     rules: [{ id: 'no-cycles', description: 'Avoid cycles', severity: 'error' }],
     isAnalyzing: false,
-    lastCompletedRun: null,
     forceAnalysis: vi.fn(),
-    showSnackbar: vi.fn(),
     ...overrides,
   }
 }
@@ -68,7 +66,6 @@ it('starts an analysis when manual recheck is available', () => {
     options.rules,
     { useServerDefaults: false },
   )
-  expect(options.showSnackbar).toHaveBeenCalledWith('Re-check started.', 'success')
 })
 
 it('does not start a manual recheck while the API is disconnected', () => {
@@ -79,26 +76,4 @@ it('does not start a manual recheck while the API is disconnected', () => {
 
   act(() => button.click())
   expect(options.forceAnalysis).not.toHaveBeenCalled()
-  expect(options.showSnackbar).not.toHaveBeenCalled()
-})
-
-it('reports the result after a started manual recheck completes', () => {
-  const options = createOptions()
-  const button = renderRecheck(options)
-
-  act(() => button.click())
-
-  const completedOptions = {
-    ...options,
-    lastCompletedRun: {
-      id: 1,
-      source: 'manual' as const,
-      status: 'success' as const,
-      violationsCount: 2,
-      error: null,
-    },
-  }
-  renderRecheck(completedOptions)
-
-  expect(options.showSnackbar).toHaveBeenLastCalledWith('Check complete: 2 violations', 'success')
 })
