@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback } from 'react'
 import type { Rule } from './api'
 import { canRunAnalysis } from './analysisReadiness'
-import { getManualAnalysisNotice } from './homeFeedback'
 import { resolveRulesAvailabilityState } from './rulesState'
 import type { UseDiagramAnalysisReturn } from './useDiagramAnalysis'
 import type { ConnectionStatus } from './useApiEndpoint'
-
-type ShowSnackbar = (message: string, tone: 'success' | 'error') => void
 
 interface UseManualRecheckOptions {
   code: string
@@ -19,9 +16,7 @@ interface UseManualRecheckOptions {
   enabledRules: string[]
   rules: Rule[]
   isAnalyzing: boolean
-  lastCompletedRun: UseDiagramAnalysisReturn['lastCompletedRun']
   forceAnalysis: UseDiagramAnalysisReturn['forceAnalysis']
-  showSnackbar: ShowSnackbar
 }
 
 export function useManualRecheck({
@@ -35,12 +30,8 @@ export function useManualRecheck({
   enabledRules,
   rules,
   isAnalyzing,
-  lastCompletedRun,
   forceAnalysis,
-  showSnackbar,
 }: UseManualRecheckOptions) {
-  const pendingManualRunRef = useRef(false)
-  const lastManualRunIdRef = useRef(0)
   const { isAvailable, isUnavailable } = resolveRulesAvailabilityState(
     endpoint,
     rulesLoadedEndpoint,
@@ -60,22 +51,8 @@ export function useManualRecheck({
   const handleRecheck = useCallback(() => {
     if (!canAnalyze) return
 
-    pendingManualRunRef.current = true
-    showSnackbar('Re-check started.', 'success')
     forceAnalysis(endpoint, code, enabledRules, rules, { useServerDefaults: isUnavailable })
-  }, [canAnalyze, code, endpoint, enabledRules, forceAnalysis, isUnavailable, rules, showSnackbar])
-
-  useEffect(() => {
-    if (!pendingManualRunRef.current || !lastCompletedRun) return
-    if (lastCompletedRun.id <= lastManualRunIdRef.current) return
-
-    const notice = getManualAnalysisNotice(lastCompletedRun)
-    if (!notice) return
-
-    lastManualRunIdRef.current = lastCompletedRun.id
-    pendingManualRunRef.current = false
-    showSnackbar(notice.message, notice.tone)
-  }, [lastCompletedRun, showSnackbar])
+  }, [canAnalyze, code, endpoint, enabledRules, forceAnalysis, isUnavailable, rules])
 
   return { canRecheck, handleRecheck }
 }

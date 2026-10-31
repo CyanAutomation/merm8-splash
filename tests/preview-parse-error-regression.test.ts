@@ -72,6 +72,7 @@ vi.mock('../app/components/ResultsPanel', async () => {
 
 vi.mock('../app/components/Snackbar', () => ({
   SnackbarProvider: ({ children }: { children: unknown }) => children,
+  SnackbarViewport: () => null,
   useSnackbar: () => ({ show: vi.fn() }),
 }))
 vi.mock('@/lib/useApiEndpoint', () => ({
@@ -110,9 +111,6 @@ vi.mock('@/lib/useRulesConfiguration', () => ({
   }),
 }))
 vi.mock('@/lib/useScheduledAnalysis', () => ({ useScheduledAnalysis: vi.fn() }))
-vi.mock('@/lib/useEndpointFeedback', () => ({
-  useEndpointFeedback: () => ({ handleTestConnection: vi.fn(), handleSaveEndpoint: vi.fn() }),
-}))
 vi.mock('@/lib/useManualRecheck', () => ({
   useManualRecheck: () => ({ canRecheck: false, handleRecheck: vi.fn() }),
 }))
