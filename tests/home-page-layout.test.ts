@@ -3,6 +3,7 @@ import { act, createElement, createRef, type ComponentProps } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import HomePageLayout, { type HomePageLayoutProps } from '../app/components/HomePageLayout'
+import { SnackbarProvider } from '../app/components/Snackbar'
 import type HomeHeader from '../app/components/HomeHeader'
 import type HomeDialogs from '../app/components/HomeDialogs'
 import type StatusBar from '../app/components/StatusBar'
@@ -148,17 +149,20 @@ it('renders page regions in order and routes each section action to its callback
     onResetLayout: vi.fn(),
   }
 
-  act(() => root?.render(createElement(HomePageLayout, createLayoutProps(callbacks))))
+  act(() => root?.render(createElement(SnackbarProvider, null,
+    createElement(HomePageLayout, createLayoutProps(callbacks)),
+  )))
 
   const appShell = container.querySelector('.app-shell')
   if (!appShell) throw new Error('Expected the home page shell to render.')
   expect([...appShell.children].map((region) => {
     if (region.matches('header')) return 'header'
     if (region.matches('.app-main')) return 'workspace'
+    if (region.matches('.snackbar-lane')) return 'notifications'
     if (region.matches('.status-bar')) return 'status-bar'
     if (region.querySelector('[role="dialog"]')) return 'dialogs'
     return 'unknown'
-  })).toEqual(['header', 'workspace', 'status-bar', 'dialogs'])
+  })).toEqual(['header', 'workspace', 'notifications', 'status-bar', 'dialogs'])
 
   clickAction('API settings')
   clickAction('Jump to diagram line')

@@ -12,11 +12,16 @@ import {
 
 export type ConnectionStatus = 'connected' | 'checking' | 'error' | 'disconnected'
 
+export interface ConnectionTestResult {
+  connectionStatus: 'connected' | 'error'
+  message: string
+}
+
 export interface UseApiEndpointReturn {
   endpoint: string
   setEndpoint: (url: string) => void
   connectionStatus: ConnectionStatus
-  testConnection: () => Promise<void>
+  testConnection: () => Promise<ConnectionTestResult | null>
   saveEndpoint: () => void
   configSource: string
   statusMessage: string
@@ -60,16 +65,17 @@ export function useApiEndpoint(): UseApiEndpointReturn {
     setStatusMessage('')
   }, [])
 
-  const testConnection = useCallback(async () => {
+  const testConnection = useCallback(async (): Promise<ConnectionTestResult | null> => {
     healthCheckAbortControllerRef.current?.abort()
     const controller = new AbortController()
     healthCheckAbortControllerRef.current = controller
     const endpointAtStart = endpointRef.current
     const validation = validateApiEndpoint(endpointAtStart)
     if (!validation.valid) {
+      const message = validation.message ?? 'Invalid endpoint.'
       setConnectionStatus('error')
-      setStatusMessage(validation.message ?? 'Invalid endpoint.')
-      return
+      setStatusMessage(message)
+      return { connectionStatus: 'error', message }
     }
 
     const requestId = ++latestRequestIdRef.current
@@ -86,21 +92,25 @@ export function useApiEndpoint(): UseApiEndpointReturn {
       await fetchHealthz(endpointAtStart, controller.signal)
 
       if (!isCurrentRequest()) {
-        return
+        return null
       }
 
       setConnectionStatus('connected')
       setStatusMessage('Connection successful.')
+      return { connectionStatus: 'connected', message: 'Connection successful.' }
     } catch (error) {
       if (controller.signal.aborted) {
-        return
+        return null
       }
       if (!isCurrentRequest()) {
-        return
+        return null
       }
 
+      const message = getApiFailureMessage(error, 'connection')
+        ?? 'Could not connect to the API endpoint. Check the URL, network connection, and server status.'
       setConnectionStatus('error')
-      setStatusMessage(getApiFailureMessage(error, 'connection') ?? 'Could not connect to the API endpoint. Check the URL, network connection, and server status.')
+      setStatusMessage(message)
+      return { connectionStatus: 'error', message }
     }
   }, [])
 

@@ -51,6 +51,32 @@ describe('export actions', () => {
     expect(closeDropdown).toHaveBeenCalledOnce()
   })
 
+  it('reports a successful local download when clipboard access is unavailable', async () => {
+    clipboardMocks.copyTextWithFallback.mockResolvedValue({
+      copied: false,
+      clipboardAvailable: false,
+      method: 'fallback-failed',
+    })
+    const downloadFile = vi.fn()
+    const showSnackbar = vi.fn()
+
+    await copyExport({
+      text: 'report',
+      format: 'markdown',
+      fallbackFilename: 'report.md',
+      fallbackMime: 'text/markdown',
+      isMounted: () => true,
+      setCopying: vi.fn(),
+      showSnackbar,
+      scheduleCopyingReset: vi.fn(),
+      closeDropdown: vi.fn(),
+      downloadFile,
+    })
+
+    expect(downloadFile).toHaveBeenCalledWith('report', 'report.md', 'text/markdown')
+    expect(showSnackbar).toHaveBeenCalledWith('Clipboard unavailable; downloaded report.md instead.', 'success')
+  })
+
   it('downloads the generated fallback when remote SARIF generation fails', async () => {
     exportApiMocks.analyzeCodeSarif.mockRejectedValue(new Error('offline'))
     const downloadFile = vi.fn()
@@ -74,7 +100,7 @@ describe('export actions', () => {
     expect(JSON.parse(content).version).toBe('2.1.0')
     expect(filename).toBe('merm8-check-results.sarif.json')
     expect(mime).toBe('application/json')
-    expect(showSnackbar).toHaveBeenCalledWith('The API couldn’t create a SARIF export, so I saved a local copy.', 'error')
+    expect(showSnackbar).toHaveBeenCalledWith('The API couldn’t create SARIF; downloaded a local copy instead.', 'success')
     expect(closeDropdown).toHaveBeenCalledOnce()
   })
 
