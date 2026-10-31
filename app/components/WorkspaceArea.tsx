@@ -49,7 +49,7 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
     : resultsIndicator ? `Results, ${resultsIndicator}` : 'Results'
 
   return (
-    <div className="app-main" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+    <main className="app-main" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div className="mobile-workspace-tabs" role="group" aria-label="Workspace view">
         {([
           ['editor', 'Edit', 'workspace-editor'],
@@ -127,6 +127,6 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
           <WorkspaceResults {...results} />
         </div>
       </div>
-    </div>
+    </main>
   )
 }
