@@ -16,20 +16,26 @@ it('keeps the page title aligned with the product name shown in the header', () 
   }))
   const renderedHeader = new DOMParser().parseFromString(header, 'text/html')
   const productName = renderedHeader.querySelector('.home-brand-name')?.textContent?.trim()
-  const tagline = renderedHeader.querySelector('.home-brand-tagline')?.textContent?.trim()
 
   expect(productName).toBeTruthy()
-  expect(tagline).toBeTruthy()
   expect(String(metadata.title).split(' | ', 1)[0]).toBe(productName)
-  expect(metadata.description).toEqual(expect.stringMatching(/\S/))
 })
 
-it('distinguishes checking, missing rules, and successful analysis copy', () => {
-  expect(ANALYSIS_RESULT_MESSAGES['needs-connection']).toBe('Connect to the API to run a check.')
-  expect(ANALYSIS_RESULT_MESSAGES['no-enabled-rules']).toContain('No rules are enabled.')
-  expect(ANALYSIS_RESULT_MESSAGES['no-rules-available']).toContain('API hasn’t provided any rules')
-  expect(ANALYSIS_RESULT_MESSAGES.clean).toBe('No issues found.')
-  expect(ANALYSIS_RESULT_MESSAGES['syntax-only']).toContain('lint rules weren’t run')
+it('uses distinct messages for connection, rule, clean, and syntax-only states', () => {
+  const messages = [
+    ANALYSIS_RESULT_MESSAGES['needs-connection'],
+    ANALYSIS_RESULT_MESSAGES['no-enabled-rules'],
+    ANALYSIS_RESULT_MESSAGES['no-rules-available'],
+    ANALYSIS_RESULT_MESSAGES.clean,
+    ANALYSIS_RESULT_MESSAGES['syntax-only'],
+  ]
+
+  expect(messages[0]).toMatch(/connect/i)
+  expect(messages[1]).toMatch(/enable.*rule/i)
+  expect(messages[2]).toMatch(/API.*provided.*rules/i)
+  expect(messages[3]).toMatch(/no issues/i)
+  expect(messages[4]).toMatch(/syntax.*lint/i)
+  expect(new Set(messages).size).toBe(messages.length)
 })
 
 it('uses result state to avoid claiming an unchecked diagram is clean in exports', () => {

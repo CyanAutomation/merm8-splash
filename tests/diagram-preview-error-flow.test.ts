@@ -44,13 +44,14 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-it('shows the full parser message automatically without error action buttons', () => {
+it('shows the short summary and full parser trace automatically without action buttons', () => {
   mount(createElement(DiagramPreviewErrorPanel, {
     message: 'Unexpected token on line 7',
     fullMessage: 'Unexpected token on line 7\nDetailed parser trace',
   }))
 
   expect(container.textContent).toContain('Detailed parser trace')
+  expect(container.textContent).toContain('Unexpected token on line 7')
   expect(container.querySelector('[role="alert"]')).not.toBeNull()
   expect(container.querySelectorAll('button')).toHaveLength(0)
 })
