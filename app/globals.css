@@ -1335,6 +1335,14 @@ a {
     color: var(--color-error);
   }
 
+  .snackbar-warning {
+    border-color: var(--color-warning);
+  }
+
+  .snackbar-warning > span {
+    color: var(--color-warning);
+  }
+
   .snackbar-dismiss {
     flex: 0 0 auto;
     border: 0;

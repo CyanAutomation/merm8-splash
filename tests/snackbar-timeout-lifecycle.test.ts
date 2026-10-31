@@ -59,6 +59,19 @@ describe('SnackbarProvider', () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
+  it('shows fallback outcomes as warnings for six seconds', () => {
+    renderHarness()
+    act(() => enqueue('Downloaded a local copy instead.', 'warning'))
+
+    expect(container.querySelector('.snackbar-warning')).not.toBeNull()
+    expect(container.querySelector('[role="status"]')).not.toBeNull()
+
+    act(() => vi.advanceTimersByTime(5_999))
+    expect(container.textContent).toContain('Downloaded a local copy instead.')
+    act(() => vi.advanceTimersByTime(1))
+    expect(container.textContent).not.toContain('Downloaded a local copy instead.')
+  })
+
   it('pauses the timeout while the notice is hovered and resumes it afterward', () => {
     renderHarness()
     act(() => enqueue('Copied code.'))

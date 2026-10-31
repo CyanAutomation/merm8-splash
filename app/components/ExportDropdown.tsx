@@ -44,7 +44,7 @@ export default function ExportDropdown({
     setCopying(nextCopying)
   }
 
-  const showSnackbarSafely = (message: string, type: 'success' | 'error') => {
+  const showSnackbarSafely = (message: string, type: 'success' | 'warning' | 'error') => {
     if (!isMountedRef.current) return
     snackbar.show(message, type)
   }
