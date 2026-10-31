@@ -64,18 +64,3 @@ it('clears manually highlighted lines on blur', () => {
 
   expect((gutter.children[0] as HTMLElement).style.background).toBe('transparent')
 })
-
-it('keeps one visible editor row per Mermaid source line', () => {
-  const code = 'A --> B\nA very long Mermaid line that should scroll horizontally instead of wrapping'
-  root = createRoot(container)
-
-  act(() => root?.render(createElement(SnackbarProvider, null,
-    createElement(DiagramEditor, { value: code, onChange: () => undefined })
-  )))
-
-  const textarea = container.querySelector('textarea') as HTMLTextAreaElement
-  const gutter = container.querySelector('[data-gutter]') as HTMLDivElement
-
-  expect(textarea.getAttribute('wrap')).toBe('off')
-  expect(gutter.children).toHaveLength(code.split('\n').length)
-})

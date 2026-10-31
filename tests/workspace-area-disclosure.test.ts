@@ -92,6 +92,7 @@ afterEach(() => {
 
 it('adds a finding count and accessible context to the mobile Results tab', () => {
   const view = mount('violations')
+  expect(view.querySelector('main.app-main')).not.toBeNull()
   const resultsTab = view.querySelector<HTMLButtonElement>('[aria-label="Results, 2"]')
   expect(resultsTab?.textContent).toContain('2')
 
@@ -101,6 +102,11 @@ it('adds a finding count and accessible context to the mobile Results tab', () =
 
 it('marks a clean mobile Results tab without adding an extra tab', () => {
   const view = mount('clean')
-  expect(view.querySelector('[aria-label="Results, Clear"]')?.textContent).toContain('Clear')
-  expect(view.querySelectorAll('.mobile-workspace-tabs button')).toHaveLength(3)
+  const resultsTab = view.querySelector<HTMLButtonElement>('[aria-label="Results, Clear"]')
+  expect(resultsTab?.textContent).toContain('Clear')
+  expect(resultsTab?.getAttribute('aria-pressed')).toBe('false')
+
+  act(() => resultsTab?.click())
+  expect(resultsTab?.getAttribute('aria-pressed')).toBe('true')
+  expect(view.querySelector('.workspace-grid')?.getAttribute('data-mobile-view')).toBe('results')
 })

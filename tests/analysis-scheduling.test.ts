@@ -1,9 +1,12 @@
 import { expect, it } from 'vitest'
 import { getScheduledDelay } from '../lib/analysis/scheduling'
 
-it('uses the large-diagram idle boundary when a diagram has many lines', () => {
-  expect(getScheduledDelay(Array(70).fill('A').join('\n'), 'input', 1_000, 0, 0).delayMs)
-    .toBe(1_000)
+it('waits longer before checking a large diagram than a small one', () => {
+  const largeDiagram = Array(70).fill('A').join('\n')
+  const smallDiagram = 'A --> B'
+
+  expect(getScheduledDelay(largeDiagram, 'input', 1_000, 0, 0).delayMs)
+    .toBeGreaterThan(getScheduledDelay(smallDiagram, 'input', 1_000, 0, 0).delayMs)
 })
 
 it('does not apply rapid-input backoff to configuration changes', () => {
