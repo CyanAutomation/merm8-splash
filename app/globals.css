@@ -1292,15 +1292,99 @@ a {
   }
 
   @keyframes snackbar-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .snackbar-lane {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: center;
+    min-height: 0;
+    padding: 0 12px;
+  }
+
+  .snackbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: fit-content;
+    max-width: min(520px, 100%);
+    min-width: 0;
+    margin: 4px 0;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .snackbar > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .snackbar-error {
+    border-color: var(--color-error);
+  }
+
+  .snackbar-error > span {
+    color: var(--color-error);
+  }
+
+  .snackbar-warning {
+    border-color: var(--color-warning);
+  }
+
+  .snackbar-warning > span {
+    color: var(--color-warning);
+  }
+
+  .snackbar-dismiss {
+    flex: 0 0 auto;
+    border: 0;
+    padding: 2px 4px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .snackbar-dismiss:hover {
+    color: var(--color-text-primary);
+  }
+
+  .snackbar-dismiss:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   .snackbar-enter {
-    animation: snackbar-in 150ms ease;
+    animation: snackbar-in 180ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .snackbar-enter {
+      animation: none;
+    }
   }
 
   @media (max-width: 700px) {
+    .snackbar {
+      gap: 8px;
+      width: 100%;
+      padding: 8px 10px;
+    }
+
+    .snackbar-dismiss {
+      min-height: 36px;
+    }
+
     .app-shell {
       height: 100dvh !important;
     }

@@ -93,7 +93,6 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       onChange(nextExample.code)
       persistHighlightOnBlurRef.current = false
       setHighlightedLine(null)
-          snackbar.show(`Example ${nextIndex + 1} (${nextExample.type}) loaded.`)
     }
 
     const handleCopyClick = async () => {
@@ -114,7 +113,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
         }
 
         setCopyStatus('error')
-          snackbar.show('Couldn’t copy the diagram code.', 'error')
+        snackbar.show('Couldn’t copy the diagram code. Try selecting and copying it manually.', 'error')
         copyStatusTimeoutRef.current = setTimeout(() => {
           if (!mountedRef.current) return
           setCopyStatus('idle')
@@ -157,7 +156,6 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
                 onClick={() => {
                   if (!window.confirm('Clear all Mermaid code? This action cannot be undone.')) return
                   onChange('')
-                  snackbar.show('Diagram code cleared.')
                 }}
               >
                 Clear code

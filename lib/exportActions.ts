@@ -10,7 +10,7 @@ export interface CopyExportOptions {
   fallbackMime: string
   isMounted: () => boolean
   setCopying: (format: string | null) => void
-  showSnackbar: (message: string, type: 'success' | 'error') => void
+  showSnackbar: (message: string, type: 'success' | 'warning' | 'error') => void
   scheduleCopyingReset: () => void
   closeDropdown: () => void
   downloadFile: (content: string, filename: string, mime: string) => void
@@ -35,9 +35,9 @@ export async function copyExport(options: CopyExportOptions): Promise<void> {
 
   options.downloadFile(options.text, options.fallbackFilename, options.fallbackMime)
   const message = copyResult.clipboardAvailable
-    ? `Clipboard access failed. Downloaded ${options.fallbackFilename} instead.`
-    : `Clipboard unavailable. Downloaded ${options.fallbackFilename} instead.`
-  options.showSnackbar(message, 'error')
+    ? `Clipboard access failed; downloaded ${options.fallbackFilename} instead.`
+    : `Clipboard unavailable; downloaded ${options.fallbackFilename} instead.`
+  options.showSnackbar(message, 'warning')
   options.closeDropdown()
 }
 
@@ -49,7 +49,7 @@ export interface SarifExportOptions {
   rulesMetadata: Rule[]
   isMounted: () => boolean
   closeDropdown: () => void
-  showSnackbar: (message: string, type: 'success' | 'error') => void
+  showSnackbar: (message: string, type: 'success' | 'warning' | 'error') => void
   downloadFile: (content: string, filename: string, mime: string) => void
 }
 
@@ -60,7 +60,7 @@ export async function exportSarifWithFallback(options: SarifExportOptions): Prom
   try {
     if (!endpointValidation.valid) {
       options.downloadFile(JSON.stringify(fallback, null, 2), 'merm8-check-results.sarif.json', 'application/json')
-      options.showSnackbar('The endpoint is invalid, so I saved a local SARIF file.', 'success')
+      options.showSnackbar('Endpoint is invalid; downloaded a local SARIF file instead.', 'warning')
       return
     }
 
@@ -69,7 +69,7 @@ export async function exportSarifWithFallback(options: SarifExportOptions): Prom
     options.showSnackbar(EXPORT_MESSAGES.sarifDownloaded, 'success')
   } catch {
     options.downloadFile(JSON.stringify(fallback, null, 2), 'merm8-check-results.sarif.json', 'application/json')
-    options.showSnackbar('The API couldn’t create a SARIF export, so I saved a local copy.', 'error')
+    options.showSnackbar('The API couldn’t create SARIF; downloaded a local copy instead.', 'warning')
   } finally {
     if (options.isMounted()) options.closeDropdown()
   }
