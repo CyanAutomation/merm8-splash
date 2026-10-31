@@ -16,7 +16,7 @@ vi.mock('../app/components/WorkspaceArea', async () => {
   const { createElement } = await import('react')
   return {
     default: ({ preview }: { preview: { onJumpToLine: (line: number) => void } }) =>
-      createElement('div', { className: 'app-main' },
+      createElement('main', { className: 'app-main' },
         createElement('button', { 'aria-label': 'Jump to diagram line', onClick: () => preview.onJumpToLine(7) }, 'Jump to line 7')),
   }
 })
@@ -156,7 +156,7 @@ it('renders page sections and routes their actions to the matching callback', ()
   const appShell = container.querySelector('.app-shell')
   if (!appShell) throw new Error('Expected the home page shell to render.')
   expect(appShell.querySelector('header')).not.toBeNull()
-  expect(appShell.querySelector('.app-main')).not.toBeNull()
+  expect(appShell.querySelector('main.app-main')).not.toBeNull()
   expect(appShell.querySelector('.status-bar')).not.toBeNull()
   expect(appShell.querySelector('[role="dialog"]')).not.toBeNull()
 
