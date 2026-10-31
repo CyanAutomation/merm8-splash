@@ -51,7 +51,7 @@ describe('export actions', () => {
     expect(closeDropdown).toHaveBeenCalledOnce()
   })
 
-  it('reports a successful local download when clipboard access is unavailable', async () => {
+  it('warns when a local download is used instead of copying', async () => {
     clipboardMocks.copyTextWithFallback.mockResolvedValue({
       copied: false,
       clipboardAvailable: false,
@@ -74,10 +74,10 @@ describe('export actions', () => {
     })
 
     expect(downloadFile).toHaveBeenCalledWith('report', 'report.md', 'text/markdown')
-    expect(showSnackbar).toHaveBeenCalledWith('Clipboard unavailable; downloaded report.md instead.', 'success')
+    expect(showSnackbar).toHaveBeenCalledWith('Clipboard unavailable; downloaded report.md instead.', 'warning')
   })
 
-  it('downloads the generated fallback when remote SARIF generation fails', async () => {
+  it('warns when SARIF generation falls back to a local download', async () => {
     exportApiMocks.analyzeCodeSarif.mockRejectedValue(new Error('offline'))
     const downloadFile = vi.fn()
     const showSnackbar = vi.fn()
@@ -100,8 +100,26 @@ describe('export actions', () => {
     expect(JSON.parse(content).version).toBe('2.1.0')
     expect(filename).toBe('merm8-check-results.sarif.json')
     expect(mime).toBe('application/json')
-    expect(showSnackbar).toHaveBeenCalledWith('The API couldn’t create SARIF; downloaded a local copy instead.', 'success')
+    expect(showSnackbar).toHaveBeenCalledWith('The API couldn’t create SARIF; downloaded a local copy instead.', 'warning')
     expect(closeDropdown).toHaveBeenCalledOnce()
+  })
+
+  it('warns when an invalid endpoint requires a local SARIF export', async () => {
+    const showSnackbar = vi.fn()
+
+    await exportSarifWithFallback({
+      endpoint: 'not a URL',
+      code: 'flowchart TD\nA --> B',
+      results: [],
+      enabledRules: [],
+      rulesMetadata: [],
+      isMounted: () => true,
+      closeDropdown: vi.fn(),
+      showSnackbar,
+      downloadFile: vi.fn(),
+    })
+
+    expect(showSnackbar).toHaveBeenCalledWith('Endpoint is invalid; downloaded a local SARIF file instead.', 'warning')
   })
 
   it('confirms when a SARIF file is downloaded successfully', async () => {

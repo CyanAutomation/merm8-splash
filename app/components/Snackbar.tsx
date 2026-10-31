@@ -5,12 +5,12 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 interface SnackbarMessage {
   id: number
   text: string
-  tone: 'success' | 'error'
+  tone: 'success' | 'warning' | 'error'
 }
 
 interface SnackbarContextValue {
   message: SnackbarMessage | null
-  show: (text: string, tone?: 'success' | 'error') => void
+  show: (text: string, tone?: 'success' | 'warning' | 'error') => void
   dismiss: () => void
   pause: (reason: 'hover' | 'focus') => void
   resume: (reason: 'hover' | 'focus') => void
@@ -55,13 +55,13 @@ export function SnackbarProvider({ children }: { children: React.ReactNode }) {
     }, remainingTimeRef.current)
   }, [])
 
-  const show = useCallback((text: string, tone: 'success' | 'error' = 'success') => {
+  const show = useCallback((text: string, tone: 'success' | 'warning' | 'error' = 'success') => {
     clearTimer()
     // Replacing a focused notice removes its focused dismiss button.
     if (messageRef.current) pauseReasonsRef.current.delete('focus')
     const nextMessage = { id: ++idRef.current, text, tone }
     messageRef.current = nextMessage
-    remainingTimeRef.current = tone === 'error' ? 6_000 : 4_000
+    remainingTimeRef.current = tone === 'success' ? 4_000 : 6_000
     setMessage(nextMessage)
     if (pauseReasonsRef.current.size === 0) startTimer()
   }, [clearTimer, startTimer])
