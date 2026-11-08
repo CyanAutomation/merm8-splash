@@ -49,7 +49,7 @@ Try the [hosted merm8-splash app](https://merm8-splash.vercel.app/). The built-i
 
 ### Prerequisites
 
-- **Node.js** 24.x
+- **Node.js** 26.x
 - **npm** 9+ (the repository uses `package-lock.json`; npm is the verified package manager)
 
 ### Installation
