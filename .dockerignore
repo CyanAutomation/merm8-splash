@@ -1,0 +1,8 @@
+node_modules
+.git
+.vercel
+.next
+out
+coverage
+.env*
+!.env.example
