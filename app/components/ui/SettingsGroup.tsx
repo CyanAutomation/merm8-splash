@@ -16,7 +16,7 @@ export default function SettingsGroup({ title, description, children, className 
       aria-labelledby={titleId}
     >
       <h3 className="settings-group-title" id={titleId}>{title}</h3>
-      {description && <p className="settings-group-description">{description}</p>}
+      {description && <div className="settings-group-description">{description}</div>}
       <div className="settings-group-content">{children}</div>
     </section>
   )

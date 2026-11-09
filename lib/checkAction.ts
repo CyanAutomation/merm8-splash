@@ -36,7 +36,7 @@ export function getCheckActionState({
       kind: 'run',
       label,
       title: isAnalyzing ? 'Checking this diagram' : 'Run a check on this diagram',
-      disabled: !canRecheck,
+      disabled: !canRecheck || resultState === 'loading-rules',
       busy,
     }
   }

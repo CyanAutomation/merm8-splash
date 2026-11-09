@@ -37,6 +37,12 @@ it('uses check loading and disabled states after the API connects', () => {
     disabled: true,
     busy: true,
   })
+  expect(getCheckActionState({ ...base, resultState: 'loading-rules', canRecheck: true })).toMatchObject({
+    kind: 'run',
+    label: 'Loading rules…',
+    disabled: true,
+    busy: true,
+  })
   expect(getCheckActionState({ ...base, isAnalyzing: true, resultState: 'loading-rules' })).toMatchObject({
     kind: 'run',
     label: 'Checking…',

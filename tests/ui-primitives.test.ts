@@ -16,7 +16,7 @@ function parseMarkup(markup: string) {
 it('renders a page header with a heading, description, status, and named action group', () => {
   const markup = renderToStaticMarkup(createElement(PageHeader, {
     title: 'Diagram workspace',
-    description: 'Edit a Mermaid diagram, then run a check to see findings.',
+    description: createElement('div', null, createElement('ul', null, createElement('li', null, 'Run a check to see findings.'))),
     headingLevel: 'h2',
     metadata: createElement(StatusBadge, { tone: 'success' }, 'API connected'),
     actions: createElement(ToolbarGroup, { label: 'Workspace actions' },
@@ -26,8 +26,9 @@ it('renders a page header with a heading, description, status, and named action 
   const document = parseMarkup(markup)
 
   expect(document.querySelector('h2')?.textContent).toBe('Diagram workspace')
-  expect(document.querySelector('.page-header-description')?.textContent)
-    .toContain('run a check')
+  const pageDescription = document.querySelector('.page-header-description')
+  expect(pageDescription?.tagName).toBe('DIV')
+  expect(pageDescription?.querySelector('ul')?.textContent).toContain('Run a check')
   expect(document.querySelector('[role="group"][aria-label="Workspace actions"]')?.textContent)
     .toContain('Run check')
   expect(document.querySelector('.status-badge[data-tone="success"]')?.textContent)
@@ -37,7 +38,7 @@ it('renders a page header with a heading, description, status, and named action 
 it('renders settings as a labelled section with a separate content and control column', () => {
   const markup = renderToStaticMarkup(createElement(SettingsGroup, {
     title: 'Available checks',
-    description: 'Choose the rules to run.',
+    description: createElement('div', null, createElement('ul', null, createElement('li', null, 'Choose the rules to run.'))),
     children: createElement(SettingsRow, {
       content: createElement('label', { htmlFor: 'rule-cycle' }, 'Avoid cycles'),
       control: createElement('input', { id: 'rule-cycle', type: 'checkbox' }),
@@ -49,8 +50,9 @@ it('renders settings as a labelled section with a separate content and control c
   expect(section?.getAttribute('aria-labelledby')).toBeTruthy()
   expect(document.getElementById(section?.getAttribute('aria-labelledby') ?? '')?.textContent)
     .toBe('Available checks')
-  expect(section?.querySelector('.settings-group-description')?.textContent)
-    .toBe('Choose the rules to run.')
+  const settingsDescription = section?.querySelector('.settings-group-description')
+  expect(settingsDescription?.tagName).toBe('DIV')
+  expect(settingsDescription?.querySelector('ul')?.textContent).toBe('Choose the rules to run.')
   expect(section?.querySelector('.settings-row-content label')?.getAttribute('for')).toBe('rule-cycle')
   expect(section?.querySelector('.settings-row-control input')?.getAttribute('type')).toBe('checkbox')
 })
