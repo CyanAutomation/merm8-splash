@@ -4,6 +4,7 @@ import Image from 'next/image'
 import remAvatar from '@/design/rem-avatar.png'
 import { PRODUCT_NAME, PRODUCT_TAGLINE } from '@/lib/uiCopy'
 import Button from './Button'
+import ToolbarGroup from './ui/ToolbarGroup'
 
 interface HomeHeaderProps {
   onOpenApiConfiguration: () => void
@@ -20,7 +21,7 @@ export default function HomeHeader({ onOpenApiConfiguration, onResetLayout }: Ho
           <span className="home-brand-tagline">{PRODUCT_TAGLINE}</span>
         </div>
       </div>
-      <div className="home-header-actions">
+      <ToolbarGroup label="Application actions" className="home-header-actions">
         <Button variant="secondary" onClick={onOpenApiConfiguration}>
           API settings
         </Button>
@@ -32,7 +33,7 @@ export default function HomeHeader({ onOpenApiConfiguration, onResetLayout }: Ho
             </Button>
           </div>
         </details>
-      </div>
+      </ToolbarGroup>
     </header>
   )
 }

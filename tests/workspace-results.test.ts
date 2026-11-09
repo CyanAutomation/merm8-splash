@@ -53,16 +53,13 @@ afterEach(() => {
   semanticReviewMock.isApiRequestError.mockReset().mockReturnValue(false)
 })
 
-it('keeps the current next step visible and defers secondary result actions', () => {
+it('groups result actions and keeps secondary tools in the explicit More menu', () => {
   const onToggleMetrics = vi.fn()
-  const onOpenRules = vi.fn()
-  const onRecheck = vi.fn()
   const resultsRef = createRef<ResultsPanelRef>()
   const view = mount(createElement(WorkspaceResults, {
     analysis: {
       violations: [],
       resultState: 'clean',
-      connectionStatus: 'connected',
       isAnalyzing: false,
       analyzeError: null,
       analysisHints: [],
@@ -82,13 +79,7 @@ it('keeps the current next step visible and defers secondary result actions', ()
       visible: true,
       onToggle: onToggleMetrics,
     },
-    actions: {
-      canRecheck: true,
-      onRecheck,
-      onOpenRules,
-      onOpenApiConfiguration: vi.fn(),
-      onTestConnection: vi.fn(),
-    },
+    actions: {},
   }))
 
   const buttonWithTitle = (title: string) => Array.from(view.querySelectorAll('button'))
@@ -116,74 +107,21 @@ it('keeps the current next step visible and defers secondary result actions', ()
 
   const metricsButton = buttonWithTitle('Toggle diagram metrics')
   const semanticReviewButton = buttonWithTitle('Review the diagram’s clarity')
-  const rulesButton = buttonWithTitle('Manage enabled rules')
-  const recheckButton = buttonWithTitle('Run a check on this diagram')
-  if (!metricsButton || !semanticReviewButton || !rulesButton || !recheckButton) {
+  if (!metricsButton || !semanticReviewButton) {
     throw new Error('Expected each results toolbar action to render.')
   }
+  expect(view.querySelector('[role="group"][aria-label="Results actions"]')).toBeTruthy()
   expect(metricsButton.closest('details')).toBe(moreActions)
   expect(semanticReviewButton.closest('details')).toBe(moreActions)
-  expect(rulesButton.closest('details')).toBe(moreActions)
-  expect(recheckButton.closest('details')).toBeNull()
-  expect(recheckButton.classList.contains('btn--primary')).toBe(true)
+  expect(buttonWithTitle('Run a check on this diagram')).toBeUndefined()
+  expect(Array.from(view.querySelectorAll('button')).some((button) => button.textContent?.trim() === 'Rules')).toBe(false)
   const exportButton = Array.from(view.querySelectorAll('button'))
     .find((button) => button.textContent?.includes('Export'))
   expect(exportButton?.classList.contains('btn--secondary')).toBe(true)
 
   act(() => metricsButton.click())
-  act(() => rulesButton.click())
-  act(() => recheckButton.click())
 
   expect(onToggleMetrics).toHaveBeenCalledOnce()
-  expect(onOpenRules).toHaveBeenCalledOnce()
-  expect(onRecheck).toHaveBeenCalledOnce()
-})
-
-it('shows API setup or connection as the primary step until the API is ready', () => {
-  const onOpenApiConfiguration = vi.fn()
-  const onTestConnection = vi.fn()
-  const baseProps = {
-    analysis: {
-      violations: [],
-      resultState: 'needs-connection' as const,
-      connectionStatus: 'disconnected' as const,
-      isAnalyzing: false,
-      analyzeError: null,
-      analysisHints: [],
-      lintSupported: null,
-      parseErrorDetail: null,
-      onJumpToLine: vi.fn(),
-      resultsRef: createRef<ResultsPanelRef>(),
-    },
-    exportOptions: { code: 'flowchart TD\nA --> B', endpoint: '', enabledRules: [], rules: [] },
-    metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: {
-      canRecheck: false,
-      onRecheck: vi.fn(),
-      onOpenRules: vi.fn(),
-      onOpenApiConfiguration,
-      onTestConnection,
-    },
-  }
-  const view = mount(createElement(WorkspaceResults, baseProps))
-
-  const setupButton = Array.from(view.querySelectorAll('button'))
-    .find((button) => button.textContent?.trim() === 'Set up API')
-  if (!setupButton) throw new Error('Expected API setup to be the primary action.')
-  act(() => setupButton.click())
-  expect(onOpenApiConfiguration).toHaveBeenCalledOnce()
-
-  act(() => root?.render(createElement(SnackbarProvider, null, createElement(WorkspaceResults, {
-    ...baseProps,
-    analysis: { ...baseProps.analysis, connectionStatus: 'error' },
-    exportOptions: { ...baseProps.exportOptions, endpoint: 'https://api.example.test' },
-  }))))
-  expect(view.textContent).not.toContain('This part of the page didn’t load.')
-  const testButton = Array.from(view.querySelectorAll('button'))
-    .find((button) => button.textContent?.trim() === 'Test API')
-  if (!testButton) throw new Error('Expected API testing to be the primary action.')
-  act(() => testButton.click())
-  expect(onTestConnection).toHaveBeenCalledOnce()
 })
 
 it('keeps copy feedback attached to a finding when a higher-severity row is added', async () => {
@@ -195,7 +133,6 @@ it('keeps copy feedback attached to a finding when a higher-severity row is adde
     analysis: {
       violations: [warning],
       resultState: 'violations',
-      connectionStatus: 'connected',
       isAnalyzing: false,
       analyzeError: null,
       analysisHints: [],
@@ -206,13 +143,7 @@ it('keeps copy feedback attached to a finding when a higher-severity row is adde
     },
     exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: {
-      canRecheck: true,
-      onRecheck: vi.fn(),
-      onOpenRules: vi.fn(),
-      onOpenApiConfiguration: vi.fn(),
-      onTestConnection: vi.fn(),
-    },
+    actions: {},
   }))
 
   try {
@@ -232,7 +163,6 @@ it('keeps copy feedback attached to a finding when a higher-severity row is adde
       analysis: {
         violations: [warning, { rule_id: 'no-cycles', severity: 'error' as const, message: 'Cycle detected', line: 4 }],
         resultState: 'violations' as const,
-        connectionStatus: 'connected' as const,
         isAnalyzing: false,
         analyzeError: null,
         analysisHints: [],
@@ -243,13 +173,7 @@ it('keeps copy feedback attached to a finding when a higher-severity row is adde
       },
       exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
       metrics: { data: null, visible: false, onToggle: vi.fn() },
-      actions: {
-        canRecheck: true,
-        onRecheck: vi.fn(),
-        onOpenRules: vi.fn(),
-        onOpenApiConfiguration: vi.fn(),
-        onTestConnection: vi.fn(),
-      },
+      actions: {},
     }
     act(() => root?.render(createElement(SnackbarProvider, null, createElement(WorkspaceResults, props))))
 
@@ -273,7 +197,6 @@ it('summarizes findings before showing rule details in a disclosure', () => {
         { rule_id: 'no-cycles', severity: 'error', message: 'Cycle detected', line: 4 },
       ],
       resultState: 'violations',
-      connectionStatus: 'connected',
       isAnalyzing: false,
       analyzeError: null,
       analysisHints: [],
@@ -284,7 +207,7 @@ it('summarizes findings before showing rule details in a disclosure', () => {
     },
     exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn(), onOpenApiConfiguration: vi.fn(), onTestConnection: vi.fn() },
+    actions: {},
   }))
 
   const overview = view.querySelector('.results-overview')
@@ -332,11 +255,7 @@ it('runs semantic review directly from the toolbar and displays the API result i
       rules: [],
     },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: {
-      canRecheck: true,
-      onRecheck: vi.fn(),
-      onOpenRules: vi.fn(),
-    },
+    actions: {},
   }))
 
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
@@ -410,9 +329,7 @@ it('shows actionable findings, selected-answer likelihoods, rule issues, and a s
     },
     exportOptions: { code: 'flowchart TD\nB[Decision] --> C', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: {
-      canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn(), onApplySuggestedCode,
-    },
+    actions: { onApplySuggestedCode },
   }))
 
   const reviewButton = Array.from(view.querySelectorAll('button'))
@@ -476,7 +393,7 @@ it('marks branch clarity not applicable for a flowchart with no branching', asyn
     },
     exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
+    actions: {},
   }))
   const reviewButton = Array.from(view.querySelectorAll('button'))
     .find((button) => button.title === 'Review the diagram’s clarity')
@@ -510,7 +427,7 @@ it('shows a request error and lets the user retry from the results pane', async 
     },
     exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
+    actions: {},
   }))
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
     .find((button) => button.title === 'Review the diagram’s clarity')
@@ -552,7 +469,7 @@ it('contains a rendering failure from malformed review data and provides recover
     },
     exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
+    actions: {},
   }))
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
     .find((button) => button.title === 'Review the diagram’s clarity')
@@ -581,7 +498,7 @@ it('aborts an in-flight semantic review when the results pane unmounts', () => {
     },
     exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
+    actions: {},
   }))
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))
     .find((button) => button.title === 'Review the diagram’s clarity')
@@ -608,7 +525,7 @@ it('aborts an in-flight review and discards its response when the diagram change
     },
     exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
     metrics: { data: null, visible: false, onToggle: vi.fn() },
-    actions: { canRecheck: true, onRecheck: vi.fn(), onOpenRules: vi.fn() },
+    actions: {},
   }
   const view = mount(createElement(WorkspaceResults, props))
   const semanticReviewButton = Array.from(view.querySelectorAll('button'))

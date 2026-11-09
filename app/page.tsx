@@ -108,6 +108,20 @@ function HomeContent() {
         onOpenApiConfiguration: openApiConfigAndFocus,
         onResetLayout: dialogState.openResetConfirmation,
       }}
+      pageHeader={{
+        connectionStatus,
+        check: {
+          endpoint,
+          connectionStatus,
+          resultState,
+          isAnalyzing,
+          canRecheck,
+          onRecheck: handleRecheck,
+          onTestConnection: testConnectionWithNotice,
+          onOpenApiConfiguration: openApiConfigAndFocus,
+        },
+        onOpenRules: dialogState.openRules,
+      }}
       workspace={{
         layout: { preferences: prefs, savePreferences: savePrefs },
         editor: { code, onChange: setCode, ref: editorRef },
@@ -121,7 +135,6 @@ function HomeContent() {
           analysis: {
             violations,
             resultState,
-            connectionStatus,
             resultsAreStale: resultsAreStale && lastCompletedRun?.status === 'success',
             isAnalyzing,
             analyzeError,
@@ -134,11 +147,6 @@ function HomeContent() {
           exportOptions: { code, endpoint, enabledRules, rules },
           metrics: { data: metrics, visible: dialogState.showMetrics, onToggle: dialogState.toggleMetrics },
           actions: {
-            canRecheck,
-            onRecheck: handleRecheck,
-            onOpenApiConfiguration: openApiConfigAndFocus,
-            onTestConnection: testConnectionWithNotice,
-            onOpenRules: dialogState.openRules,
             onApplySuggestedCode: setCode,
           },
         },
