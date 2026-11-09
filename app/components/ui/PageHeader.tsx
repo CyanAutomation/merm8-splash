@@ -23,7 +23,7 @@ export default function PageHeader({
     <header className={['page-header', className].filter(Boolean).join(' ')}>
       <div className="page-header-content">
         <Heading className="page-header-title">{title}</Heading>
-        {description && <p className="page-header-description">{description}</p>}
+        {description && <div className="page-header-description">{description}</div>}
         {metadata && <div className="page-header-metadata">{metadata}</div>}
       </div>
       {actions && <div className="page-header-actions">{actions}</div>}
