@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import ToggleSlider from './ToggleSlider'
 import type { DiagramColorMode } from './diagramRenderer'
 import Button from './Button'
+import ToolbarGroup from './ui/ToolbarGroup'
 
 interface DiagramPreviewToolbarProps {
   hasCode: boolean
@@ -110,17 +111,19 @@ export default function DiagramPreviewToolbar({
 
   return (
     <div className="diagram-preview-toolbar">
-      <DiagramToolbarActions
-        visible={isVisible}
-        colorMode={colorMode}
-        useBeautifulRenderer={useBeautifulRenderer}
-        canToggleBeautifulRenderer={canToggleBeautifulRenderer}
-        canExpand={canExpand}
-        onToggleColorMode={onToggleColorMode}
-        onFit={onFit}
-        onExpand={onExpand}
-        onToggleBeautifulRenderer={onToggleBeautifulRenderer}
-      />
+      <ToolbarGroup label="Preview actions" className="diagram-preview-actions">
+        <DiagramToolbarActions
+          visible={isVisible}
+          colorMode={colorMode}
+          useBeautifulRenderer={useBeautifulRenderer}
+          canToggleBeautifulRenderer={canToggleBeautifulRenderer}
+          canExpand={canExpand}
+          onToggleColorMode={onToggleColorMode}
+          onFit={onFit}
+          onExpand={onExpand}
+          onToggleBeautifulRenderer={onToggleBeautifulRenderer}
+        />
+      </ToolbarGroup>
       {isRendering && (
         <span role="status" style={{ fontSize: '12px', color: 'var(--color-accent-primary)' }}>
           Rendering diagram…

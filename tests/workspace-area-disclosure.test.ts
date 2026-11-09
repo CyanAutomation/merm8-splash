@@ -50,7 +50,6 @@ function createProps(resultState: 'violations' | 'clean'): WorkspaceAreaProps {
           ]
           : [],
         resultState,
-        connectionStatus: 'connected',
         isAnalyzing: false,
         analyzeError: null,
         analysisHints: [],
@@ -61,13 +60,7 @@ function createProps(resultState: 'violations' | 'clean'): WorkspaceAreaProps {
       },
       exportOptions: { code: 'flowchart TD\nA --> B', endpoint: 'https://api.example.test', enabledRules: [], rules: [] },
       metrics: { data: null, visible: false, onToggle: vi.fn() },
-      actions: {
-        canRecheck: true,
-        onRecheck: vi.fn(),
-        onOpenApiConfiguration: vi.fn(),
-        onTestConnection: vi.fn(),
-        onOpenRules: vi.fn(),
-      },
+      actions: {},
     },
   }
 }
@@ -92,7 +85,7 @@ afterEach(() => {
 
 it('adds a finding count and accessible context to the mobile Results tab', () => {
   const view = mount('violations')
-  expect(view.querySelector('main.app-main')).not.toBeNull()
+  expect(view.querySelector('.workspace-area')).not.toBeNull()
   const resultsTab = view.querySelector<HTMLButtonElement>('[aria-label="Results, 2"]')
   expect(resultsTab?.textContent).toContain('2')
 
