@@ -27,11 +27,19 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-it('defers editor utilities and confirms before clearing the diagram', () => {
+it('keeps the example path visible and defers utility actions before clearing the diagram', () => {
   const onChange = vi.fn()
   const view = mount(createElement(DiagramEditor, { value: 'flowchart TD\nA --> B', onChange }))
   const disclosure = view.querySelector<HTMLDetailsElement>('.editor-actions-disclosure')
   expect(disclosure?.open).toBe(false)
+
+  const loadExampleButton = Array.from(view.querySelectorAll('button'))
+    .find((button) => button.textContent === 'Load example')
+  expect(loadExampleButton?.closest('details')).toBeNull()
+  act(() => loadExampleButton?.click())
+  expect(onChange).toHaveBeenCalledOnce()
+  expect(onChange.mock.calls[0][0]).toContain('A[Pull Request Opened]')
+  onChange.mockClear()
 
   const clearButton = Array.from(disclosure?.querySelectorAll('button') ?? [])
     .find((button) => button.textContent === 'Clear code')

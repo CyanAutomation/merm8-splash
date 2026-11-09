@@ -13,9 +13,21 @@
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
   --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
   --font-size-base: 14px;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
   --line-height-base: 1.5;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
   --radius-control: 6px;
   --radius-panel: 6px;
+  --control-height: 36px;
+  --control-height-touch: 44px;
   --focus-ring: 0 0 0 3px rgba(10, 132, 255, 0.35);
 }
 
@@ -92,16 +104,158 @@ a {
     margin-bottom: 8px;
   }
 
+  .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-control);
+    padding: 1px var(--space-2);
+    background: var(--color-bg-primary);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .status-badge[data-tone="accent"] { color: var(--color-accent-primary); }
+  .status-badge[data-tone="success"] { color: var(--color-success); }
+  .status-badge[data-tone="warning"] { color: var(--color-warning); }
+  .status-badge[data-tone="error"] { color: var(--color-error); }
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-bg-primary);
+  }
+
+  .page-header-content {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .page-header-title {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .page-header-description {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .page-header-metadata {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .page-header-actions {
+    flex: 0 0 auto;
+  }
+
+  .workspace-page-header .toolbar-group {
+    justify-content: flex-end;
+  }
+
+  .settings-group {
+    margin-top: var(--space-2);
+  }
+
+  .settings-group-title {
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+  }
+
+  .settings-group-description {
+    margin-top: var(--space-1);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .settings-group-content {
+    margin-top: var(--space-2);
+  }
+
+  .settings-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+    padding-block: var(--space-2);
+  }
+
+  .settings-row-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .settings-row-control {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    padding-inline-start: var(--space-2);
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .form-field-description {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .form-field-feedback {
+    min-height: 1.25em;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .form-field-feedback-error {
+    color: var(--color-error);
+  }
+
   .rules-panel {
     padding: 12px;
   }
 
   .rules-panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
     margin-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+    padding-block: 6px;
+    background: var(--color-bg-secondary);
   }
 
   .export-dropdown {
@@ -271,12 +425,14 @@ a {
     vertical-align: 1px;
   }
 
-  .results-count[data-severity="error"] {
+  .results-count[data-severity="error"],
+  .results-count[data-tone="error"] {
     border-color: var(--color-error);
     color: var(--color-error);
   }
 
-  .results-count[data-severity="warning"] {
+  .results-count[data-severity="warning"],
+  .results-count[data-tone="warning"] {
     border-color: var(--color-warning);
     color: var(--color-warning);
   }
@@ -316,20 +472,13 @@ a {
   }
 
   .rules-count {
-    color: var(--color-text-secondary);
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 
   .rules-panel-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 4px;
-  }
-
-  .rules-description {
-    margin-bottom: 8px;
-    color: var(--color-text-secondary);
-    font-size: 12px;
   }
 
   .rules-list {
@@ -344,16 +493,11 @@ a {
   }
 
   .rule-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--color-border);
+    padding-inline: var(--space-1);
   }
 
   .rule-checkbox {
     flex: 0 0 auto;
-    margin-top: 3px;
     accent-color: var(--color-accent-primary);
   }
 
@@ -535,9 +679,7 @@ a {
   }
 
   .home-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-wrap: nowrap;
   }
 
   .mobile-workspace-tabs {
@@ -620,8 +762,17 @@ a {
 
   .api-endpoint-row {
     display: flex;
+    flex: 1;
+    min-width: 0;
     align-items: center;
     gap: 8px;
+  }
+
+  .api-endpoint-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
   }
 
   .api-endpoint-input {
@@ -632,12 +783,6 @@ a {
   .api-endpoint-presets {
     min-width: 120px;
     cursor: pointer;
-  }
-
-  .api-endpoint-feedback {
-    min-height: 1.25em;
-    margin-top: 6px;
-    font-size: 13px;
   }
 
   .api-endpoint-security-note {
@@ -1390,12 +1535,22 @@ a {
     }
 
     .app-main {
-      overflow-y: auto !important;
+      min-height: 0;
+      overflow: hidden !important;
+    }
+
+    .workspace-area {
+      display: flex;
+      min-height: 0;
+      flex: 1;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .workspace-grid {
       display: block !important;
       height: auto !important;
+      flex: 1;
       min-height: 0;
     }
 
@@ -1415,6 +1570,8 @@ a {
     .workspace-grid[data-mobile-view] .workspace-pane,
     .workspace-grid[data-mobile-view] .workspace-results {
       display: none;
+      height: 100%;
+      min-height: 0;
     }
 
     .workspace-grid[data-mobile-view="editor"] .workspace-editor-pane,
@@ -1430,9 +1587,9 @@ a {
     }
 
     .workspace-pane-content {
-      height: calc(100dvh - 166px) !important;
-      min-height: 320px;
-      overflow: visible !important;
+      height: 100% !important;
+      min-height: 0;
+      overflow: auto !important;
     }
 
     .workspace-results {
@@ -1440,9 +1597,8 @@ a {
     }
 
     .workspace-results-content {
-      height: calc(100dvh - 166px) !important;
-      min-height: 320px;
-      overflow: auto !important;
+      height: 100% !important;
+      min-height: 0;
     }
 
     .workspace-divider {
@@ -1451,6 +1607,29 @@ a {
   }
 
   @media (max-width: 520px) {
+    .page-header {
+      align-items: stretch;
+      flex-direction: column;
+      gap: var(--space-2);
+      padding: var(--space-2);
+    }
+
+    .page-header-content {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .page-header-actions,
+    .page-header-actions .toolbar-group {
+      width: 100%;
+    }
+
+    .workspace-page-header .toolbar-group .btn {
+      flex: 1;
+      min-height: var(--control-height-touch);
+    }
+
     .modal-backdrop {
       align-items: flex-start;
       padding: 12px;
@@ -1503,7 +1682,7 @@ a {
     }
 
     .mobile-workspace-tabs .btn {
-      min-height: 44px;
+      min-height: var(--control-height-touch);
     }
 
     .workspace-results-more > summary,
@@ -1557,12 +1736,10 @@ a {
   }
 
   .mobile-workspace-tab-status {
-    margin-left: 4px;
-    border: 1px solid currentColor;
-    border-radius: 10px;
-    padding: 0 5px;
+    min-height: 18px;
+    margin-inline-start: 4px;
+    padding-inline: 5px;
     font-size: 11px;
-    font-weight: 500;
   }
 
   @media (max-width: 360px) {
