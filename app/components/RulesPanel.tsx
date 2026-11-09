@@ -6,6 +6,10 @@ import { Rule, deriveDisplayName } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
 import { severityColor } from '@/lib/severity'
 import Button from './Button'
+import SettingsGroup from './ui/SettingsGroup'
+import SettingsRow from './ui/SettingsRow'
+import StatusBadge from './ui/StatusBadge'
+import ToolbarGroup from './ui/ToolbarGroup'
 
 interface RulesPanelProps {
   rules: Rule[]
@@ -66,19 +70,19 @@ function RulesPanelHeader({
         onClick={onToggle}
       >
         <span className="panel-heading">Rules</span>
-        <span className="rules-count">{badgeLabel}</span>
+        <StatusBadge className="rules-count" tone="neutral">{badgeLabel}</StatusBadge>
       </Button>
       {!collapsed && !isLoading && !isUnavailable && displayedRuleCount > 0 && (
-        <div className="rules-panel-actions">
+        <ToolbarGroup label="Rule selection actions" className="rules-panel-actions">
           <Button onClick={onEnableAll}>Enable all</Button>
           <Button onClick={onDisableAll}>Disable all</Button>
-        </div>
+        </ToolbarGroup>
       )}
     </div>
   )
 }
 
-function RulesDescription({
+function getRulesDescription({
   isUnavailable,
   hasNoRulesForDiagramType,
   displayedRuleCount,
@@ -88,20 +92,14 @@ function RulesDescription({
   hasNoRulesForDiagramType: boolean
   displayedRuleCount: number
   diagramType: string | null
-}) {
-  const message = isUnavailable
+}): string {
+  return isUnavailable
     ? 'Checks use the API’s default rules.'
     : hasNoRulesForDiagramType
       ? `No checks are available for ${diagramType} diagrams.`
       : displayedRuleCount > 0
         ? 'Checks use the rules you’ve selected.'
         : 'Test the API connection to load rules.'
-
-  return (
-    <div className="rules-description">
-      {message}
-    </div>
-  )
 }
 
 function RuleRow({ rule, enabled, onToggle }: {
@@ -111,16 +109,14 @@ function RuleRow({ rule, enabled, onToggle }: {
 }) {
   const color = severityColor(rule.severity)
 
+  const inputId = `rule-${rule.id}`
+  const descriptionId = `${inputId}-description`
+
   return (
-    <div className="rule-row">
-      <input
-        type="checkbox"
-        id={`rule-${rule.id}`}
-        checked={enabled}
-        onChange={onToggle}
-        className="rule-checkbox"
-      />
-      <label htmlFor={`rule-${rule.id}`} className="rule-label">
+    <SettingsRow
+      className="rule-row"
+      content={(
+        <label htmlFor={inputId} className="rule-label">
         <div className="rule-name-row">
           <span className="rule-name">
             {deriveDisplayName(rule.id)}
@@ -132,11 +128,22 @@ function RuleRow({ rule, enabled, onToggle }: {
             {rule.severity}
           </span>
         </div>
-        <div className="rule-description">
+        <div className="rule-description" id={descriptionId}>
           {rule.description}
         </div>
-      </label>
-    </div>
+        </label>
+      )}
+      control={(
+        <input
+          type="checkbox"
+          id={inputId}
+          checked={enabled}
+          onChange={onToggle}
+          className="rule-checkbox"
+          aria-describedby={descriptionId}
+        />
+      )}
+    />
   )
 }
 
@@ -198,6 +205,15 @@ export default function RulesPanel(props: RulesPanelProps) {
         : view.displayedRules.length === 0
           ? 'No rules'
           : `${view.applicableEnabledCount}/${view.displayedRules.length}`
+  const description = !props.isLoading
+    && (view.displayedRules.length > 0 || props.isUnavailable)
+    ? getRulesDescription({
+        isUnavailable: props.isUnavailable,
+        hasNoRulesForDiagramType: view.hasNoRulesForDiagramType,
+        displayedRuleCount: view.displayedRules.length,
+        diagramType: props.diagramType,
+      })
+    : undefined
 
   return (
     <div className="panel rules-panel">
@@ -212,24 +228,18 @@ export default function RulesPanel(props: RulesPanelProps) {
         isUnavailable={props.isUnavailable}
       />
       <div id="rules-content" hidden={collapsed}>
-        {!props.isLoading && (view.displayedRules.length > 0 || props.isUnavailable) && (
-          <RulesDescription
+        <SettingsGroup title="Available checks" description={description}>
+          <RulesContent
+            isLoading={props.isLoading}
             isUnavailable={props.isUnavailable}
+            rulesReady={rulesReady}
+            displayedRules={view.displayedRules}
+            enabledRules={props.enabledRules}
+            onToggleRule={props.onToggleRule}
             hasNoRulesForDiagramType={view.hasNoRulesForDiagramType}
-            displayedRuleCount={view.displayedRules.length}
             diagramType={props.diagramType}
           />
-        )}
-        <RulesContent
-          isLoading={props.isLoading}
-          isUnavailable={props.isUnavailable}
-          rulesReady={rulesReady}
-          displayedRules={view.displayedRules}
-          enabledRules={props.enabledRules}
-          onToggleRule={props.onToggleRule}
-          hasNoRulesForDiagramType={view.hasNoRulesForDiagramType}
-          diagramType={props.diagramType}
-        />
+        </SettingsGroup>
       </div>
     </div>
   )

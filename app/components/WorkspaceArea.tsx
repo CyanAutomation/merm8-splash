@@ -10,6 +10,8 @@ import ErrorBoundary from './ErrorBoundary'
 import WorkspaceDivider from './WorkspaceDivider'
 import WorkspaceResults from './WorkspaceResults'
 import Button from './Button'
+import StatusBadge, { type StatusBadgeTone } from './ui/StatusBadge'
+import ToolbarGroup from './ui/ToolbarGroup'
 
 export interface WorkspaceAreaProps {
   layout: {
@@ -35,22 +37,29 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
   const [mobileView, setMobileView] = useState<'editor' | 'preview' | 'results'>('editor')
   const resultState = results.analysis.resultState
   let resultsIndicator: string | null = null
+  let resultsIndicatorTone: StatusBadgeTone = 'neutral'
   if (results.analysis.violations.length > 0) {
     resultsIndicator = String(results.analysis.violations.length)
+    resultsIndicatorTone = results.analysis.violations.some((violation) => violation.severity === 'error')
+      ? 'error'
+      : 'warning'
   } else if (resultState === 'clean') {
     resultsIndicator = 'Clear'
+    resultsIndicatorTone = 'success'
   } else if (resultState === 'parse-error' || resultState === 'analysis-error') {
     resultsIndicator = 'Issue'
+    resultsIndicatorTone = 'error'
   } else if (resultState === 'needs-connection') {
     resultsIndicator = 'Setup'
+    resultsIndicatorTone = 'accent'
   }
   const resultsTabAriaLabel = resultsIndicator === 'Issue'
     ? 'Results, attention needed'
     : resultsIndicator ? `Results, ${resultsIndicator}` : 'Results'
 
   return (
-    <main className="app-main" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-      <div className="mobile-workspace-tabs" role="group" aria-label="Workspace view">
+    <div className="workspace-area" style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+      <ToolbarGroup label="Workspace view" className="mobile-workspace-tabs">
         {([
           ['editor', 'Edit', 'workspace-editor'],
           ['preview', 'Preview', 'workspace-preview'],
@@ -66,11 +75,17 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
           >
             {label}
             {view === 'results' && resultsIndicator && (
-              <span className="mobile-workspace-tab-status">{resultsIndicator}</span>
+              <StatusBadge
+                className="mobile-workspace-tab-status"
+                tone={resultsIndicatorTone}
+                aria-hidden="true"
+              >
+                {resultsIndicator}
+              </StatusBadge>
             )}
           </Button>
         ))}
-      </div>
+      </ToolbarGroup>
       <div
         className="workspace-grid"
         data-mobile-view={mobileView}
@@ -81,6 +96,8 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
           height: '100%',
           width: '100%',
           gap: 0,
+          flex: 1,
+          minHeight: 0,
         }}
       >
         <div id="workspace-editor" className="workspace-pane workspace-editor-pane" style={{ overflow: 'hidden', gridColumn: 1, gridRow: 1 }}>
@@ -127,6 +144,6 @@ export default function WorkspaceArea({ layout, editor, preview, results }: Work
           <WorkspaceResults {...results} />
         </div>
       </div>
-    </main>
+    </div>
   )
 }

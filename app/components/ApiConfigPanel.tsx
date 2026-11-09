@@ -5,6 +5,7 @@ import { validateApiEndpoint } from '@/lib/api'
 import type { ConnectionStatus } from '@/lib/useApiEndpoint'
 import { getConnectionStatusLabel } from '@/lib/uiCopy'
 import Button from './Button'
+import FormField from './ui/FormField'
 
 interface ApiConfigPanelProps {
   endpoint: string
@@ -54,7 +55,9 @@ function ApiConfigHeader({ status, source }: { status: ConnectionStatus; source:
   )
 }
 
-function EndpointInput({ endpoint, invalid, status, inputRef, onEndpointChange }: {
+function EndpointInput({ id, describedBy, endpoint, invalid, status, inputRef, onEndpointChange }: {
+  id: string
+  describedBy?: string
   endpoint: string
   invalid: boolean
   status: ConnectionStatus
@@ -65,7 +68,7 @@ function EndpointInput({ endpoint, invalid, status, inputRef, onEndpointChange }
     <div className="api-endpoint-row">
       <span className={`status-dot status-dot-${status}`} aria-hidden="true" />
       <input
-        id="api-endpoint"
+        id={id}
         ref={inputRef}
         type="url"
         value={endpoint}
@@ -73,7 +76,7 @@ function EndpointInput({ endpoint, invalid, status, inputRef, onEndpointChange }
         placeholder="https://merm8.scheimann.workers.dev"
         className="field-control api-endpoint-input"
         aria-invalid={invalid || undefined}
-        aria-describedby="api-endpoint-feedback"
+        aria-describedby={describedBy}
       />
     </div>
   )
@@ -132,16 +135,6 @@ function EndpointActions({
   )
 }
 
-function EndpointFeedback({ message, invalid, status }: {
-  message: string
-  invalid: boolean
-  status: ConnectionStatus
-}) {
-  if (!message) return null
-  const color = invalid ? 'var(--color-error)' : getStatusColor(status)
-  return <div id="api-endpoint-feedback" role="status" className="api-endpoint-feedback" style={{ color }}>{message}</div>
-}
-
 const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
   function ApiConfigPanel({
     endpoint,
@@ -171,35 +164,42 @@ const ApiConfigPanel = forwardRef<ApiConfigPanelRef, ApiConfigPanelProps>(
     return (
       <div className="panel api-config-panel">
         <ApiConfigHeader status={connectionStatus} source={configSource} />
-        <label className="field-label" htmlFor="api-endpoint">API endpoint</label>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <EndpointInput
-            endpoint={endpoint}
-            invalid={invalid}
-            status={connectionStatus}
-            inputRef={inputRef}
-            onEndpointChange={onEndpointChange}
-          />
-          <EndpointActions
-            selectedPreset={selectedPreset}
-            invalid={invalid}
-            checking={connectionStatus === 'checking'}
-            onSelectPreset={selectPreset}
-            onTestConnection={onTestConnection}
-            onSave={onSave}
-          />
-        </div>
-        <p className="api-endpoint-security-note" role="note">
-          Diagram source is sent to this endpoint when you run an analysis or semantic review.{' '}
-          Only continue if you trust this endpoint.{' '}
-          {configSource === 'URL parameter' && <strong>This endpoint was selected by the page URL. </strong>}
-          <code>{endpoint}</code>
-        </p>
-        <EndpointFeedback
-          message={feedbackMessage}
+        <FormField
+          id="api-endpoint"
+          label="API endpoint"
+          description={(
+            <p className="api-endpoint-security-note" role="note">
+              Diagram source is sent to this endpoint when you run an analysis or semantic review.{' '}
+              Only continue if you trust this endpoint.{' '}
+              {configSource === 'URL parameter' && <strong>This endpoint was selected by the page URL. </strong>}
+              <code>{endpoint}</code>
+            </p>
+          )}
+          feedback={feedbackMessage || undefined}
           invalid={invalid}
-          status={connectionStatus}
-        />
+        >
+          {({ id, describedBy }) => (
+            <div className="api-endpoint-controls">
+              <EndpointInput
+                id={id}
+                describedBy={describedBy}
+                endpoint={endpoint}
+                invalid={invalid}
+                status={connectionStatus}
+                inputRef={inputRef}
+                onEndpointChange={onEndpointChange}
+              />
+              <EndpointActions
+                selectedPreset={selectedPreset}
+                invalid={invalid}
+                checking={connectionStatus === 'checking'}
+                onSelectPreset={selectPreset}
+                onTestConnection={onTestConnection}
+                onSave={onSave}
+              />
+            </div>
+          )}
+        </FormField>
       </div>
     )
   }

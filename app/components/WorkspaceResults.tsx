@@ -4,7 +4,6 @@ import type { RefObject } from 'react'
 import { useCallback, useState } from 'react'
 import type { AnalysisMetrics, Rule, Violation } from '@/lib/api'
 import type { AnalysisResultState } from '@/lib/analysisResultState'
-import type { ConnectionStatus } from '@/lib/useApiEndpoint'
 import { getExportEmptyMessage } from '@/lib/uiCopy'
 import type { ResultsPanelRef } from './ResultsPanel'
 import ErrorBoundary from './ErrorBoundary'
@@ -13,12 +12,13 @@ import ExportDropdown from './ExportDropdown'
 import ResultsPanel from './ResultsPanel'
 import SemanticReviewResults from './SemanticReviewResults'
 import { useSemanticReview } from './useSemanticReview'
+import StatusBadge from './ui/StatusBadge'
+import ToolbarGroup from './ui/ToolbarGroup'
 
 export interface WorkspaceResultsProps {
   analysis: {
     violations: Violation[]
     resultState?: AnalysisResultState
-    connectionStatus?: ConnectionStatus
     resultsAreStale?: boolean
     isAnalyzing: boolean
     analyzeError: string | null
@@ -40,11 +40,6 @@ export interface WorkspaceResultsProps {
     onToggle: () => void
   }
   actions: {
-    canRecheck: boolean
-    onRecheck: () => void
-    onOpenApiConfiguration?: () => void
-    onTestConnection?: () => void
-    onOpenRules: () => void
     onApplySuggestedCode?: (code: string) => void
   }
 }
@@ -85,22 +80,6 @@ function MetricItem({ label, value }: { label: string; value: string | number })
 export default function WorkspaceResults({ analysis, exportOptions, metrics, actions }: WorkspaceResultsProps) {
   const hasErrors = analysis.violations.some((violation) => violation.severity === 'error')
   const resultState = analysis.resultState ?? (analysis.violations.length > 0 ? 'violations' : 'ready')
-  const hasEndpoint = Boolean(exportOptions.endpoint.trim())
-  const connectionStatus = analysis.connectionStatus ?? 'connected'
-  const isConnected = connectionStatus === 'connected'
-  const primaryActionLabel = isConnected
-    ? analysis.isAnalyzing
-      ? 'Checking…'
-      : resultState === 'loading-rules' ? 'Loading rules…' : 'Run check'
-    : connectionStatus === 'checking' ? 'Testing…' : hasEndpoint ? 'Test API' : 'Set up API'
-  const runPrimaryAction = isConnected
-    ? actions.onRecheck
-    : hasEndpoint ? actions.onTestConnection : actions.onOpenApiConfiguration
-  const primaryActionDisabled = isConnected
-    ? !actions.canRecheck
-    : connectionStatus === 'checking'
-      || (hasEndpoint && !actions.onTestConnection)
-      || (!hasEndpoint && !actions.onOpenApiConfiguration)
   const [showSemanticReview, setShowSemanticReview] = useState(false)
   const [semanticReviewAttempt, setSemanticReviewAttempt] = useState(0)
   const {
@@ -125,20 +104,12 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
         <h2 className="panel-heading" style={{ marginBottom: 0 }}>
           Results{' '}
           {analysis.violations.length > 0 && (
-            <span className="results-count" data-severity={hasErrors ? 'error' : 'warning'}>
+            <StatusBadge className="results-count" tone={hasErrors ? 'error' : 'warning'}>
               {analysis.violations.length}
-            </span>
+            </StatusBadge>
           )}
         </h2>
-        <div className="workspace-results-actions">
-          <Button
-            variant="primary"
-            onClick={runPrimaryAction ?? (() => undefined)}
-            disabled={primaryActionDisabled}
-            title={isConnected ? 'Run a check on this diagram' : hasEndpoint ? 'Test the API connection' : 'Configure the API endpoint'}
-          >
-            {primaryActionLabel}
-          </Button>
+        <ToolbarGroup label="Results actions" className="workspace-results-actions">
           <ErrorBoundary>
             <ExportDropdown
               results={analysis.violations}
@@ -168,12 +139,9 @@ export default function WorkspaceResults({ analysis, exportOptions, metrics, act
               >
                 Diagram review
               </Button>
-              <Button onClick={actions.onOpenRules} title="Manage enabled rules">
-                Rules
-              </Button>
             </div>
           </details>
-        </div>
+        </ToolbarGroup>
       </div>
       <div className="workspace-results-body">
         {showSemanticReview ? (

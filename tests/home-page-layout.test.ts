@@ -16,7 +16,7 @@ vi.mock('../app/components/WorkspaceArea', async () => {
   const { createElement } = await import('react')
   return {
     default: ({ preview }: { preview: { onJumpToLine: (line: number) => void } }) =>
-      createElement('main', { className: 'app-main' },
+      createElement('div', { className: 'workspace-area' },
         createElement('button', { 'aria-label': 'Jump to diagram line', onClick: () => preview.onJumpToLine(7) }, 'Jump to line 7')),
   }
 })
@@ -40,6 +40,8 @@ afterEach(() => {
 
 function createLayoutProps(callbacks: {
   onOpenApiConfiguration: () => void
+  onTestConnection: () => void
+  onOpenRules: () => void
   onJumpToLine: (line: number) => void
   onResetLayout: () => void
 }): HomePageLayoutProps {
@@ -48,6 +50,20 @@ function createLayoutProps(callbacks: {
       onOpenApiConfiguration: callbacks.onOpenApiConfiguration,
       onResetLayout: vi.fn(),
     } satisfies ComponentProps<typeof HomeHeader>,
+    pageHeader: {
+      connectionStatus: 'disconnected',
+      check: {
+        endpoint: 'https://api.example.test',
+        connectionStatus: 'disconnected',
+        resultState: 'needs-connection',
+        isAnalyzing: false,
+        canRecheck: false,
+        onRecheck: vi.fn(),
+        onTestConnection: callbacks.onTestConnection,
+        onOpenApiConfiguration: callbacks.onOpenApiConfiguration,
+      },
+      onOpenRules: callbacks.onOpenRules,
+    },
     workspace: {
       layout: {
         preferences: {
@@ -72,6 +88,7 @@ function createLayoutProps(callbacks: {
       results: {
         analysis: {
           violations: [],
+          resultState: 'ready',
           isAnalyzing: false,
           analyzeError: null,
           analysisHints: [],
@@ -82,11 +99,7 @@ function createLayoutProps(callbacks: {
         },
         exportOptions: { code: '', endpoint: '', enabledRules: [], rules: [] },
         metrics: { data: null, visible: false, onToggle: vi.fn() },
-        actions: {
-          canRecheck: false,
-          onRecheck: vi.fn(),
-          onOpenRules: vi.fn(),
-        },
+        actions: {},
       },
     } satisfies WorkspaceAreaProps,
     statusBar: {
@@ -145,6 +158,8 @@ function clickAction(label: string, within: ParentNode = container) {
 it('renders page sections and routes their actions to the matching callback', () => {
   const callbacks = {
     onOpenApiConfiguration: vi.fn(),
+    onTestConnection: vi.fn(),
+    onOpenRules: vi.fn(),
     onJumpToLine: vi.fn(),
     onResetLayout: vi.fn(),
   }
@@ -161,6 +176,8 @@ it('renders page sections and routes their actions to the matching callback', ()
   expect(appShell.querySelector('[role="dialog"]')).not.toBeNull()
 
   clickAction('API settings')
+  clickAction('Test API')
+  clickAction('Rules')
   clickAction('Jump to diagram line')
   const statusDetails = appShell.querySelector('.status-bar-disclosure summary')
   if (!statusDetails) throw new Error('Expected a status details disclosure.')
@@ -170,6 +187,8 @@ it('renders page sections and routes their actions to the matching callback', ()
   clickAction('Reset layout', resetDialog)
 
   expect(callbacks.onOpenApiConfiguration).toHaveBeenCalledOnce()
+  expect(callbacks.onTestConnection).toHaveBeenCalledOnce()
+  expect(callbacks.onOpenRules).toHaveBeenCalledOnce()
   expect(callbacks.onJumpToLine).toHaveBeenCalledWith(7)
   expect(callbacks.onResetLayout).toHaveBeenCalledOnce()
 })

@@ -5,6 +5,7 @@ import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
 import { copyTextWithMountedCompletion } from '@/lib/clipboard'
 import { useSnackbar } from '@/app/components/Snackbar'
 import Button from './Button'
+import ToolbarGroup from './ui/ToolbarGroup'
 
 interface DiagramEditorProps {
   value: string
@@ -26,7 +27,7 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
     }
     const textareaRef = useRef<HTMLTextAreaElement>(null)
     const editorContainerRef = useRef<HTMLDivElement>(null)
-    const [currentExampleIndex, setCurrentExampleIndex] = useState(0)
+    const [currentExampleIndex, setCurrentExampleIndex] = useState(-1)
     const [highlightedLine, setHighlightedLine] = useState<number | null>(null)
     const persistHighlightOnBlurRef = useRef(false)
     const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
@@ -140,28 +141,30 @@ const DiagramEditor = forwardRef<DiagramEditorRef, DiagramEditorProps>(
       <div className="panel diagram-editor-panel">
         <div className="diagram-editor-toolbar">
           <h2 className="panel-heading">Diagram editor</h2>
-          <details className="editor-actions-disclosure">
-            <summary aria-label="More editor actions">Actions</summary>
-            <div className="more-actions-menu" role="group" aria-label="Editor actions">
-              <Button onClick={handleExampleClick}>Load example</Button>
-              <Button
-                onClick={handleCopyClick}
-                disabled={!value}
-                aria-label="Copy diagram code"
-                title="Copy diagram code"
-              >
-                {copyStatus === 'success' ? 'Copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy code'}
-              </Button>
-              <Button
-                onClick={() => {
-                  if (!window.confirm('Clear all Mermaid code? This action cannot be undone.')) return
-                  onChange('')
-                }}
-              >
-                Clear code
-              </Button>
-            </div>
-          </details>
+          <ToolbarGroup label="Diagram editor actions" className="diagram-editor-actions">
+            <Button onClick={handleExampleClick}>Load example</Button>
+            <details className="editor-actions-disclosure">
+              <summary aria-label="More editor actions">Actions</summary>
+              <ToolbarGroup label="Editor utility actions" className="more-actions-menu">
+                <Button
+                  onClick={handleCopyClick}
+                  disabled={!value}
+                  aria-label="Copy diagram code"
+                  title="Copy diagram code"
+                >
+                  {copyStatus === 'success' ? 'Copied' : copyStatus === 'error' ? 'Copy failed' : 'Copy code'}
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!window.confirm('Clear all Mermaid code? This action cannot be undone.')) return
+                    onChange('')
+                  }}
+                >
+                  Clear code
+                </Button>
+              </ToolbarGroup>
+            </details>
+          </ToolbarGroup>
         </div>
 
         <label className="field-label" htmlFor="diagram-code">Mermaid code</label>
