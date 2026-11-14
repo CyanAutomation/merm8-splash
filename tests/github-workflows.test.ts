@@ -322,7 +322,7 @@ it('automates analyzer version and checksum updates behind a validated pull requ
   expect(updaterWorkflow).toContain("cron: '0 7 1 * *'")
   expect(updaterWorkflow).toContain('workflow_dispatch:')
   expect(updaterWorkflow).toContain('node scripts/update-workflow-tool-pins.mjs')
-  expect(updaterWorkflow).toContain('peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1')
+  expect(updaterWorkflow).toContain('peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1')
   expect(updaterWorkflow).toContain('contents: write')
   expect(updaterWorkflow).toContain('pull-requests: write')
 
