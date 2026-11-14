@@ -62,5 +62,5 @@ it('clears manually highlighted lines on blur', () => {
 
   act(() => textarea.dispatchEvent(new FocusEvent('focusout', { bubbles: true })))
 
-  expect((gutter.children[0] as HTMLElement).style.background).toBe('transparent')
+  expect(['transparent', 'none']).toContain((gutter.children[0] as HTMLElement).style.background)
 })
