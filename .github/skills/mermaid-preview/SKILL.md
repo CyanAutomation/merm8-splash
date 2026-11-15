@@ -34,4 +34,4 @@ Use this skill for changes to the Mermaid authoring and preview workflow. The ap
 
 Use the nearest tests as the behavior contract. Relevant coverage includes `tests/diagram-types.test.ts`, `tests/diagram-preview-utils.test.ts`, `tests/diagram-preview-error-flow.test.ts`, `tests/preview-parse-error-regression.test.ts`, `tests/preview-render-id-isolation.test.ts`, and `tests/use-diagram-preview-dom.test.ts`.
 
-For behavior changes, add or update a focused regression test first where practical, then run it with Vitest. Follow `AGENTS.md` for lint and manual UI checks. Do not add a dependency or change the rendering engine without a task requirement.
+For behavior changes, add or update a focused regression test first where practical, then run it with Vitest. Follow `AGENTS.md` for lint and manual UI checks. Do not add a dependency or change the rendering engine without a task requirement. Report which checks ran and which did not.

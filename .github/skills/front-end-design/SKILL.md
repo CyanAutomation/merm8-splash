@@ -45,4 +45,4 @@ For prototypes, demos, and games, follow the requested experience and preserve u
 
 ## Validation
 
-For UI changes, follow the validation instructions in `AGENTS.md`. Check the changed interactions with a keyboard and at a narrow viewport; verify reduced-motion behavior when motion is introduced. When browser tooling is available, capture before/after screenshots for substantial visual changes.
+For UI changes, follow the validation instructions in `AGENTS.md`. Check the changed interactions with a keyboard and at a narrow viewport; verify reduced-motion behavior when motion is introduced. When browser tooling is available, capture before/after screenshots for substantial visual changes. Report which checks ran and which did not.
