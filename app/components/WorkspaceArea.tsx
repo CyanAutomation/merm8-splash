@@ -10,8 +10,7 @@ import ErrorBoundary from './ErrorBoundary'
 import WorkspaceDivider from './WorkspaceDivider'
 import WorkspaceResults from './WorkspaceResults'
 import Button from './Button'
-import StatusBadge, { type StatusBadgeTone } from './ui/StatusBadge'
-import ToolbarGroup from './ui/ToolbarGroup'
+import { StatusBadge, ToolbarGroup, type StatusBadgeTone } from './ui'
 
 export interface WorkspaceAreaProps {
   layout: {

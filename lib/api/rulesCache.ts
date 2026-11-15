@@ -1,4 +1,5 @@
 import type { FetchRulesResult } from '../api'
+import { canonicalizeEndpoint } from '../endpointUtils'
 
 const RULES_CACHE_TTL_MS = 5 * 60_000
 const RULES_CACHE_MAX_ENDPOINTS = 20
@@ -11,19 +12,6 @@ interface RulesCacheOptions {
 interface RulesCacheEntry {
   result: FetchRulesResult
   ts: number
-}
-
-function canonicalizeEndpoint(endpoint: string): string {
-  const trimmedEndpoint = endpoint.trim()
-  try {
-    const url = new URL(trimmedEndpoint)
-    url.protocol = url.protocol.toLowerCase()
-    url.hostname = url.hostname.toLowerCase()
-    if (!url.pathname.endsWith('/')) url.pathname = `${url.pathname}/`
-    return url.toString()
-  } catch {
-    return trimmedEndpoint
-  }
 }
 
 export class RulesCache {

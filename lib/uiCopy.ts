@@ -11,7 +11,7 @@ export const EXPORT_MESSAGES = {
 
 export const RESULTS_STALE_MESSAGE = 'These results are from your previous edits. A new check will run when you pause.'
 
-export const CONNECTION_STATUS_LABELS: Record<ConnectionStatus, string> = {
+const CONNECTION_STATUS_LABELS: Record<ConnectionStatus, string> = {
   connected: 'Connected',
   checking: 'Checking…',
   error: 'Couldn’t connect',
