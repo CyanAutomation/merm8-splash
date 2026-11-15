@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
+  fetchLatestToolRelease,
   getValidationArguments,
   toolDefinitions,
   updateWorkflowToolPins,
@@ -69,5 +70,90 @@ describe('analyzer workflow validation commands', () => {
       [],
       '/workspace/.github/workflows',
     )).toThrow(/future-tool must define validateArgs/)
+  })
+})
+
+describe('fetchLatestToolRelease', () => {
+  const tool = toolDefinitions[0]
+  const archive = Buffer.from('trusted archive')
+  const assetUrl = 'https://github.com/rhysd/actionlint/releases/download/v1.8.0/actionlint.tar.gz'
+
+  function createFetch({ release, download = {} }) {
+    return vi.fn(async (input, init) => {
+      if (String(input).includes('/releases/latest')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => release,
+        }
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        url: 'https://objects.githubusercontent.com/rhysd/actionlint/archive.tar.gz',
+        arrayBuffer: async () => archive,
+        ...download,
+      }
+    })
+  }
+
+  function releasePayload(overrides = {}) {
+    return {
+      tag_name: 'v1.8.0',
+      assets: [{ name: tool.assetName('1.8.0'), browser_download_url: assetUrl }],
+      ...overrides,
+    }
+  }
+
+  it('downloads the expected release from GitHub and returns its digest', async () => {
+    const fetchImpl = createFetch({ release: releasePayload() })
+    const result = await fetchLatestToolRelease(tool, { fetchImpl, githubToken: 'token' })
+
+    expect(result.version).toBe('1.8.0')
+    expect(result.archive).toEqual(archive)
+    expect(result.sha256).toMatch(/^[a-f0-9]{64}$/)
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(fetchImpl.mock.calls[0][1].headers.authorization).toBe('Bearer token')
+    expect(fetchImpl.mock.calls[1][1].redirect).toBe('follow')
+  })
+
+  it('rejects failed release lookups and unsupported tags before downloading', async () => {
+    const failedLookup = vi.fn(async () => ({ ok: false, status: 503 }))
+    await expect(fetchLatestToolRelease(tool, { fetchImpl: failedLookup }))
+      .rejects.toThrow('Could not read rhysd/actionlint latest release: HTTP 503')
+    expect(failedLookup).toHaveBeenCalledOnce()
+
+    const unsupportedTag = createFetch({ release: releasePayload({ tag_name: 'latest' }) })
+    await expect(fetchLatestToolRelease(tool, { fetchImpl: unsupportedTag }))
+      .rejects.toThrow('rhysd/actionlint returned an unsupported release tag')
+    expect(unsupportedTag).toHaveBeenCalledOnce()
+  })
+
+  it('rejects missing or untrusted release assets before download', async () => {
+    const missingAsset = createFetch({ release: releasePayload({ assets: [] }) })
+    await expect(fetchLatestToolRelease(tool, { fetchImpl: missingAsset }))
+      .rejects.toThrow('rhysd/actionlint release 1.8.0 has no actionlint_1.8.0_linux_amd64.tar.gz asset')
+    expect(missingAsset).toHaveBeenCalledOnce()
+
+    const untrustedAsset = createFetch({
+      release: releasePayload({ assets: [{ name: tool.assetName('1.8.0'), browser_download_url: 'http://example.com/tool' }] }),
+    })
+    await expect(fetchLatestToolRelease(tool, { fetchImpl: untrustedAsset }))
+      .rejects.toThrow('rhysd/actionlint returned an untrusted release asset URL')
+    expect(untrustedAsset).toHaveBeenCalledOnce()
+  })
+
+  it('rejects failed redirects and empty archives', async () => {
+    const untrustedFinalUrl = createFetch({
+      release: releasePayload(),
+      download: { url: 'https://evil.example/tool.tar.gz' },
+    })
+    await expect(fetchLatestToolRelease(tool, { fetchImpl: untrustedFinalUrl }))
+      .rejects.toThrow('Could not download actionlint_1.8.0_linux_amd64.tar.gz: HTTP 200')
+
+    const emptyArchive = createFetch({ release: releasePayload(), download: { arrayBuffer: async () => Buffer.alloc(0) } })
+    await expect(fetchLatestToolRelease(tool, { fetchImpl: emptyArchive }))
+      .rejects.toThrow('actionlint_1.8.0_linux_amd64.tar.gz was empty or exceeded the 100 MiB size limit')
   })
 })

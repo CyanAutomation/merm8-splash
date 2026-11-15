@@ -1,6 +1,6 @@
 'use client'
 
-import type { SemanticReviewFinding, SemanticReviewResponse } from '@/lib/api'
+import type { SemanticReview, SemanticReviewFinding, SemanticReviewResponse } from '@/lib/api'
 import { createCodeDiff, getReviewActions, getReviewItems, hasMixedReviewSignals } from '@/lib/semanticReview'
 import { severityColor } from '@/lib/severity'
 import type { CSSProperties } from 'react'
@@ -179,6 +179,132 @@ function RuleFindings({
   )
 }
 
+function hasBranching(result: SemanticReviewResponse): boolean | undefined {
+  const isFlowchart = ['flowchart', 'flow-chart'].includes(
+    (result.metrics?.diagramType || result.diagram_type || '').toLowerCase()
+  )
+  return isFlowchart && result.metrics
+    ? result.metrics.maxFanout > 1
+    : undefined
+}
+
+function ReviewStatusMessages({
+  result,
+  error,
+  isLoading,
+}: Pick<SemanticReviewResultsProps, 'result' | 'error' | 'isLoading'>) {
+  return (
+    <>
+      {error && <p role="alert" style={{ color: 'var(--color-error)', marginBottom: '12px' }}>{error}</p>}
+      {isLoading && <p role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: '12px' }}>Reviewing diagram…</p>}
+      {!result && !error && !isLoading && (
+        <p role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
+          The diagram has changed. Run a new review to see updated feedback.
+        </p>
+      )}
+    </>
+  )
+}
+
+function ReviewScores({ review, branchInfo }: { review: SemanticReview; branchInfo: boolean | undefined }) {
+  return (
+    <div className="semantic-review-score-grid">
+      {getReviewItems(review, { hasBranching: branchInfo }).map((item) => (
+        <div
+          className="semantic-review-score"
+          data-concern={item.isConcern}
+          key={item.id}
+        >
+          <div className="semantic-review-score-label">{item.label}</div>
+          <div className="semantic-review-score-value">{item.value}</div>
+          {item.score != null && (
+            <div className="semantic-review-score-explanation">
+              {item.scoreLabel}: {percent(item.score)}
+            </div>
+          )}
+          {item.detail && <div className="semantic-review-score-explanation">{item.detail}</div>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ReviewActions({ review, branchInfo }: { review: SemanticReview; branchInfo: boolean | undefined }) {
+  return (
+    <section className="semantic-review-actions" aria-labelledby="semantic-review-actions-title">
+      <h3 id="semantic-review-actions-title">Suggested checks</h3>
+      <ul>
+        {getReviewActions(review, { hasBranching: branchInfo }).map((action) => (
+          <li key={action.title}>
+            <strong>{action.title}:</strong> {action.description}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function ReviewOutcome({
+  result,
+  review,
+  code,
+  onBack,
+  onJumpToLine,
+  onApplySuggestedCode,
+}: {
+  result: SemanticReviewResponse
+  review: SemanticReview
+  code: string
+  onBack: () => void
+  onJumpToLine?: (line: number) => void
+  onApplySuggestedCode?: (code: string) => void
+}) {
+  const reviewFindings = sortFindings(result['review-findings'] ?? [])
+  const branchInfo = hasBranching(result)
+  const applySuggestedCode = (suggestedCode: string) => {
+    onApplySuggestedCode?.(suggestedCode)
+    onBack()
+  }
+
+  return (
+    <>
+      <p className="semantic-review-intro">
+        This is an AI review of clarity and meaning. Scores are model estimates; use the findings to guide a human review.
+      </p>
+
+      {hasMixedReviewSignals(review) && (
+        <p className="semantic-review-mixed-signals" role="note">
+          Mixed signals: the model detected ambiguity but selected no review priority. These are separate judgements; check the suggested actions before relying on the diagram.
+        </p>
+      )}
+
+      <ReviewScores review={review} branchInfo={branchInfo} />
+
+      {reviewFindings.length > 0 ? (
+        <section className="semantic-review-findings" aria-labelledby="semantic-review-findings-title">
+          <h3 id="semantic-review-findings-title">Findings</h3>
+          <ol>
+            {reviewFindings.map((finding, index) => (
+              <ReviewFinding
+                finding={finding}
+                code={code}
+                onJumpToLine={onJumpToLine}
+                onApplySuggestedCode={applySuggestedCode}
+                key={findingKey(finding, index)}
+              />
+            ))}
+          </ol>
+        </section>
+      ) : (
+        <ReviewActions review={review} branchInfo={branchInfo} />
+      )}
+
+      <RuleFindings result={result} onJumpToLine={onJumpToLine} />
+      <p className="semantic-review-model">Model: {result.meta.model}</p>
+    </>
+  )
+}
+
 export default function SemanticReviewResults({
   result,
   error,
@@ -190,15 +316,6 @@ export default function SemanticReviewResults({
   onApplySuggestedCode,
 }: SemanticReviewResultsProps) {
   const review = result?.['semantic-review']
-  const isFlowchart = ['flowchart', 'flow-chart'].includes(
-    (result?.metrics?.diagramType || result?.diagram_type || '').toLowerCase()
-  )
-  const hasBranching = isFlowchart && result?.metrics
-    ? result.metrics.maxFanout > 1
-    : undefined
-  const reviewFindings = result?.['review-findings']
-    ? sortFindings(result['review-findings'])
-    : []
 
   return (
     <section aria-label="Diagram review results" style={{ padding: '12px' }}>
@@ -207,80 +324,17 @@ export default function SemanticReviewResults({
         <Button onClick={onBack}>Back to results</Button>
       </div>
 
-      {error && <p role="alert" style={{ color: 'var(--color-error)', marginBottom: '12px' }}>{error}</p>}
-      {isLoading && <p role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: '12px' }}>Reviewing diagram…</p>}
-      {!result && !error && !isLoading && (
-        <p role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
-          The diagram has changed. Run a new review to see updated feedback.
-        </p>
-      )}
+      <ReviewStatusMessages result={result} error={error} isLoading={isLoading} />
 
       {result && review && (
-        <>
-          <p className="semantic-review-intro">
-            This is an AI review of clarity and meaning. Scores are model estimates; use the findings to guide a human review.
-          </p>
-
-          {hasMixedReviewSignals(review) && (
-            <p className="semantic-review-mixed-signals" role="note">
-              Mixed signals: the model detected ambiguity but selected no review priority. These are separate judgements; check the suggested actions before relying on the diagram.
-            </p>
-          )}
-
-          <div className="semantic-review-score-grid">
-            {getReviewItems(review, { hasBranching }).map((item) => (
-              <div
-                className="semantic-review-score"
-                data-concern={item.isConcern}
-                key={item.id}
-              >
-                <div className="semantic-review-score-label">{item.label}</div>
-                <div className="semantic-review-score-value">{item.value}</div>
-                {item.score != null && (
-                  <div className="semantic-review-score-explanation">
-                    {item.scoreLabel}: {percent(item.score)}
-                  </div>
-                )}
-                {item.detail && <div className="semantic-review-score-explanation">{item.detail}</div>}
-              </div>
-            ))}
-          </div>
-
-          {reviewFindings.length > 0 ? (
-            <section className="semantic-review-findings" aria-labelledby="semantic-review-findings-title">
-              <h3 id="semantic-review-findings-title">Findings</h3>
-              <ol>
-                {reviewFindings.map((finding, index) => (
-                  <ReviewFinding
-                    finding={finding}
-                    code={code}
-                    onJumpToLine={onJumpToLine}
-                    onApplySuggestedCode={(suggestedCode) => {
-                      onApplySuggestedCode?.(suggestedCode)
-                      onBack()
-                    }}
-                    key={findingKey(finding, index)}
-                  />
-                ))}
-              </ol>
-            </section>
-          ) : (
-            <section className="semantic-review-actions" aria-labelledby="semantic-review-actions-title">
-              <h3 id="semantic-review-actions-title">Suggested checks</h3>
-              <ul>
-                {getReviewActions(review, { hasBranching }).map((action) => (
-                  <li key={action.title}>
-                    <strong>{action.title}:</strong> {action.description}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <RuleFindings result={result} onJumpToLine={onJumpToLine} />
-
-          <p className="semantic-review-model">Model: {result.meta.model}</p>
-        </>
+        <ReviewOutcome
+          result={result}
+          review={review}
+          code={code}
+          onBack={onBack}
+          onJumpToLine={onJumpToLine}
+          onApplySuggestedCode={onApplySuggestedCode}
+        />
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '18px' }}>

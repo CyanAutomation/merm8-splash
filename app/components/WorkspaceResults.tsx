@@ -12,8 +12,7 @@ import ExportDropdown from './ExportDropdown'
 import ResultsPanel from './ResultsPanel'
 import SemanticReviewResults from './SemanticReviewResults'
 import { useSemanticReview } from './useSemanticReview'
-import StatusBadge from './ui/StatusBadge'
-import ToolbarGroup from './ui/ToolbarGroup'
+import { StatusBadge, ToolbarGroup } from './ui'
 
 export interface WorkspaceResultsProps {
   analysis: {

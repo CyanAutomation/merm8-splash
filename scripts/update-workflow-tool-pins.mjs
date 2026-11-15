@@ -88,26 +88,8 @@ export function updateWorkflowToolPins(workflow, releases) {
   return updated
 }
 
-async function fetchLatestToolRelease(tool) {
-  const apiHeaders = {
-    accept: 'application/vnd.github+json',
-    'user-agent': 'merm8-splash-workflow-tool-updater',
-  }
-  if (process.env.GITHUB_TOKEN) {
-    apiHeaders.authorization = `Bearer ${process.env.GITHUB_TOKEN}`
-  }
-
-  const apiResponse = await fetch(`https://api.github.com/repos/${tool.repository}/releases/latest`, {
-    headers: apiHeaders,
-    signal: AbortSignal.timeout(30_000),
-  })
-
-  if (!apiResponse.ok) {
-    throw new Error(`Could not read ${tool.repository} latest release: HTTP ${apiResponse.status}`)
-  }
-
-  const release = await apiResponse.json()
-  const tagMatch = typeof release.tag_name === 'string'
+function getReleaseVersion(tool, release) {
+  const tagMatch = typeof release?.tag_name === 'string'
     ? release.tag_name.match(/^v(\d+\.\d+\.\d+)$/)
     : null
   const version = tagMatch?.[1] ?? ''
@@ -115,9 +97,13 @@ async function fetchLatestToolRelease(tool) {
     throw new Error(`${tool.repository} returned an unsupported release tag`)
   }
 
+  return version
+}
+
+function getReleaseAssetUrl(tool, release, version) {
   const expectedAsset = tool.assetName(version)
-  const asset = Array.isArray(release.assets)
-    ? release.assets.find((candidate) => candidate.name === expectedAsset)
+  const asset = Array.isArray(release?.assets)
+    ? release.assets.find((candidate) => candidate && candidate.name === expectedAsset)
     : undefined
   if (typeof asset?.browser_download_url !== 'string') {
     throw new Error(`${tool.repository} release ${version} has no ${expectedAsset} asset`)
@@ -128,16 +114,25 @@ async function fetchLatestToolRelease(tool) {
     throw new Error(`${tool.repository} returned an untrusted release asset URL`)
   }
 
-  const assetResponse = await fetch(assetUrl, {
+  return { assetUrl, expectedAsset }
+}
+
+function isTrustedReleaseRedirect(url) {
+  return url.protocol === 'https:' && (
+    url.hostname === 'github.com'
+    || url.hostname.endsWith('.github.com')
+    || url.hostname.endsWith('.githubusercontent.com')
+  )
+}
+
+async function downloadReleaseArchive(assetUrl, expectedAsset, fetchImpl) {
+  const assetResponse = await fetchImpl(assetUrl, {
     headers: { 'user-agent': 'merm8-splash-workflow-tool-updater' },
     redirect: 'follow',
     signal: AbortSignal.timeout(120_000),
   })
   const finalAssetUrl = new URL(assetResponse.url)
-  const trustedAssetHost = finalAssetUrl.hostname === 'github.com' ||
-    finalAssetUrl.hostname.endsWith('.github.com') ||
-    finalAssetUrl.hostname.endsWith('.githubusercontent.com')
-  if (!assetResponse.ok || finalAssetUrl.protocol !== 'https:' || !trustedAssetHost) {
+  if (!assetResponse.ok || !isTrustedReleaseRedirect(finalAssetUrl)) {
     throw new Error(`Could not download ${expectedAsset}: HTTP ${assetResponse.status}`)
   }
 
@@ -145,6 +140,39 @@ async function fetchLatestToolRelease(tool) {
   if (archive.length === 0 || archive.length > 100 * 1024 * 1024) {
     throw new Error(`${expectedAsset} was empty or exceeded the 100 MiB size limit`)
   }
+
+  return archive
+}
+
+/**
+ * @param {(typeof toolDefinitions)[number]} tool
+ * @param {{ fetchImpl?: typeof fetch, githubToken?: string }} [options]
+ */
+export async function fetchLatestToolRelease(
+  tool,
+  { fetchImpl = fetch, githubToken = process.env.GITHUB_TOKEN } = {},
+) {
+  const apiHeaders = {
+    accept: 'application/vnd.github+json',
+    'user-agent': 'merm8-splash-workflow-tool-updater',
+  }
+  if (githubToken) {
+    apiHeaders.authorization = `Bearer ${githubToken}`
+  }
+
+  const apiResponse = await fetchImpl(`https://api.github.com/repos/${tool.repository}/releases/latest`, {
+    headers: apiHeaders,
+    signal: AbortSignal.timeout(30_000),
+  })
+
+  if (!apiResponse.ok) {
+    throw new Error(`Could not read ${tool.repository} latest release: HTTP ${apiResponse.status}`)
+  }
+
+  const release = await apiResponse.json()
+  const version = getReleaseVersion(tool, release)
+  const { assetUrl, expectedAsset } = getReleaseAssetUrl(tool, release, version)
+  const archive = await downloadReleaseArchive(assetUrl, expectedAsset, fetchImpl)
 
   return {
     version,

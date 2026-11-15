@@ -2,12 +2,7 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
-import FormField from '../app/components/ui/FormField'
-import PageHeader from '../app/components/ui/PageHeader'
-import SettingsGroup from '../app/components/ui/SettingsGroup'
-import SettingsRow from '../app/components/ui/SettingsRow'
-import StatusBadge from '../app/components/ui/StatusBadge'
-import ToolbarGroup from '../app/components/ui/ToolbarGroup'
+import { FormField, PageHeader, SettingsGroup, SettingsRow, StatusBadge, ToolbarGroup } from '../app/components/ui'
 
 function parseMarkup(markup: string) {
   return new DOMParser().parseFromString(markup, 'text/html')

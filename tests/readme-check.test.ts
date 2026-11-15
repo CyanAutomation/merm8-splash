@@ -58,6 +58,16 @@ describe('checkReadme', () => {
     expect(issues).toEqual(['README references npm test but package.json has no test script'])
   })
 
+  it('reports invalid percent encoding in local destinations without resolving them', () => {
+    const issues = checkReadme({
+      readme: '[Bad path](docs/%E0%A4%A)',
+      packageJson: { scripts: {} },
+      rootDir: process.cwd(),
+    })
+
+    expect(issues).toEqual(['Invalid URL encoding in README link: docs/%E0%A4%A'])
+  })
+
   it('reports missing anchors in the README and linked Markdown files', () => {
     const rootDir = mkdtempSync(path.join(tmpdir(), 'readme-check-'))
     writeFileSync(path.join(rootDir, 'docs.md'), '# API Reference\n')

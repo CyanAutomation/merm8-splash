@@ -1,4 +1,5 @@
 import type { AnalyzeRequestOptions, AnalyzeResponse, Rule } from '../api'
+import { canonicalizeEndpoint } from '../endpointUtils'
 
 const ANALYSIS_CACHE_TTL_MS = 60_000
 const ANALYSIS_CACHE_MAX_ENTRIES = 100
@@ -16,24 +17,6 @@ interface StoredAnalysisCacheEntry extends AnalysisCacheEntry {
 interface AnalysisCacheOptions {
   maxEntries?: number
   maxBytes?: number
-}
-
-function canonicalizeAnalysisEndpoint(endpoint: string): string {
-  const trimmedEndpoint = endpoint.trim()
-
-  try {
-    const url = new URL(trimmedEndpoint)
-    url.protocol = url.protocol.toLowerCase()
-    url.hostname = url.hostname.toLowerCase()
-
-    if (!url.pathname.endsWith('/')) {
-      url.pathname = `${url.pathname}/`
-    }
-
-    return url.toString()
-  } catch {
-    return trimmedEndpoint
-  }
 }
 
 function stableSerializeUnknown(value: unknown): string {
@@ -80,7 +63,7 @@ export function buildAnalysisRequestKey(
   rulesMetadata: Rule[],
   options: AnalyzeRequestOptions
 ): string {
-  const normalizedEndpoint = canonicalizeAnalysisEndpoint(endpoint)
+  const normalizedEndpoint = canonicalizeEndpoint(endpoint)
   const normalizedRules = [...enabledRules].sort().join(',')
   const metadataFingerprint = buildRulesMetadataFingerprint(rulesMetadata)
   const useServerDefaults = options.useServerDefaults === true ? '1' : '0'
