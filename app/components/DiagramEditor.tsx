@@ -5,7 +5,7 @@ import { EXAMPLE_DIAGRAMS } from '@/lib/constants'
 import { copyTextWithMountedCompletion } from '@/lib/clipboard'
 import { useSnackbar } from '@/app/components/Snackbar'
 import Button from './Button'
-import ToolbarGroup from './ui/ToolbarGroup'
+import { ToolbarGroup } from './ui'
 
 interface DiagramEditorProps {
   value: string

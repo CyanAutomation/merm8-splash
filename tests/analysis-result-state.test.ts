@@ -92,3 +92,17 @@ it('treats empty code as idle even when the previous analysis failed', () => {
     lastCompletedStatus: 'error',
   })).toBe('empty-code')
 })
+
+it.each([
+  [{ isAnalyzing: true, parseError: 'Bad syntax' }, 'analyzing'],
+  [{ parseError: 'Bad syntax', analyzeError: 'API unavailable' }, 'parse-error'],
+  [{ analyzeError: 'API unavailable', connectionStatus: 'checking' }, 'analysis-error'],
+  [{ connectionStatus: 'checking', rulesLoading: true }, 'checking-connection'],
+  [{ rulesLoading: true, violationCount: 1 }, 'loading-rules'],
+  [{ violationCount: 1, lastCompletedStatus: 'success', lintSupported: false }, 'violations'],
+  [{ lastCompletedStatus: 'success', lintSupported: false, availableRuleCount: 0 }, 'syntax-only'],
+  [{ availableRuleCount: 0, enabledRuleCount: 0 }, 'no-rules-available'],
+  [{ enabledRuleCount: 0 }, 'no-enabled-rules'],
+])('preserves result-state precedence for %#', (overrides, expected) => {
+  expect(getAnalysisResultState({ ...readyState, ...overrides })).toBe(expected)
+})

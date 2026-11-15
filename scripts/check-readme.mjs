@@ -104,58 +104,63 @@ function splitLocalTarget(target) {
   }
 }
 
-/**
- * Check local Markdown links, heading fragments, and documented npm scripts.
- * @param {{ readme: string, packageJson: { scripts?: Record<string, string> }, rootDir: string }} input
- * @returns {string[]}
- */
-export function checkReadme({ readme, packageJson, rootDir }) {
-  const issues = []
-  const scripts = packageJson.scripts ?? {}
-  const readmeSlugs = headingSlugs(readme)
-
-  for (const target of extractMarkdownTargets(readme)) {
-    if (!target || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(target)) continue
-
-    const { localPath, fragment } = splitLocalTarget(target)
-    let decodedPath = localPath
-    let decodedFragment = fragment
-
-    try {
-      decodedPath = decodeURIComponent(localPath)
-      decodedFragment = fragment === null ? null : decodeURIComponent(fragment)
-    } catch {
-      issues.push(`Invalid URL encoding in README link: ${target}`)
-      continue
+function decodeMarkdownTarget(target) {
+  const { localPath, fragment } = splitLocalTarget(target)
+  try {
+    return {
+      decodedPath: decodeURIComponent(localPath),
+      decodedFragment: fragment === null ? null : decodeURIComponent(fragment),
     }
-
-    const resolvedPath = decodedPath ? path.resolve(rootDir, decodedPath) : null
-    if (resolvedPath && !existsSync(resolvedPath)) {
-      issues.push(`Missing local README link target: ${decodedPath}`)
-      continue
-    }
-
-    if (!decodedFragment) continue
-
-    const isReadmeFragment = !resolvedPath || path.resolve(rootDir, 'README.md') === resolvedPath
-    const isMarkdownTarget = resolvedPath && /\.(?:md|mdx)$/i.test(resolvedPath)
-    if (!isReadmeFragment && !isMarkdownTarget) continue
-
-    let slugs = readmeSlugs
-    if (!isReadmeFragment && resolvedPath) {
-      slugs = headingSlugs(readFileSync(resolvedPath, 'utf8'))
-    }
-
-    if (!slugs.has(decodedFragment)) {
-      const label = isReadmeFragment ? `#${decodedFragment}` : `${decodedPath}#${decodedFragment}`
-      issues.push(
-        isReadmeFragment
-          ? `Missing README heading anchor: ${label}`
-          : `Missing Markdown heading anchor: ${label}`,
-      )
-    }
+  } catch {
+    return null
   }
+}
 
+function missingLocalTargetIssue(decodedPath, rootDir) {
+  if (!decodedPath) return null
+  return existsSync(path.resolve(rootDir, decodedPath))
+    ? null
+    : `Missing local README link target: ${decodedPath}`
+}
+
+function missingHeadingIssue(decodedPath, decodedFragment, rootDir, readmeSlugs) {
+  if (!decodedFragment) return null
+  const resolvedPath = decodedPath ? path.resolve(rootDir, decodedPath) : null
+  const isReadmeFragment = !resolvedPath || path.resolve(rootDir, 'README.md') === resolvedPath
+  const isMarkdownTarget = resolvedPath && /\.(?:md|mdx)$/i.test(resolvedPath)
+  if (!isReadmeFragment && !isMarkdownTarget) return null
+
+  const slugs = isReadmeFragment || !resolvedPath
+    ? readmeSlugs
+    : headingSlugs(readFileSync(resolvedPath, 'utf8'))
+  if (slugs.has(decodedFragment)) return null
+
+  const label = isReadmeFragment ? `#${decodedFragment}` : `${decodedPath}#${decodedFragment}`
+  return isReadmeFragment
+    ? `Missing README heading anchor: ${label}`
+    : `Missing Markdown heading anchor: ${label}`
+}
+
+function checkLocalMarkdownTarget(target, rootDir, readmeSlugs) {
+  if (!target || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(target)) return []
+
+  const decodedTarget = decodeMarkdownTarget(target)
+  if (!decodedTarget) return [`Invalid URL encoding in README link: ${target}`]
+
+  const missingPathIssue = missingLocalTargetIssue(decodedTarget.decodedPath, rootDir)
+  if (missingPathIssue) return [missingPathIssue]
+
+  const missingFragmentIssue = missingHeadingIssue(
+    decodedTarget.decodedPath,
+    decodedTarget.decodedFragment,
+    rootDir,
+    readmeSlugs,
+  )
+  return missingFragmentIssue ? [missingFragmentIssue] : []
+}
+
+function checkDocumentedScripts(readme, scripts) {
+  const issues = []
   for (const match of readme.matchAll(/\bnpm\s+run\s+([a-zA-Z0-9:_-]+)/g)) {
     const script = match[1]
     if (!(script in scripts)) {
@@ -168,6 +173,18 @@ export function checkReadme({ readme, packageJson, rootDir }) {
   }
 
   return issues
+}
+
+/**
+ * Check local Markdown links, heading fragments, and documented npm scripts.
+ * @param {{ readme: string, packageJson: { scripts?: Record<string, string> }, rootDir: string }} input
+ * @returns {string[]}
+ */
+export function checkReadme({ readme, packageJson, rootDir }) {
+  const readmeSlugs = headingSlugs(readme)
+  const localLinkIssues = extractMarkdownTargets(readme)
+    .flatMap((target) => checkLocalMarkdownTarget(target, rootDir, readmeSlugs))
+  return [...localLinkIssues, ...checkDocumentedScripts(readme, packageJson.scripts ?? {})]
 }
 
 /**
@@ -219,55 +236,6 @@ export async function checkExternalLinks(
     urls.add(url.href)
   }
 
-  async function checkLink(url) {
-    for (let attempt = 0; attempt <= retries; attempt += 1) {
-      try {
-        const request = (method, headers = {}) =>
-          fetchImpl(url, {
-            method,
-            redirect: 'follow',
-            headers: {
-              'user-agent': 'merm8-splash-readme-link-check/1.0',
-              ...headers,
-            },
-            signal: AbortSignal.timeout(timeoutMs),
-          })
-
-        let response = await request('HEAD')
-        if ([403, 405, 501].includes(response.status)) {
-          await response.body?.cancel().catch(() => {})
-          response = await request('GET', { range: 'bytes=0-0' })
-        }
-
-        if (response.ok) {
-          await response.body?.cancel().catch(() => {})
-          return null
-        }
-
-        const issue = `External README link returned HTTP ${response.status}: ${url}`
-        await response.body?.cancel().catch(() => {})
-        if (attempt < retries && (response.status === 429 || response.status >= 500)) {
-          await sleep(500 * (attempt + 1))
-          continue
-        }
-
-        return { issue, warning: null }
-      } catch (error) {
-        if (attempt < retries) {
-          await sleep(500 * (attempt + 1))
-          continue
-        }
-
-        return {
-          issue: null,
-          warning: `External README link could not be checked: ${url} (${error instanceof Error ? error.message : String(error)})`,
-        }
-      }
-    }
-
-    return null
-  }
-
   const uniqueUrls = [...urls]
   let nextUrlIndex = 0
   const workerCount = Math.min(4, uniqueUrls.length)
@@ -279,7 +247,7 @@ export async function checkExternalLinks(
       while (nextUrlIndex < uniqueUrls.length) {
         const url = uniqueUrls[nextUrlIndex]
         nextUrlIndex += 1
-        const result = await checkLink(url)
+        const result = await checkLink(url, { fetchImpl, retries, timeoutMs, sleep })
         if (result?.issue) workerIssues.push(result.issue)
         if (result?.warning) workerWarnings.push(result.warning)
       }
@@ -292,6 +260,61 @@ export async function checkExternalLinks(
     issues: [...issues, ...workerResults.flatMap((result) => result.issues)].sort(),
     warnings: [...warnings, ...workerResults.flatMap((result) => result.warnings)].sort(),
   }
+}
+
+async function checkLink(url, { fetchImpl, retries, timeoutMs, sleep }) {
+  const request = (method, headers = {}) =>
+    fetchImpl(url, {
+      method,
+      redirect: 'follow',
+      headers: {
+        'user-agent': 'merm8-splash-readme-link-check/1.0',
+        ...headers,
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const result = await requestExternalLink(url, request, attempt, retries, sleep)
+      if (result?.retry) continue
+      return result
+    } catch (error) {
+      if (attempt < retries) {
+        await sleep(500 * (attempt + 1))
+        continue
+      }
+
+      return {
+        issue: null,
+        warning: `External README link could not be checked: ${url} (${error instanceof Error ? error.message : String(error)})`,
+      }
+    }
+  }
+
+  return null
+}
+
+async function requestExternalLink(url, request, attempt, retries, sleep) {
+  let response = await request('HEAD')
+  if ([403, 405, 501].includes(response.status)) {
+    await response.body?.cancel().catch(() => {})
+    response = await request('GET', { range: 'bytes=0-0' })
+  }
+
+  if (response.ok) {
+    await response.body?.cancel().catch(() => {})
+    return null
+  }
+
+  const issue = `External README link returned HTTP ${response.status}: ${url}`
+  await response.body?.cancel().catch(() => {})
+  if (attempt < retries && (response.status === 429 || response.status >= 500)) {
+    await sleep(500 * (attempt + 1))
+    return { retry: true }
+  }
+
+  return { issue, warning: null }
 }
 
 async function main() {

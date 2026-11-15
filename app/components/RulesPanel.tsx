@@ -6,10 +6,7 @@ import { Rule, deriveDisplayName } from '@/lib/api'
 import { getApplicableRules } from '@/lib/diagramTypes'
 import { severityColor } from '@/lib/severity'
 import Button from './Button'
-import SettingsGroup from './ui/SettingsGroup'
-import SettingsRow from './ui/SettingsRow'
-import StatusBadge from './ui/StatusBadge'
-import ToolbarGroup from './ui/ToolbarGroup'
+import { SettingsGroup, SettingsRow, StatusBadge, ToolbarGroup } from './ui'
 
 interface RulesPanelProps {
   rules: Rule[]

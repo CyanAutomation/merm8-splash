@@ -3,9 +3,7 @@ import { getConnectionStatusLabel } from '@/lib/uiCopy'
 import type { ConnectionStatus } from '@/lib/useApiEndpoint'
 import Button from './Button'
 import CheckActionButton from './CheckActionButton'
-import PageHeader from './ui/PageHeader'
-import StatusBadge, { type StatusBadgeTone } from './ui/StatusBadge'
-import ToolbarGroup from './ui/ToolbarGroup'
+import { PageHeader, StatusBadge, ToolbarGroup, type StatusBadgeTone } from './ui'
 
 interface WorkspacePageHeaderProps {
   connectionStatus: ConnectionStatus

@@ -1,0 +1,19 @@
+{
+  "boundaries": {
+    "zones": [
+      { "name": "app", "patterns": ["app/**"] },
+      { "name": "lib", "patterns": ["lib/**"] },
+      { "name": "scripts", "patterns": ["scripts/**"] },
+      { "name": "tests", "patterns": ["tests/**"] }
+    ],
+    "rules": [
+      { "from": "app", "allow": ["app", "lib"] },
+      { "from": "lib", "allow": ["lib"] },
+      { "from": "scripts", "allow": ["scripts"] },
+      { "from": "tests", "allow": ["app", "lib", "scripts", "tests"] }
+    ]
+  },
+  "rules": {
+    "policy-violation": "off"
+  }
+}
