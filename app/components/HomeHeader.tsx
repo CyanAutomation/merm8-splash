@@ -4,7 +4,7 @@ import Image from 'next/image'
 import remAvatar from '@/design/rem-avatar.png'
 import { PRODUCT_NAME, PRODUCT_TAGLINE } from '@/lib/uiCopy'
 import Button from './Button'
-import ToolbarGroup from './ui/ToolbarGroup'
+import { ToolbarGroup } from './ui'
 
 interface HomeHeaderProps {
   onOpenApiConfiguration: () => void

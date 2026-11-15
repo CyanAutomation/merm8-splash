@@ -1,7 +1,7 @@
 'use client'
 
 import type { ConnectionStatus } from '@/lib/useApiEndpoint'
-import { getParseStatusLabel } from '@/lib/status'
+import { getParseStatusLabel, getRuleSummaryLabel } from '@/lib/status'
 import type { ParseStatus } from '@/lib/status'
 import { getConnectionStatusLabel } from '@/lib/uiCopy'
 
@@ -71,17 +71,13 @@ function RuleSummary({ ruleCount, availableRuleCount, violationCount, rulesUnava
 }) {
   return (
     <span className="status-bar-rules">
-      {rulesUnavailable
-        ? 'Using API defaults'
-        : rulesLoading
-          ? 'Loading rules…'
-          : !rulesReady
-            ? 'Test API to load rules'
-            : availableRuleCount === 0
-              ? 'No rules available'
-              : ruleCount === 0
-                ? 'No rules enabled'
-                : `${ruleCount} rule${ruleCount !== 1 ? 's' : ''} enabled`}
+      {getRuleSummaryLabel({
+        ruleCount,
+        availableRuleCount,
+        rulesUnavailable,
+        rulesReady,
+        rulesLoading,
+      })}
       {violationCount > 0 && (
         <span style={{ color: 'var(--color-error)', marginLeft: '4px' }}>
           · {violationCount} violation{violationCount !== 1 ? 's' : ''}

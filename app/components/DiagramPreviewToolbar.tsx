@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import ToggleSlider from './ToggleSlider'
 import type { DiagramColorMode } from './diagramRenderer'
 import Button from './Button'
-import ToolbarGroup from './ui/ToolbarGroup'
+import { ToolbarGroup } from './ui'
 
 interface DiagramPreviewToolbarProps {
   hasCode: boolean

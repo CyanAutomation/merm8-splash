@@ -1,0 +1,59 @@
+import { expect, it } from 'vitest'
+import {
+  isSemanticReviewResponse,
+  normalizeSemanticReviewFindings,
+} from '../lib/api/semanticReview'
+
+const semanticReview = {
+  purpose: { value: 'process', confidence: 0.9 },
+  'label-clarity': { value: true, probability: 0.8 },
+  'branch-clarity': { value: false, probability: 0.6 },
+  'abstraction-consistency': { value: true, probability: 0.7 },
+  ambiguity: { value: false, probability: 0.2 },
+  'review-priority': { value: 'low', confidence: 0.85 },
+}
+
+it('accepts semantic review payloads with every scored judgement and model metadata', () => {
+  expect(isSemanticReviewResponse({ 'semantic-review': semanticReview, meta: { model: 'test-model' } })).toBe(true)
+})
+
+it.each([
+  null,
+  [],
+  { 'semantic-review': semanticReview, meta: {} },
+  { 'semantic-review': { ...semanticReview, ambiguity: { value: false, probability: Number.NaN } }, meta: { model: 'm' } },
+])('rejects malformed semantic review payloads %#', (payload) => {
+  expect(isSemanticReviewResponse(payload)).toBe(false)
+})
+
+it('normalizes finding aliases and evidence while dropping malformed records', () => {
+  expect(normalizeSemanticReviewFindings([
+    {
+      title: 'Check the decision',
+      rationale: 'The label is broad.',
+      'suggested-code': 'flowchart TD\nA[Is it valid?]',
+      evidence: [
+        { 'node-id': 'A', label: 'Decision', 'source-line': 2 },
+        { from: 'A', to: 'B', line: 0 },
+        { unknown: true },
+        null,
+      ],
+    },
+    { title: 'Missing explanation', evidence: [] },
+    null,
+  ])).toEqual([{
+    id: 'review-finding-1',
+    title: 'Check the decision',
+    explanation: 'The label is broad.',
+    suggestedCode: 'flowchart TD\nA[Is it valid?]',
+    evidence: [
+      { nodeId: 'A', label: 'Decision', line: 2 },
+      { from: 'A', to: 'B' },
+    ],
+  }])
+})
+
+it('distinguishes an omitted findings field from an empty findings list', () => {
+  expect(normalizeSemanticReviewFindings(undefined)).toBeUndefined()
+  expect(normalizeSemanticReviewFindings([])).toEqual([])
+})

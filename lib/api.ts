@@ -1,5 +1,7 @@
 import { parseDiagramType, filterRulesByDiagramType } from './diagramTypes'
 import { normalizeAnalyzeResponse, normalizeRulesResponse, validateHealthzResponse } from './api/normalizers'
+import { isSemanticReviewResponse, normalizeSemanticReviewFindings } from './api/semanticReview'
+import { isRecord } from './api/valueGuards'
 import type { Severity } from './theme'
 
 export {
@@ -375,92 +377,6 @@ export function deriveDisplayName(ruleId: string): string {
     .split('-')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ')
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value)
-}
-
-function hasScoredValue(
-  value: unknown,
-  valueType: 'string' | 'boolean',
-  scoreKey: 'confidence' | 'probability'
-): boolean {
-  return isRecord(value) && typeof value.value === valueType && isFiniteNumber(value[scoreKey])
-}
-
-function isSemanticReviewResponse(value: unknown): value is SemanticReviewResponse {
-  if (!isRecord(value)) return false
-
-  const review = value['semantic-review']
-  const metadata = value.meta
-  if (!isRecord(review) || !isRecord(metadata) || typeof metadata.model !== 'string') return false
-
-  return hasScoredValue(review.purpose, 'string', 'confidence')
-    && hasScoredValue(review['label-clarity'], 'boolean', 'probability')
-    && hasScoredValue(review['branch-clarity'], 'boolean', 'probability')
-    && hasScoredValue(review['abstraction-consistency'], 'boolean', 'probability')
-    && hasScoredValue(review.ambiguity, 'boolean', 'probability')
-    && hasScoredValue(review['review-priority'], 'string', 'confidence')
-}
-
-function normalizeSemanticReviewEvidence(value: unknown): SemanticReviewEvidence[] {
-  if (!Array.isArray(value)) return []
-
-  return value.flatMap((rawEvidence) => {
-    if (!isRecord(rawEvidence)) return []
-
-    const evidence: SemanticReviewEvidence = {}
-    const nodeId = rawEvidence['node-id'] ?? rawEvidence.nodeId
-    const from = rawEvidence.from
-    const to = rawEvidence.to
-    const line = rawEvidence.line ?? rawEvidence['source-line']
-
-    if (typeof nodeId === 'string') evidence.nodeId = nodeId
-    if (typeof rawEvidence.label === 'string') evidence.label = rawEvidence.label
-    if (typeof from === 'string') evidence.from = from
-    if (typeof to === 'string') evidence.to = to
-    if (typeof line === 'number' && Number.isInteger(line) && line > 0) evidence.line = line
-
-    if (Object.keys(evidence).length === 0) return []
-    return [evidence]
-  })
-}
-
-function normalizeSemanticReviewFindings(value: unknown): SemanticReviewFinding[] | undefined {
-  if (!Array.isArray(value)) return undefined
-
-  return value.flatMap((rawFinding, index) => {
-    if (!isRecord(rawFinding)) return []
-
-    const title = rawFinding.title
-    const explanation = rawFinding.explanation ?? rawFinding.rationale
-    if (typeof title !== 'string' || typeof explanation !== 'string') return []
-
-    const finding: SemanticReviewFinding = {
-      title,
-      explanation,
-      evidence: normalizeSemanticReviewEvidence(rawFinding.evidence),
-    }
-    const id = rawFinding.id
-    const category = rawFinding.category
-    const priority = rawFinding.priority
-    const suggestion = rawFinding.suggestion
-    const suggestedCode = rawFinding['suggested-code'] ?? rawFinding.suggestedCode
-
-    if (typeof id === 'string') finding.id = id
-    else finding.id = `review-finding-${index + 1}`
-    if (typeof category === 'string') finding.category = category
-    if (priority === 'low' || priority === 'medium' || priority === 'high') finding.priority = priority
-    if (typeof suggestion === 'string') finding.suggestion = suggestion
-    if (typeof suggestedCode === 'string') finding.suggestedCode = suggestedCode
-
-    return [finding]
-  })
 }
 
 export interface HealthzResponse {

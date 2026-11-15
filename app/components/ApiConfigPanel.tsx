@@ -5,7 +5,7 @@ import { validateApiEndpoint } from '@/lib/api'
 import type { ConnectionStatus } from '@/lib/useApiEndpoint'
 import { getConnectionStatusLabel } from '@/lib/uiCopy'
 import Button from './Button'
-import FormField from './ui/FormField'
+import { FormField } from './ui'
 
 interface ApiConfigPanelProps {
   endpoint: string
