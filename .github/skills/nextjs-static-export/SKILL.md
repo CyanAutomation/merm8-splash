@@ -7,6 +7,8 @@ description: Use when changing Next.js routing, component boundaries, build conf
 
 Use this skill for framework, routing, build, and deployment changes. This repo uses Next.js 16, React 19, TypeScript, and `output: 'export'`; do not assume a running Next.js server or a backend inside this repository.
 
+This skill owns framework and deployment behavior: static routes, client/server boundaries, build-time settings, exported assets, and hosting configuration. For browser API endpoint selection, request/response behavior, or analysis state, use `api-integration`.
+
 ## Read the installed documentation first
 
 Before writing Next.js code, follow `AGENTS.md` and read the relevant guide from the installed package under `node_modules/next/dist/docs/`. Start with the App Router static-export guide and the Server and Client Components guide when those areas are involved. The installed version is authoritative; verify exact APIs and unsupported features there instead of relying on memory or older examples.
@@ -24,4 +26,4 @@ Before writing Next.js code, follow `AGENTS.md` and read the relevant guide from
 
 Inspect affected configuration and hosting files before changing deployment behavior, including `next.config.ts`, `vercel.json`, `netlify.toml`, `Dockerfile`, and `nginx.conf`. Update README deployment instructions when user-visible setup changes.
 
-Use focused tests for affected behavior, such as `tests/vercel-config.test.ts`, `tests/nginx-cache-policy.test.ts`, or `tests/github-workflows.test.ts`. For routing or configuration changes, run the relevant tests and `npm run build`; follow `AGENTS.md` for lint and manual checks. Confirm the generated output remains suitable for static hosting.
+Use focused tests for affected behavior, such as `tests/vercel-config.test.ts`, `tests/nginx-cache-policy.test.ts`, or `tests/github-workflows.test.ts`. For routing or configuration changes, run the relevant tests and `npm run build`; follow `AGENTS.md` for lint and manual checks. Confirm the generated output remains suitable for static hosting, and report which checks ran and which did not.
