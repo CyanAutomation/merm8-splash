@@ -7,6 +7,8 @@ description: Use when changing the merm8 API client, endpoint configuration, req
 
 Use this skill for frontend work that sends requests to or presents data from the remote merm8 API. This repository has no local backend; do not add server assumptions or duplicate request logic inside UI components.
 
+This skill owns browser API behavior: endpoint selection and validation, request payloads, response normalization, API error states, and asynchronous analysis state. For Next.js routing, build output, component boundaries, or hosting configuration, use `nextjs-static-export` and keep API behavior within the boundaries below.
+
 ## API boundaries
 
 - Keep request and response handling centralized in `lib/api.ts`; keep endpoint selection and validation in `lib/api/endpoint.ts` and response normalization in `lib/api/normalizers.ts`.
@@ -31,4 +33,4 @@ Add or update a focused test before changing observable API behavior where pract
 - Analysis cache, scheduling, cancellation, retries, and stale-response handling: `tests/analysis-cache.test.ts`, `tests/analysis-scheduling.test.ts`, `tests/use-diagram-analysis-cache.test.ts`, and `tests/use-diagram-analysis.test.ts`.
 - Rules behavior: `tests/use-rules-configuration.test.ts` and adjacent rules-state tests.
 
-Run the focused Vitest files, then follow `AGENTS.md` for `npm run lint` and any relevant manual checks. Update API documentation when the public behavior or configuration changes.
+Run the focused Vitest files, then follow `AGENTS.md` for `npm run lint` and any relevant manual checks. Update API documentation when the public behavior or configuration changes. Report which checks ran and which did not.
