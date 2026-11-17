@@ -59,6 +59,7 @@ it('builds stable request keys across canonical endpoint, rule, and metadata ord
     severity: 'warning',
     defaultConfig: { second: 2, first: 1 },
   }]
+  const enabledRules = ['r2', 'r1']
   const equivalentMetadata: Rule[] = [{
     id: 'r1',
     description: 'Rule one',
@@ -69,7 +70,7 @@ it('builds stable request keys across canonical endpoint, rule, and metadata ord
   expect(buildAnalysisRequestKey(
     'HTTPS://EXAMPLE.TEST:443/api',
     'flowchart TD\nA --> B',
-    ['r2', 'r1'],
+    enabledRules,
     firstMetadata,
     {},
   )).toBe(buildAnalysisRequestKey(
@@ -79,6 +80,7 @@ it('builds stable request keys across canonical endpoint, rule, and metadata ord
     equivalentMetadata,
     {},
   ))
+  expect(enabledRules).toEqual(['r2', 'r1'])
 })
 
 it('includes request behavior inputs in the request key', () => {
