@@ -21,18 +21,21 @@ const dom = {
   fitDiagramToContainer: vi.fn(),
 }
 
-function RenderErrorHarness({ onParseStateChange }: {
+function RenderErrorHarness({ onParseStateChange, code = 'invalid diagram', parseErrorMessage }: {
   onParseStateChange: (state: { hasParseError: boolean; message: string | null; fullMessage?: string | null }) => void
+  code?: string
+  parseErrorMessage?: string | null
 }) {
   const [, setRenderError] = useState<string | null>(null)
   const [, setFullRenderError] = useState<string | null>(null)
   const [, setIsRendering] = useState(false)
 
   useDiagramRenderEffect({
-    code: 'invalid diagram',
+    code,
     previewId: 'preview-1',
     stableId: 'preview-1',
     colorMode: 'dark',
+    parseErrorMessage,
     useBeautifulRenderer: false,
     onParseStateChange,
     dom: dom as never,
@@ -63,6 +66,20 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+it.each([
+  ['empty code', { code: '' }],
+  ['a known parse error', { parseErrorMessage: 'Unexpected token' }],
+])('clears stale preview nodes for %s', (_label, props) => {
+  dom.containerRef.current.append(document.createTextNode('stale preview text'), document.createElement('svg'))
+  root = createRoot(container)
+
+  act(() => {
+    root?.render(createElement(RenderErrorHarness, { onParseStateChange: vi.fn(), ...props }))
+  })
+
+  expect(dom.containerRef.current.childNodes).toHaveLength(0)
+})
+
 it('reports both the short error and the full renderer details to shared parse state', async () => {
   const fullMessage = 'Unexpected token\nParse error on line 7\nDetailed parser trace'
   let resolveParseState!: () => void
@@ -71,6 +88,7 @@ it('reports both the short error and the full renderer details to shared parse s
   })
   const onParseStateChange = vi.fn(() => resolveParseState())
   rendererMocks.renderDiagramSvg.mockRejectedValue(new Error(fullMessage))
+  dom.containerRef.current.append(document.createTextNode('stale preview text'), document.createElement('svg'))
   root = createRoot(container)
 
   act(() => {
@@ -85,4 +103,5 @@ it('reports both the short error and the full renderer details to shared parse s
     message: 'Unexpected token',
     fullMessage,
   })
+  expect(dom.containerRef.current.childNodes).toHaveLength(0)
 })

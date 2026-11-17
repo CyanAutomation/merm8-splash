@@ -64,7 +64,7 @@ export function buildAnalysisRequestKey(
   options: AnalyzeRequestOptions
 ): string {
   const normalizedEndpoint = canonicalizeEndpoint(endpoint)
-  const normalizedRules = [...enabledRules].sort().join(',')
+  const normalizedRules = enabledRules.toSorted().join(',')
   const metadataFingerprint = buildRulesMetadataFingerprint(rulesMetadata)
   const useServerDefaults = options.useServerDefaults === true ? '1' : '0'
   return `${normalizedEndpoint}::${normalizedRules}::${metadataFingerprint}::${useServerDefaults}::${code}`
