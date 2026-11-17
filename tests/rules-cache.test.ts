@@ -1,6 +1,15 @@
 import { expect, it } from 'vitest'
 import { RulesCache } from '../lib/api/rulesCache'
 
+it('keeps rules through the five-minute freshness boundary and expires them afterward', () => {
+  const cache = new RulesCache()
+  const result = { rules: [], status: 'success' as const }
+  cache.set('https://example.test', result, 10)
+
+  expect(cache.get('https://example.test', 300_010)).toBe(result)
+  expect(cache.get('https://example.test', 300_011)).toBeUndefined()
+})
+
 // Endpoint isolation and bounded storage: README.md#testing
 it('keeps cache entries isolated by endpoint and evicts the least recently used endpoint', () => {
   const cache = new RulesCache({ maxEntries: 2 })
