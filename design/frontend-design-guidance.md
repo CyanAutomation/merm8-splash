@@ -16,9 +16,15 @@ Use the existing charcoal palette and blue accent from `app/globals.css`:
 
 Prefer solid surfaces and simple borders. Do not introduce gradients, glass effects, decorative shadows, or new colors when existing tokens fit.
 
+Shared UI token contracts:
+
+- Keep the spacing scale on a 4px base (`--space-1: 4px`, `--space-2: 8px`).
+- Use a 14px base font size for body copy and a 44px minimum control height for touch targets.
+
 ## Components and layout
 
 - Reuse `Button`, `Modal`, and the shared field, panel, and status styles. Add a shared component or token when the same pattern appears in multiple places.
+- Keep the rules-panel action header sticky so bulk actions stay available while the rules list scrolls.
 - Use sentence-case headings, 14px or larger body copy where space allows, and the existing sans/monospace pairing.
 - Keep buttons, fields, panels, and status messages consistent in height, radius, spacing, hover, disabled, and focus states.
 - Keep desktop editor and preview side by side with results available in the workspace. On narrow screens, let people switch between Edit, Preview, and Results without a long stacked page.
@@ -40,3 +46,9 @@ Use a warm, direct, helpful voice. Prefer short sentences, sentence case, and fa
 - Keep controls usable at touch sizes on narrow screens and prevent toolbars from overflowing.
 - Preserve readable contrast and visible focus. Do not rely on color alone to communicate state.
 - Use semantic headings, labels, buttons, status regions, and dialog relationships.
+
+## Preview errors and recovery
+
+- Keep short parse-error feedback in the results pane and the complete parser trace available from the preview.
+- Clear parse-error feedback after corrected Mermaid code renders successfully.
+- Keep each preview's rendered SVG independently selectable when multiple previews are mounted or updated.

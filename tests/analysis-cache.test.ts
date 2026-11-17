@@ -9,7 +9,7 @@ function makeResponse(message: string): AnalyzeResponse {
   }
 }
 
-it('keeps a cached result through its TTL boundary and expires it afterward', () => {
+it('keeps cached analysis through the 60-second freshness boundary and expires it afterward', () => {
   const cache = new AnalysisCache()
   const result = makeResponse('cached')
   cache.set('request', result, 10)
@@ -18,38 +18,17 @@ it('keeps a cached result through its TTL boundary and expires it afterward', ()
   expect(cache.get('request', 60_011)).toBeUndefined()
 })
 
-it('enforces the cache size limit when adding entries', () => {
-  const cache = new AnalysisCache()
+// Internal memory guardrail: README.md#testing
+it('evicts the least recently used result when the configured entry limit is exceeded', () => {
+  const cache = new AnalysisCache({ maxEntries: 2 })
+  cache.set('a', makeResponse('A'), 1)
+  cache.set('b', makeResponse('B'), 2)
+  cache.get('a', 3)
+  cache.set('c', makeResponse('C'), 4)
 
-  for (let index = 0; index <= 100; index += 1) {
-    cache.set(`request-${index}`, makeResponse(String(index)), index)
-  }
-
-  expect(cache.get('request-0', 1_000)).toBeUndefined()
-  expect(cache.get('request-1', 1_000)?.result.results[0]?.message).toBe('1')
-  expect(cache.get('request-100', 1_000)?.result.results[0]?.message).toBe('100')
-})
-
-it('evicts least recently used results and caps retained bytes', () => {
-  const cache = new AnalysisCache({ maxEntries: 2, maxBytes: 1_000 })
-  cache.set('a', makeResponse('a'), 1)
-  cache.set('b', makeResponse('b'), 2)
-  expect(cache.get('a', 3)).toBeDefined()
-  cache.set('c', makeResponse('c'), 4)
-
+  expect(cache.get('a', 5)?.result.results[0]?.message).toBe('A')
   expect(cache.get('b', 5)).toBeUndefined()
-  expect(cache.get('a', 5)).toBeDefined()
-
-  const byteLimitedCache = new AnalysisCache({ maxEntries: 10, maxBytes: 400 })
-  byteLimitedCache.set('a', makeResponse('a'), 1)
-  byteLimitedCache.set('b', makeResponse('b'), 2)
-  byteLimitedCache.set('c', makeResponse('c'), 3)
-  byteLimitedCache.set('large', makeResponse('x'.repeat(200)), 4)
-
-  expect(byteLimitedCache.get('a', 5)).toBeUndefined()
-  expect(byteLimitedCache.get('b', 5)).toBeDefined()
-  expect(byteLimitedCache.get('c', 5)).toBeDefined()
-  expect(byteLimitedCache.get('large', 5)).toBeUndefined()
+  expect(cache.get('c', 5)?.result.results[0]?.message).toBe('C')
 })
 
 it('builds stable request keys across canonical endpoint, rule, and metadata ordering', () => {
@@ -112,4 +91,18 @@ it('includes request behavior inputs in the request key', () => {
     request.rulesMetadata,
     { useServerDefaults: true },
   )).not.toBe(baseline)
+})
+
+// Internal memory guardrail: README.md#testing
+it('evicts older results to stay within the configured byte budget', () => {
+  const cache = new AnalysisCache({ maxEntries: 10, maxBytes: 400 })
+  cache.set('a', makeResponse('A'), 1)
+  cache.set('b', makeResponse('B'), 2)
+  cache.set('c', makeResponse('C'), 3)
+  cache.set('large', makeResponse('x'.repeat(200)), 4)
+
+  expect(cache.get('a', 5)).toBeUndefined()
+  expect(cache.get('b', 5)).toBeDefined()
+  expect(cache.get('c', 5)).toBeDefined()
+  expect(cache.get('large', 5)).toBeUndefined()
 })

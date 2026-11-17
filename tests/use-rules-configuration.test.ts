@@ -62,7 +62,10 @@ it('keeps an endpoint available after a successful response with no rules', asyn
   })
 })
 
-it('reuses recently fetched rules on reconnect and refreshes them after the cache expires', async () => {
+// Observable cache contract: README.md#testing
+it('reuses rules through the freshness boundary and refreshes after expiry', async () => {
+  const cacheCreatedAt = 10_000
+  const currentTime = vi.spyOn(Date, 'now').mockReturnValue(cacheCreatedAt)
   const firstRules = [
     { id: 'first', description: 'First rule', severity: 'warning' as const },
     { id: 'second', description: 'Second rule', severity: 'error' as const },
@@ -91,8 +94,17 @@ it('reuses recently fetched rules on reconnect and refreshes them after the cach
   expect(currentState?.rules.map((rule) => rule.id)).toEqual(['first', 'second'])
   expect(currentState?.enabledRules).toEqual(['second'])
 
-  const now = Date.now()
-  vi.spyOn(Date, 'now').mockReturnValue(now + 5 * 60_000 + 1)
+  currentTime.mockReturnValue(cacheCreatedAt + 5 * 60_000)
+  await act(async () => {
+    root?.render(createElement(Harness, { connectionStatus: 'disconnected' }))
+  })
+  await act(async () => {
+    root?.render(createElement(Harness, { connectionStatus: 'connected' }))
+  })
+
+  expect(apiMocks.fetchRules).toHaveBeenCalledTimes(1)
+
+  currentTime.mockReturnValue(cacheCreatedAt + 5 * 60_000 + 1)
   await act(async () => {
     root?.render(createElement(Harness, { connectionStatus: 'disconnected' }))
   })
