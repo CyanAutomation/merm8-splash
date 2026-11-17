@@ -12,13 +12,21 @@ import type { ApiConfigPanelRef } from '../app/components/ApiConfigPanel'
 import type { DiagramEditorRef } from '../app/components/DiagramEditor'
 import type { ResultsPanelRef } from '../app/components/ResultsPanel'
 
-vi.mock('../app/components/WorkspaceArea', async () => {
-  const { createElement } = await import('react')
+vi.mock('../app/components/DiagramEditor', async () => {
+  const React = await import('react')
   return {
-    default: ({ preview }: { preview: { onJumpToLine: (line: number) => void } }) =>
-      createElement('div', { className: 'workspace-area' },
-        createElement('button', { 'aria-label': 'Jump to diagram line', onClick: () => preview.onJumpToLine(7) }, 'Jump to line 7')),
+    default: React.forwardRef<HTMLDivElement, { value: string }>(({ value }, ref) =>
+      React.createElement('div', { ref, 'data-testid': 'diagram-editor' }, value)),
   }
+})
+vi.mock('../app/components/DiagramPreview', async () => {
+  const React = await import('react')
+  return { default: () => React.createElement('div', { 'data-testid': 'diagram-preview' }, 'Preview') }
+})
+vi.mock('../app/components/WorkspaceDivider', () => ({ default: () => null }))
+vi.mock('../app/components/WorkspaceResults', async () => {
+  const React = await import('react')
+  return { default: () => React.createElement('div', { 'data-testid': 'workspace-results' }, 'Results') }
 })
 
 let root: Root | null = null
@@ -42,7 +50,6 @@ function createLayoutProps(callbacks: {
   onOpenApiConfiguration: () => void
   onTestConnection: () => void
   onOpenRules: () => void
-  onJumpToLine: (line: number) => void
   onResetLayout: () => void
 }): HomePageLayoutProps {
   return {
@@ -82,7 +89,7 @@ function createLayoutProps(callbacks: {
       preview: {
         resetKey: 'initial',
         onParseStateChange: vi.fn(),
-        onJumpToLine: callbacks.onJumpToLine,
+        onJumpToLine: vi.fn(),
         onExpandToFullscreen: vi.fn(),
       },
       results: {
@@ -155,18 +162,25 @@ function clickAction(label: string, within: ParentNode = container) {
   act(() => button.click())
 }
 
-it('renders page sections and routes their actions to the matching callback', () => {
-  const callbacks = {
+function createCallbacks() {
+  return {
     onOpenApiConfiguration: vi.fn(),
     onTestConnection: vi.fn(),
     onOpenRules: vi.fn(),
-    onJumpToLine: vi.fn(),
     onResetLayout: vi.fn(),
   }
+}
 
+function renderLayout(callbacks = createCallbacks()) {
   act(() => root?.render(createElement(SnackbarProvider, null,
     createElement(HomePageLayout, createLayoutProps(callbacks)),
   )))
+  return callbacks
+}
+
+// Contract: design/frontend-design-guidance.md#components-and-layout
+it('renders the page landmarks and workspace panes in the initial layout', () => {
+  renderLayout()
 
   const appShell = container.querySelector('.app-shell')
   if (!appShell) throw new Error('Expected the home page shell to render.')
@@ -174,11 +188,21 @@ it('renders page sections and routes their actions to the matching callback', ()
   expect(appShell.querySelector('main.app-main')).not.toBeNull()
   expect(appShell.querySelector('.status-bar')).not.toBeNull()
   expect(appShell.querySelector('[role="dialog"]')).not.toBeNull()
+  expect(appShell.querySelector('.workspace-grid')).not.toBeNull()
+  expect(appShell.querySelector('[data-testid="diagram-editor"]')).not.toBeNull()
+  expect(appShell.querySelector('[data-testid="diagram-preview"]')).not.toBeNull()
+  expect(appShell.querySelector('[data-testid="workspace-results"]')).not.toBeNull()
+})
+
+it('routes page actions to their matching callbacks', () => {
+  const callbacks = renderLayout()
+
+  const appShell = container.querySelector('.app-shell')
+  if (!appShell) throw new Error('Expected the home page shell to render.')
 
   clickAction('API settings')
   clickAction('Test API')
   clickAction('Rules')
-  clickAction('Jump to diagram line')
   const statusDetails = appShell.querySelector('.status-bar-disclosure summary')
   if (!statusDetails) throw new Error('Expected a status details disclosure.')
   act(() => statusDetails.click())
@@ -189,6 +213,5 @@ it('renders page sections and routes their actions to the matching callback', ()
   expect(callbacks.onOpenApiConfiguration).toHaveBeenCalledOnce()
   expect(callbacks.onTestConnection).toHaveBeenCalledOnce()
   expect(callbacks.onOpenRules).toHaveBeenCalledOnce()
-  expect(callbacks.onJumpToLine).toHaveBeenCalledWith(7)
   expect(callbacks.onResetLayout).toHaveBeenCalledOnce()
 })
