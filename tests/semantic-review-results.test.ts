@@ -59,6 +59,19 @@ it('shows syntax-only rule feedback and next steps when there are no findings', 
   expect(document.querySelector('.semantic-review-model')?.textContent).toBe('Model: test-model')
 })
 
+it('orders semantic findings by priority without mutating the response', () => {
+  const findings = [
+    { id: 'low', title: 'Low priority', explanation: 'Low', priority: 'low', evidence: [] },
+    { id: 'high', title: 'High priority', explanation: 'High', priority: 'high', evidence: [] },
+    { id: 'medium', title: 'Medium priority', explanation: 'Medium', priority: 'medium', evidence: [] },
+  ] satisfies NonNullable<SemanticReviewResponse['review-findings']>
+  const document = renderReview({ result: { ...result, 'review-findings': findings } })
+
+  expect(Array.from(document.querySelectorAll('.semantic-review-findings h4'), (heading) => heading.textContent))
+    .toEqual(['High priority', 'Medium priority', 'Low priority'])
+  expect(findings.map((finding) => finding.id)).toEqual(['low', 'high', 'medium'])
+})
+
 it('keeps the current review visible alongside an error and offers retry', () => {
   const document = renderReview({ result, error: 'The API request failed.' })
 
