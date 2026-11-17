@@ -9,6 +9,15 @@ function makeResponse(message: string): AnalyzeResponse {
   }
 }
 
+it('keeps cached analysis through the 60-second freshness boundary and expires it afterward', () => {
+  const cache = new AnalysisCache()
+  const result = makeResponse('cached')
+  cache.set('request', result, 10)
+
+  expect(cache.get('request', 60_010)?.result).toBe(result)
+  expect(cache.get('request', 60_011)).toBeUndefined()
+})
+
 // Internal memory guardrail: README.md#testing
 it('evicts the least recently used result when the configured entry limit is exceeded', () => {
   const cache = new AnalysisCache({ maxEntries: 2 })
