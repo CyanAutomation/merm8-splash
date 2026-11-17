@@ -59,7 +59,7 @@ function applyRenderError(options: RenderOptions, message: string) {
   options.setFullRenderError(message)
   options.onParseStateChange?.({ hasParseError: true, message: collapsedMessage, fullMessage: message })
   options.dom.removeMermaidFallbackNodes(options.dom.lastRenderIdRef.current ?? undefined)
-  if (options.dom.containerRef.current) options.dom.containerRef.current.innerHTML = ''
+  if (options.dom.containerRef.current) options.dom.containerRef.current.replaceChildren()
 }
 
 export function useDiagramRenderEffect(options: RenderOptions) {
@@ -81,7 +81,7 @@ export function useDiagramRenderEffect(options: RenderOptions) {
     const renderSequence = ++dom.renderSequenceRef.current
 
     if (!code.trim()) {
-      if (dom.containerRef.current) dom.containerRef.current.innerHTML = ''
+      if (dom.containerRef.current) dom.containerRef.current.replaceChildren()
       resetRenderErrors(options)
       onParseStateChange?.({ hasParseError: false, message: null })
       setIsRendering(false)
@@ -89,7 +89,7 @@ export function useDiagramRenderEffect(options: RenderOptions) {
     }
 
     if (parseErrorMessage) {
-      if (dom.containerRef.current) dom.containerRef.current.innerHTML = ''
+      if (dom.containerRef.current) dom.containerRef.current.replaceChildren()
       dom.removeMermaidFallbackNodes(dom.lastRenderIdRef.current ?? undefined)
       resetRenderErrors(options)
       onParseStateChange?.({ hasParseError: true, message: parseErrorMessage, fullMessage: parseErrorMessage })

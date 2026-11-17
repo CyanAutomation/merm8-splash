@@ -38,7 +38,7 @@ function findingKey(finding: SemanticReviewFinding, index: number): string {
 function sortFindings(findings: SemanticReviewFinding[]): SemanticReviewFinding[] {
   const priorityRank: Record<string, number> = { high: 0, medium: 1, low: 2 }
 
-  return findings.slice().sort((left, right) =>
+  return findings.toSorted((left, right) =>
     (priorityRank[left.priority ?? ''] ?? 3) - (priorityRank[right.priority ?? ''] ?? 3)
   )
 }
