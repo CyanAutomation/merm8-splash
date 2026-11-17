@@ -630,7 +630,8 @@ it('reuses both completed responses across an A to B to A sequence', async () =>
   expect(rerenderedHook.violations[0].rule_id).toBe('result-a')
 })
 
-it('expired cache entry triggers fresh network analysis', async () => {
+// Observable cache contract: README.md#testing
+it('reuses analysis through the freshness boundary and refetches after expiry', async () => {
   let callCount = 0
 
   const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
@@ -646,7 +647,13 @@ it('expired cache entry triggers fresh network analysis', async () => {
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
   await new Promise((resolve) => setImmediate(resolve))
 
-  await timerControls.advanceBy(60_001)
+  await timerControls.advanceBy(60_000)
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  expect(callCount).toBe(1)
+
+  await timerControls.advanceBy(1)
 
   hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', ['r1'], [])
   await new Promise((resolve) => setImmediate(resolve))

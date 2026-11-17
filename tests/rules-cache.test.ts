@@ -1,15 +1,7 @@
 import { expect, it } from 'vitest'
 import { RulesCache } from '../lib/api/rulesCache'
 
-it('reuses rules through the TTL boundary and expires them afterward', () => {
-  const cache = new RulesCache({ ttlMs: 10 })
-  const result = { rules: [], status: 'success' as const }
-  cache.set('https://EXAMPLE.test/api', result, 100)
-
-  expect(cache.get('https://example.test/api/', 110)).toBe(result)
-  expect(cache.get('https://example.test/api', 111)).toBeUndefined()
-})
-
+// Endpoint isolation and bounded storage: README.md#testing
 it('keeps cache entries isolated by endpoint and evicts the least recently used endpoint', () => {
   const cache = new RulesCache({ maxEntries: 2 })
   const result = { rules: [], status: 'success' as const }

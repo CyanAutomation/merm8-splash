@@ -126,6 +126,8 @@ The external link check follows redirects, retries transient failures, and skips
 - Hook behavior (e.g., `useDiagramAnalysis` with debouncing and error handling)
 - Component lifecycle patterns (e.g., timeout management in `Snackbar`)
 
+The cache tests also protect observable request behavior: equivalent analysis inputs reuse a result through the 60-second freshness window, while a changed endpoint, diagram, selected rule, rule metadata, or server-default option triggers a fresh request. Rules are reused for the same endpoint through the five-minute freshness window, then fetched again. Both in-memory caches remain bounded to limit browser memory use. See [analysis cache behavior](tests/use-diagram-analysis-cache.test.ts), [analysis expiry behavior](tests/use-diagram-analysis.test.ts), [rules reconnect behavior](tests/use-rules-configuration.test.ts), and the [analysis](tests/analysis-cache.test.ts) and [rules cache](tests/rules-cache.test.ts) memory guardrails.
+
 ## Configuration
 
 ### API Endpoint
