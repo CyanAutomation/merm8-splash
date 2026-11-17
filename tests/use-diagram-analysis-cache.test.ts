@@ -217,6 +217,28 @@ it.each(requestIdentityChanges)(
   },
 )
 
+// Observable cache contract: README.md#testing
+it('reuses the result when enabled rules and equivalent rule metadata are reordered', async () => {
+  renderHarness()
+  const request = createRequest({
+    enabledRules: ['r1', 'r2'],
+    rulesMetadata: [
+      { id: 'r1', description: 'Rule one', severity: 'warning' },
+      { id: 'r2', description: 'Rule two', severity: 'error' },
+    ],
+  })
+
+  await forceAnalysis(request)
+  await forceAnalysis({
+    ...request,
+    enabledRules: [...request.enabledRules].reverse(),
+    rulesMetadata: [...request.rulesMetadata].reverse(),
+  })
+
+  expect(apiMocks.analyzeCode).toHaveBeenCalledTimes(1)
+  expect(resultText()).toBe('Analysis 1')
+})
+
 it('keeps the cached result visible after an obsolete analysis settles', async () => {
   const cachedCode = 'flowchart TD\nA --> B'
   const obsoleteCode = 'flowchart TD\nA --> C'
