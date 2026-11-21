@@ -53,7 +53,7 @@ jobs:
               maxDiffBytes: 102400,
               scouting: { enabled: false },
               goalSetting: { enabled: false },
-              goalCheck: { enabled: false },
+              goalCheck: { enabled: true, maxRetries: 1 },
               changedFilesAllowlist: allowlist,
               validationCommands: validationCommand ? [validationCommand] : [],
               taskPrompt: `${process.env.TASK_DESCRIPTION}
@@ -70,6 +70,8 @@ jobs:
   docs_sweep:
     name: Run Kaseki documentation sweep
     needs: prepare
+    permissions:
+      contents: read
     uses: ./.github/workflows/kaseki-run.yml # zizmor: ignore[self-repository] Preserve caller-revision semantics.
     with:
       payload: ${{ needs.prepare.outputs.payload }}

@@ -106,7 +106,7 @@ function buildPayload(workflow: string, stepName: string) {
   }
 }
 
-it('keeps Kaseki preparation and secret-bearing execution on main', () => {
+it('keeps Kaseki preparation and Soyuz submissions on main', () => {
   for (const [workflow, runJobName] of [
     [dryWorkflow, 'dry_sweep'],
     [docsWorkflow, 'docs_sweep'],
@@ -118,13 +118,14 @@ it('keeps Kaseki preparation and secret-bearing execution on main', () => {
     expect(yamlScalar(runJob, 'if')).toBeUndefined()
     expect(yamlScalar(runJob, 'uses')).toBe('./.github/workflows/kaseki-run.yml')
     expect(yamlScalar(runJob, 'needs')).toBe('prepare')
+    expect(yamlBlock(runJob, 'permissions:')).toContain('contents: read')
   }
 
   expect(yamlScalar(workflowJobBlock(kasekiWorkflow, 'run'), 'if'))
     .toBe("github.ref == 'refs/heads/main'")
 })
 
-it('uses one reusable workflow for Kaseki preflight, submission, and polling', () => {
+it('uses one reusable workflow for Soyuz submission without waiting for execution', () => {
   expect(yamlBlock(yamlBlock(kasekiWorkflow, 'on:'), 'workflow_call:')).not.toBe('')
 
   for (const [workflow, jobName] of [[dryWorkflow, 'dry_sweep'], [docsWorkflow, 'docs_sweep']]) {
@@ -135,95 +136,62 @@ it('uses one reusable workflow for Kaseki preflight, submission, and polling', (
 
   const steps = yamlBlock(workflowJobBlock(kasekiWorkflow, 'run'), 'steps:')
   const stepNames = [...steps.matchAll(/^\s*- name: (.+)$/gm)].map((match) => match[1].trim())
-  expect(stepNames).toContain('Verify controller health')
-  expect(stepNames).toContain('Verify controller readiness')
-  expect(stepNames).toContain('Verify gateway connectivity and authentication')
-  expect(stepNames).toContain('Submit Kaseki run')
-  expect(stepNames).toContain('Wait for Kaseki completion')
+  expect(stepNames).toContain('Validate Soyuz URL')
+  expect(stepNames).toContain('Submit run to Soyuz')
+  expect(stepNames).toContain('Publish Soyuz submission details')
+  expect(stepNames).not.toContain('Verify controller health')
+  expect(stepNames).not.toContain('Wait for Kaseki completion')
+  expect(kasekiWorkflow).not.toContain('KASEKI_BASE_URL')
+  expect(kasekiWorkflow).not.toContain('KASEKI_API_TOKEN')
+  expect(kasekiWorkflow).not.toContain('/api/v1/runs')
 })
 
-it('uses a single authoritative readiness check before authentication and submission', () => {
-  const healthStep = workflowStepBlock(kasekiWorkflow, 'Verify controller health')
-  const readinessStep = workflowStepBlock(kasekiWorkflow, 'Verify controller readiness')
-  const authenticationStep = workflowStepBlock(
-    kasekiWorkflow,
-    'Verify gateway connectivity and authentication',
+it('keeps the Soyuz token in the submission step and gives checkout read-only access', () => {
+  const submitStep = workflowStepBlock(kasekiWorkflow, 'Submit run to Soyuz')
+  expect(submitStep).toContain(
+    'SOYUZ_SUBMISSION_API_TOKEN: ${{ secrets.SOYUZ_SUBMISSION_API_TOKEN }}',
   )
-  const submitStep = workflowStepBlock(kasekiWorkflow, 'Submit Kaseki run')
-
-  expect(healthStep).toContain(
-    'uses: CyanAutomation/kaseki-agent/.github/actions/verify-controller-health@30db5d15e117b8d8de13eb66766d48cf6b7d618b',
-  )
-  expect(readinessStep).toContain("jq -e '.status == \"ready\"'")
-  expect(authenticationStep).toContain("jq -e '.status == \"ok\"'")
-  expect(kasekiWorkflow.match(/\/ready/g)).toHaveLength(1)
-  expect(kasekiWorkflow.indexOf(healthStep)).toBeLessThan(kasekiWorkflow.indexOf(readinessStep))
-  expect(kasekiWorkflow.indexOf(readinessStep)).toBeLessThan(
-    kasekiWorkflow.indexOf(authenticationStep),
-  )
-  expect(kasekiWorkflow.indexOf(authenticationStep)).toBeLessThan(
-    kasekiWorkflow.indexOf(submitStep),
-  )
-})
-
-it('keeps the Kaseki token in authenticated request steps only', () => {
-  const stepNames = [
-    'Verify gateway connectivity and authentication',
-    'Submit Kaseki run',
-    'Wait for Kaseki completion',
-  ]
-
-  for (const stepName of stepNames) {
-    expect(workflowStepBlock(kasekiWorkflow, stepName)).toContain(
-      'KASEKI_API_TOKEN: ${{ secrets.KASEKI_API_TOKEN }}',
-    )
-  }
-
-  expect([...kasekiWorkflow.matchAll(/KASEKI_API_TOKEN: \$\{\{ secrets\.KASEKI_API_TOKEN \}\}/g)])
-    .toHaveLength(3)
+  expect([...kasekiWorkflow.matchAll(/SOYUZ_SUBMISSION_API_TOKEN: \$\{\{ secrets\.SOYUZ_SUBMISSION_API_TOKEN \}\}/g)])
+    .toHaveLength(1)
   expect(kasekiWorkflow).not.toContain('secrets: inherit')
 
   for (const workflow of [dryWorkflow, docsWorkflow]) {
-    expect(workflow).not.toContain('KASEKI_API_TOKEN')
+    expect(workflow).not.toContain('SOYUZ_SUBMISSION_API_TOKEN')
     expect(yamlBlock(workflow, 'permissions:').trim()).toBe('permissions: {}')
   }
-  expect(yamlBlock(kasekiWorkflow, 'permissions:').trim()).toBe('permissions: {}')
+  expect(yamlBlock(workflowJobBlock(kasekiWorkflow, 'run'), 'permissions:'))
+    .toContain('contents: read')
 })
 
-it('protects the shared Kaseki job with its environment and a bounded timeout', () => {
+it('protects the shared Soyuz job with its environment and a bounded timeout', () => {
   const job = yamlBlock(kasekiWorkflow, 'run:')
 
-  expect(job).toContain('environment: kaseki-agent')
-  expect(job).toContain('timeout-minutes: 200')
-  expect(job).toContain('KASEKI_BASE_URL: ${{ vars.KASEKI_BASE_URL }}')
+  expect(job).toContain('environment: soyuz')
+  expect(job).toContain('timeout-minutes: 15')
+  expect(job).toContain('SOYUZ_BASE_URL: ${{ vars.SOYUZ_BASE_URL }}')
+  expect(job).toContain('node-version-file: .nvmrc')
+  expect(job).toContain('persist-credentials: false')
 })
 
-it('allows only the approved Kaseki controller URL', () => {
-  const validationScript = runScript(
-    kasekiWorkflow,
-    'Validate Kaseki configuration and required tools',
-  )
-  const urlValidationScript = validationScript.split('command -v jq')[0]
+it('submits an idempotent Soyuz request and validates the admitted run details', () => {
+  const submitStep = workflowStepBlock(kasekiWorkflow, 'Submit run to Soyuz')
+  const submitScript = runScript(kasekiWorkflow, 'Submit run to Soyuz')
 
-  expect(urlValidationScript).toContain(
-    '[[ "$KASEKI_BASE_URL" == "https://kaseki-tunnel.scheimann.xyz" ]]',
-  )
-
-  const runUrlValidation = (baseUrl: string) => execFileSync(
-    'bash',
-    ['-c', urlValidationScript],
-    {
-      encoding: 'utf8',
-      env: { ...process.env, KASEKI_BASE_URL: baseUrl },
-    },
-  )
-
-  expect(() => runUrlValidation('https://kaseki-tunnel.scheimann.xyz')).not.toThrow()
-  expect(() => runUrlValidation('https://attacker.example')).toThrow()
+  expect(submitStep).toContain('SOYUZ_SUBMISSION_API_TOKEN: ${{ secrets.SOYUZ_SUBMISSION_API_TOKEN }}')
+  expect(submitScript).toContain('Idempotency-Key: $idempotency_key')
+  expect(submitScript).toContain('--request POST "$SOYUZ_BASE_URL/v1/runs"')
+  expect(submitScript).toContain('. + {idempotencyKey: $idempotencyKey}')
+  expect(submitScript).toContain('^(200|202)$')
+  expect(submitScript).toContain(".data.id | strings")
+  expect(submitScript).toContain('scripts/validate-soyuz-run-id.ts')
+  expect(submitScript).toContain('^soyuz-[0-9]+$')
+  expect(submitScript).toContain('admission_failed')
+  expect(submitScript).toContain('Response body omitted')
+  expect(submitScript).not.toContain('cat "$response_file"')
 })
 
-it('derives a stable UUIDv5 idempotency key from each workflow run', () => {
-  const script = runScript(kasekiWorkflow, 'Submit Kaseki run').match(
+it('derives a stable UUIDv5 idempotency key from each GitHub workflow run', () => {
+  const script = runScript(kasekiWorkflow, 'Submit run to Soyuz').match(
     /idempotency_key="\$\(\s*node <<'NODE'\r?\n([\s\S]*?)\r?\n\s*NODE\r?\n\s*\)"/,
   )?.[1]
 
@@ -248,15 +216,11 @@ it('derives a stable UUIDv5 idempotency key from each workflow run', () => {
   expect(keyForRun('Kaseki DRY Sweep', '12345')).not.toBe(first)
 })
 
-it('bounds run polling and validates controller run IDs before polling', () => {
-  const submitScript = runScript(kasekiWorkflow, 'Submit Kaseki run')
-  const waitScript = runScript(kasekiWorkflow, 'Wait for Kaseki completion')
-
-  expect(submitScript).toContain('^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$')
-  expect(waitScript).toContain('poll_deadline=$((SECONDS + 11100))')
-  expect(waitScript).toContain('timeout --foreground')
-  expect(waitScript).toContain('Kaseki status: failed')
-  expect(waitScript).toContain('echo "status=$status" >> "$GITHUB_OUTPUT"')
+it('summarizes admission without claiming that the Soyuz run has completed', () => {
+  const summaryStep = workflowStepBlock(kasekiWorkflow, 'Publish Soyuz submission details')
+  expect(summaryStep).toContain('Soyuz run')
+  expect(summaryStep).toContain('Run status at submission')
+  expect(summaryStep).toContain('does not confirm execution completion')
 })
 
 it('builds distinct task payloads from each workflow’s configured file scope and validation command', () => {
@@ -287,25 +251,28 @@ it('builds distinct task payloads from each workflow’s configured file scope a
     ],
     scouting: { enabled: false },
     goalSetting: { enabled: false },
-    goalCheck: { enabled: false },
+    goalCheck: { enabled: true, maxRetries: 1 },
   })
 })
 
-it('keeps the Kaseki payload and shared request scripts valid Bash', () => {
+it('keeps the Kaseki payload and Soyuz submission scripts valid Bash', () => {
   const scripts = [
     runScript(dryWorkflow, 'Build DRY sweep payload'),
     runScript(docsWorkflow, 'Build documentation sweep payload'),
-    runScript(kasekiWorkflow, 'Validate Kaseki configuration and required tools'),
-    runScript(kasekiWorkflow, 'Verify controller readiness'),
-    runScript(kasekiWorkflow, 'Verify gateway connectivity and authentication'),
-    runScript(kasekiWorkflow, 'Submit Kaseki run'),
-    runScript(kasekiWorkflow, 'Wait for Kaseki completion'),
+    runScript(kasekiWorkflow, 'Validate Soyuz configuration and required tools'),
+    runScript(kasekiWorkflow, 'Submit run to Soyuz'),
   ]
 
   for (const script of scripts) {
     expect(script).not.toBe('')
     expect(() => execFileSync('bash', ['-n'], { input: script })).not.toThrow()
   }
+})
+
+it('validates the configured Soyuz URL before submission', () => {
+  const validationStep = workflowStepBlock(kasekiWorkflow, 'Validate Soyuz URL')
+  expect(validationStep).toContain('node --experimental-strip-types scripts/validate-soyuz-url.ts')
+  expect(kasekiWorkflow).toContain('scripts/validate-soyuz-run-id.ts')
 })
 
 it('serializes each Kaseki workflow independently', () => {
