@@ -223,6 +223,35 @@ it('summarizes admission without claiming that the Soyuz run has completed', () 
   expect(summaryStep).toContain('does not confirm execution completion')
 })
 
+it('escapes pipe characters in task descriptions in the Markdown summary table', () => {
+  const outputDirectory = mkdtempSync(join(tmpdir(), 'kaseki-summary-'))
+  const summaryFile = join(outputDirectory, 'step-summary')
+
+  try {
+    execFileSync('bash', ['-c', runScript(kasekiWorkflow, 'Publish Soyuz submission details')], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        REPO_URL: 'https://github.com/CyanAutomation/merm8-splash',
+        REF: 'main',
+        TASK_DESCRIPTION: 'Review docs | keep table intact',
+        ALLOWLIST: 'README.md,docs/**/*.md',
+        VALIDATION_COMMAND: 'npm test',
+        RUN_ID: '018f6f5e-9abc-7def-8abc-0123456789ab',
+        DISPLAY_ID: 'soyuz-123',
+        RUN_STATUS: 'queued',
+        SUBMISSION_STATUS: 'accepted',
+        GITHUB_STEP_SUMMARY: summaryFile,
+      },
+    })
+
+    const summary = readFileSync(summaryFile, 'utf8')
+    expect(summary).toContain('| Task | Review docs \\| keep table intact |')
+  } finally {
+    rmSync(outputDirectory, { recursive: true, force: true })
+  }
+})
+
 it('builds distinct task payloads from each workflow’s configured file scope and validation command', () => {
   const dryPayload = buildPayload(dryWorkflow, 'Build DRY sweep payload')
   const docsPayload = buildPayload(docsWorkflow, 'Build documentation sweep payload')

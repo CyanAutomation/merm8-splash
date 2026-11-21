@@ -156,6 +156,8 @@ jobs:
           RUN_STATUS: ${{ steps.submit.outputs.run_status || 'not received' }}
           SUBMISSION_STATUS: ${{ steps.submit.outputs.submission_status || 'not accepted' }}
         run: |
+          # Escape Markdown table delimiters in task descriptions before writing the summary.
+          task_description_for_summary="${TASK_DESCRIPTION//|/\\|}"
           {
             echo "## Soyuz Kaseki submission"
             echo
@@ -163,7 +165,7 @@ jobs:
             echo "|---|---|"
             echo "| Repository | \`$REPO_URL\` |"
             echo "| Ref | \`$REF\` |"
-            echo "| Task | $TASK_DESCRIPTION |"
+            echo "| Task | $task_description_for_summary |"
             echo "| Allowed paths | \`$ALLOWLIST\` |"
             echo "| Validation | \`$VALIDATION_COMMAND\` |"
             echo "| Mode | \`patch\` → full PR (not draft) |"
