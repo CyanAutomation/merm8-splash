@@ -80,6 +80,8 @@ jobs:
   dry_sweep:
     name: Run Kaseki DRY sweep
     needs: prepare
+    permissions:
+      contents: read
     uses: ./.github/workflows/kaseki-run.yml # zizmor: ignore[self-repository] Preserve caller-revision semantics.
     with:
       payload: ${{ needs.prepare.outputs.payload }}
