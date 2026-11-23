@@ -28,7 +28,7 @@ function renderReview(overrides: Partial<Parameters<typeof SemanticReviewResults
     error: null,
     isLoading: false,
     code: 'flowchart TD\nA --> B',
-    onBack: () => {},
+    onHide: () => {},
     onReviewAgain: () => {},
     ...overrides,
   }))
