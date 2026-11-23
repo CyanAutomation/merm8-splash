@@ -1,4 +1,5 @@
 import type { SemanticReviewEvidence, SemanticReviewFinding, SemanticReviewResponse } from '../api'
+import { validateA2uiMessages } from '../a2ui/protocol'
 import { isFiniteNumber, isRecord } from './valueGuards'
 
 function hasScoredValue(
@@ -25,9 +26,11 @@ export function isSemanticReviewResponse(value: unknown): value is SemanticRevie
   const metadata = value.meta
   if (!isRecord(review) || !isRecord(metadata) || typeof metadata.model !== 'string') return false
 
-  return scoredReviewFields.every(([key, valueType, scoreKey]) =>
+  const reviewIsValid = scoredReviewFields.every(([key, valueType, scoreKey]) =>
     hasScoredValue(review[key], valueType, scoreKey)
   )
+  const a2uiIsValid = value.a2ui === undefined || validateA2uiMessages(value.a2ui).ok
+  return reviewIsValid && a2uiIsValid
 }
 
 function normalizeSemanticReviewEvidenceEntry(rawEvidence: unknown): SemanticReviewEvidence | null {

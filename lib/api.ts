@@ -2,6 +2,7 @@ import { parseDiagramType, filterRulesByDiagramType } from './diagramTypes'
 import { normalizeAnalyzeResponse, normalizeRulesResponse, validateHealthzResponse } from './api/normalizers'
 import { isSemanticReviewResponse, normalizeSemanticReviewFindings } from './api/semanticReview'
 import { isRecord } from './api/valueGuards'
+import type { A2uiMessage } from './a2ui/types'
 import type { Severity } from './theme'
 
 export {
@@ -120,6 +121,7 @@ export interface SemanticReviewFinding {
 export interface SemanticReviewResponse extends AnalyzeResponse {
   'semantic-review': SemanticReview
   'review-findings'?: SemanticReviewFinding[]
+  a2ui?: A2uiMessage[]
   meta: { source: 'jev'; model: string }
 }
 
@@ -492,6 +494,7 @@ export async function reviewCodeSemantics(
     ...normalizedAnalysis,
     'semantic-review': response['semantic-review'],
     ...(findings === undefined ? {} : { 'review-findings': findings }),
+    ...(response.a2ui ? { a2ui: response.a2ui } : {}),
     meta: {
       source: metaSource === 'jev' ? metaSource : 'jev',
       model: response.meta.model,

@@ -2,6 +2,7 @@ import { afterEach, describe, it, expect, vi } from 'vitest'
 import * as apiModule from '../lib/api'
 import * as rulesStateModule from '../lib/rulesState'
 import { buildAnalyzeRequest } from '../lib/api'
+import { A2UI_CATALOG_ID, A2UI_SURFACE_ID } from '../lib/a2ui/types'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -561,6 +562,22 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
       ],
       'suggested-code': 'flowchart TD\nA[Is the request valid?] --> B',
     }],
+    a2ui: [{
+      version: '1.0',
+      createSurface: {
+        surfaceId: A2UI_SURFACE_ID,
+        catalogId: A2UI_CATALOG_ID,
+        sendDataModel: false,
+        components: [
+          { id: 'root', component: 'Column', children: ['summaryTitle'] },
+          { id: 'summaryTitle', component: 'Text', variant: 'body', text: { '@path': '/summary/title' } },
+        ],
+        dataModel: {
+          presentation: { order: 'summary-first', density: 'concise' },
+          summary: { title: 'Diagram review' },
+        },
+      },
+    }],
     meta: { source: 'jev', model: 'test-model' },
   })
   const { reviewCodeSemantics } = loadApiModule({ fetchImpl })
@@ -588,6 +605,8 @@ it('reviewCodeSemantics sends Mermaid source with the API key only in the author
   expect(response['review-findings']?.[0].evidence).toEqual([
     { nodeId: 'A', label: 'Decision', line: 2 },
   ])
+  expect(response.a2ui?.[0]?.createSurface.surfaceId).toBe(A2UI_SURFACE_ID)
+  expect(response.a2ui?.[0]?.createSurface.dataModel.summary).toEqual({ title: 'Diagram review' })
   expect(JSON.stringify(calls[0].init.body)).not.toContain('secret-key')
 })
 
