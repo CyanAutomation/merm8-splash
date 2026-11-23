@@ -1,7 +1,7 @@
 export const A2UI_CATALOG_ID = 'https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json'
 export const A2UI_SURFACE_ID = 'diagramReview'
 
-export type A2uiComponentName = 'Card' | 'Column' | 'Row' | 'Text'
+export type A2uiComponentName = 'Card' | 'Column' | 'Divider' | 'Icon' | 'List' | 'Row' | 'Text'
 export type A2uiMessage = {
   version: '1.0'
   createSurface: {

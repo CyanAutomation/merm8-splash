@@ -866,6 +866,12 @@ a {
     overflow: auto;
   }
 
+  .workspace-semantic-review {
+    margin-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-3);
+  }
+
   .metrics-panel {
     flex: 0 0 auto;
     margin-top: 8px;
@@ -1107,6 +1113,58 @@ a {
   white-space: pre-line;
 }
 
+.ui-list {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  color: var(--color-text-primary);
+}
+
+.ui-list[data-direction='horizontal'] {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-inline-start: 0;
+  list-style: none;
+}
+
+.ui-divider {
+  width: 100%;
+  margin: var(--space-1) 0;
+  border: 0;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.ui-divider[data-axis='vertical'] {
+  width: 0;
+  min-height: 16px;
+  align-self: stretch;
+  margin: 0 var(--space-1);
+  border-block-start: 0;
+  border-inline-start: 1px solid var(--color-border);
+}
+
+.ui-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  color: var(--color-text-secondary);
+  vertical-align: middle;
+}
+
+.a2ui-list-item {
+  min-width: 0;
+}
+
+.a2ui-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .a2ui-surface {
   min-width: 0;
 }
@@ -1128,6 +1186,16 @@ a {
 
   .semantic-review-intro {
     margin: 0 0 10px;
+  }
+
+  .semantic-review-structured {
+    margin-top: var(--space-3);
+  }
+
+  .semantic-review-structured > h3 {
+    margin: 0 0 var(--space-2);
+    color: var(--color-text-primary);
+    font-size: var(--font-size-base);
   }
 
   .semantic-review-mixed-signals {

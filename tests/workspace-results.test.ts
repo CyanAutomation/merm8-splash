@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { SnackbarProvider } from '../app/components/Snackbar'
 import type { ResultsPanelRef } from '../app/components/ResultsPanel'
 import WorkspaceResults from '../app/components/WorkspaceResults'
+import { semanticReviewCache } from '../lib/api/semanticReviewCache'
 
 const semanticReviewMock = vi.hoisted(() => ({
   reviewCodeSemantics: vi.fn(),
@@ -51,9 +52,10 @@ afterEach(() => {
   container = null
   semanticReviewMock.reviewCodeSemantics.mockReset()
   semanticReviewMock.isApiRequestError.mockReset().mockReturnValue(false)
+  semanticReviewCache.clear()
 })
 
-it('groups result actions and keeps secondary tools in the explicit More menu', () => {
+it('keeps diagram review visible and groups secondary tools in the explicit More menu', () => {
   const onToggleMetrics = vi.fn()
   const resultsRef = createRef<ResultsPanelRef>()
   const view = mount(createElement(WorkspaceResults, {
@@ -112,7 +114,8 @@ it('groups result actions and keeps secondary tools in the explicit More menu', 
   }
   expect(view.querySelector('[role="group"][aria-label="Results actions"]')).toBeTruthy()
   expect(metricsButton.closest('details')).toBe(moreActions)
-  expect(semanticReviewButton.closest('details')).toBe(moreActions)
+  expect(semanticReviewButton.closest('details')).toBeNull()
+  expect(semanticReviewButton.getAttribute('aria-expanded')).toBe('false')
   expect(buttonWithTitle('Run a check on this diagram')).toBeUndefined()
   expect(Array.from(view.querySelectorAll('button')).some((button) => button.textContent?.trim() === 'Rules')).toBe(false)
   const exportButton = Array.from(view.querySelectorAll('button'))
@@ -221,7 +224,7 @@ it('summarizes findings before showing rule details in a disclosure', () => {
   expect(findingDetails[0].querySelector('summary')?.textContent).toBe('no-cycles')
 })
 
-it('runs semantic review directly from the toolbar and displays the API result in the results pane', async () => {
+it('shows semantic review alongside rule results and reuses a recent review when reopened', async () => {
   const reviewResponse = {
     'semantic-review': {
       purpose: { value: 'process', confidence: 0.9 },
@@ -279,13 +282,32 @@ it('runs semantic review directly from the toolbar and displays the API result i
   )
   expect(view.textContent).toContain('Diagram purpose')
   expect(view.textContent).toContain('review-model')
-  expect(view.textContent).toContain('Back to results')
+  expect(view.textContent).toContain('Run a check to see results.')
+  expect(view.textContent).toContain('Hide review')
   expect(view.querySelector('#semantic-review-api-key')).toBeNull()
 
-  const backButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Back to results')
-  if (!backButton) throw new Error('Expected a way back to analysis results.')
-  act(() => backButton.click())
+  const hideButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Hide review')
+  if (!hideButton) throw new Error('Expected a way to hide the semantic review.')
+  act(() => hideButton.click())
   expect(view.textContent).toContain('Run a check to see results.')
+  expect(view.textContent).not.toContain('Diagram purpose')
+  expect(view.querySelector('#semantic-review-panel')?.hidden).toBe(true)
+
+  await act(async () => semanticReviewButton.click())
+  expect(view.querySelector('#semantic-review-panel')?.hidden).toBe(false)
+  expect(semanticReviewMock.reviewCodeSemantics).toHaveBeenCalledTimes(1)
+  expect(view.textContent).toContain('review-model')
+
+  semanticReviewMock.reviewCodeSemantics.mockResolvedValueOnce({
+    ...reviewResponse,
+    meta: { model: 'fresh-review-model' },
+  })
+  const reviewAgainButton = Array.from(view.querySelectorAll('button'))
+    .find((button) => button.textContent === 'Review again')
+  if (!reviewAgainButton) throw new Error('Expected a forced refresh action for the cached review.')
+  await act(async () => reviewAgainButton.click())
+  expect(semanticReviewMock.reviewCodeSemantics).toHaveBeenCalledTimes(2)
+  expect(view.textContent).toContain('fresh-review-model')
 })
 
 it('shows actionable findings, selected-answer likelihoods, rule issues, and a safe code-diff apply flow', async () => {

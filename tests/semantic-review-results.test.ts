@@ -28,7 +28,7 @@ function renderReview(overrides: Partial<Parameters<typeof SemanticReviewResults
     error: null,
     isLoading: false,
     code: 'flowchart TD\nA --> B',
-    onBack: () => {},
+    onHide: () => {},
     onReviewAgain: () => {},
     ...overrides,
   }))
@@ -81,9 +81,18 @@ it('keeps the current review visible alongside an error and offers retry', () =>
   expect(Array.from(document.querySelectorAll('button')).at(-1)?.textContent).toBe('Try again')
 })
 
-it('renders the server-provided JEV-authored A2UI layout when available', () => {
+it('renders the JEV-authored A2UI overview and keeps structured findings actionable', () => {
   const resultWithA2ui: SemanticReviewResponse = {
     ...result,
+    lintSupported: true,
+    results: [{ rule_id: 'no-cycles', severity: 'warning', message: 'Cycle detected', line: 4 }],
+    'review-findings': [{
+      id: 'unclear-approval',
+      title: 'Clarify the approval step',
+      explanation: 'The label does not explain what approval means.',
+      evidence: [{ line: 2 }],
+      suggestedCode: 'flowchart TD\nA[Approve request] --> B',
+    }],
     a2ui: [{
       version: '1.0',
       createSurface: {
@@ -107,10 +116,21 @@ it('renders the server-provided JEV-authored A2UI layout when available', () => 
       },
     }],
   }
-  const document = renderReview({ result: resultWithA2ui })
+  const document = renderReview({
+    result: resultWithA2ui,
+    onJumpToLine: () => {},
+    onApplySuggestedCode: () => {},
+  })
 
   expect(document.querySelector('[aria-label="AI-authored diagram review"]')?.textContent)
     .toContain('Agent-authored overview')
-  expect(document.querySelector('.semantic-review-actions')).toBeNull()
+  expect(document.querySelector('.semantic-review-findings h4')?.textContent)
+    .toBe('Clarify the approval step')
+  expect(document.querySelector('button')?.textContent).toContain('Hide review')
+  expect(document.querySelector('.semantic-review-findings')?.textContent).toContain('Go to line 2')
+  expect(document.querySelector('.semantic-review-code-change button')?.textContent)
+    .toBe('Apply suggested code')
+  expect(document.querySelector('.semantic-rule-findings')?.textContent).toContain('Cycle detected')
+  expect(document.querySelector('.semantic-review-model')?.textContent).toBe('Model: test-model')
   expect(document.querySelectorAll('.a2ui-card')).toHaveLength(2)
 })
