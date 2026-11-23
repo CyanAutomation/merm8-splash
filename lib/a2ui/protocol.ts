@@ -10,7 +10,9 @@ const MAX_COMPONENT_DEPTH = 8
 const MAX_DATA_BYTES = 16_000
 const MAX_DATA_DEPTH = 6
 const MAX_STRING_LENGTH = 2_500
-const ALLOWED_COMPONENTS = new Set(['Card', 'Column', 'Row', 'Text'])
+const ALLOWED_COMPONENTS = new Set(['Card', 'Column', 'Divider', 'Icon', 'List', 'Row', 'Text'])
+const ALLOWED_ICONS = new Set(['check', 'error', 'info', 'warning'])
+const STATIC_LAYOUT_COMPONENTS = new Set(['Column', 'List', 'Row'])
 const ALLOWED_DATA_ROOTS = new Set(['summary', 'semantic', 'issues', 'presentation'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -89,6 +91,14 @@ function inspectSurface(message: Record<string, unknown>, componentIds: Set<stri
       throw new Error('A2UI component is outside the approved subset.')
     }
     if (component.component === 'Text') inspectTextBinding(component.text)
+    if (STATIC_LAYOUT_COMPONENTS.has(component.component) &&
+      (!Array.isArray(component.children) || component.children.some((child) => typeof child !== 'string'))) {
+      throw new Error('A2UI layout children must be static component references.')
+    }
+    if (component.component === 'Icon' &&
+      (typeof component.name !== 'string' || !ALLOWED_ICONS.has(component.name))) {
+      throw new Error('A2UI icon is outside the approved named icon set.')
+    }
   }
   return surface.components.length
 }

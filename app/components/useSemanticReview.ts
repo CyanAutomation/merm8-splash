@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getApiFailureMessage, isApiRequestError, reviewCodeSemantics, type SemanticReviewResponse } from '@/lib/api'
+import { buildSemanticReviewRequestKey, semanticReviewCache } from '@/lib/api/semanticReviewCache'
+
+export interface SemanticReviewRunOptions {
+  forceRefresh?: boolean
+}
 
 function readErrorMessage(error: unknown): string {
   const apiFailureMessage = getApiFailureMessage(error, 'semantic-review')
@@ -39,8 +44,19 @@ export function useSemanticReview(endpoint: string, code: string) {
     }
   }, [code, endpoint])
 
-  const run = useCallback(async () => {
+  const run = useCallback(async ({ forceRefresh = false }: SemanticReviewRunOptions = {}) => {
     if (!code.trim() || requestController.current) return
+
+    const cacheKey = buildSemanticReviewRequestKey(endpoint, code)
+    if (!forceRefresh) {
+      const cachedResult = semanticReviewCache.get(cacheKey, Date.now())
+      if (cachedResult) {
+        setResult(cachedResult)
+        setError(null)
+        setIsLoading(false)
+        return
+      }
+    }
 
     const currentRequestId = requestId.current + 1
     requestId.current = currentRequestId
@@ -52,7 +68,10 @@ export function useSemanticReview(endpoint: string, code: string) {
 
     try {
       const response = await reviewCodeSemantics(endpoint, code, undefined, controller.signal)
-      if (!controller.signal.aborted && requestId.current === currentRequestId) setResult(response)
+      if (!controller.signal.aborted && requestId.current === currentRequestId) {
+        semanticReviewCache.set(cacheKey, response, Date.now())
+        setResult(response)
+      }
     } catch (requestError) {
       if (!controller.signal.aborted && requestId.current === currentRequestId) {
         setError(readErrorMessage(requestError))

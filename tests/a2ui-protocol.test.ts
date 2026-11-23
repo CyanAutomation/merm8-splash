@@ -48,6 +48,37 @@ it('rejects components and operations outside the approved read-only review subs
   expect(validateA2uiMessages([{ version: '1.0', updateComponents: { surfaceId: A2UI_SURFACE_ID, components: [] } }]).ok).toBe(false)
 })
 
+it('accepts static lists, dividers, and approved named icons', () => {
+  const valid = message({
+    components: [
+      { id: 'root', component: 'Column', children: ['reviewList'] },
+      { id: 'reviewList', component: 'List', direction: 'vertical', children: ['passIcon', 'divider', 'summary'] },
+      { id: 'passIcon', component: 'Icon', name: 'check' },
+      { id: 'divider', component: 'Divider', axis: 'horizontal' },
+      { id: 'summary', component: 'Text', text: { '@path': '/summary/title' } },
+    ],
+  })
+
+  expect(validateA2uiMessages([valid]).ok).toBe(true)
+})
+
+it('rejects unapproved icon names and dynamic list templates', () => {
+  const unsupportedIcon = message({
+    components: [
+      { id: 'root', component: 'Icon', name: { svgPath: '<script/>' } },
+    ],
+  })
+  const dynamicList = message({
+    components: [
+      { id: 'root', component: 'List', children: { path: '/issues/items', componentId: 'item' } },
+      { id: 'item', component: 'Text', text: { '@path': '/title' } },
+    ],
+  })
+
+  expect(validateA2uiMessages([unsupportedIcon]).ok).toBe(false)
+  expect(validateA2uiMessages([dynamicList]).ok).toBe(false)
+})
+
 it('rejects duplicate IDs, unsafe bindings, and oversized streams', () => {
   const duplicateIds = message({
     components: [

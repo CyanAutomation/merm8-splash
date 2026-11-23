@@ -34,7 +34,8 @@ Try the [hosted merm8-splash app](https://merm8-splash.vercel.app/). The built-i
 
 3. The preview renders the diagram. After the API responds, the Results panel lists findings by rule, severity, message, and line; available rules depend on the API and diagram type.
 4. Select a finding with a line number to jump to that line in the editor. Use **Rules** to choose which available checks to apply.
-5. Open **Export** to download SARIF JSON or JSON, or copy the results as Markdown or plain text.
+5. Select **Diagram review** to see JEV’s clarity review beside rule results. When available, A2UI arranges the overview; **Structured review details** keeps findings, line jumps, code suggestions, and rule results available.
+6. Open **Export** to download SARIF JSON or JSON, or copy the results as Markdown or plain text.
 
 ## Troubleshooting
 
@@ -126,7 +127,7 @@ The external link check follows redirects, retries transient failures, and skips
 - Hook behavior (e.g., `useDiagramAnalysis` with debouncing and error handling)
 - Component lifecycle patterns (e.g., timeout management in `Snackbar`)
 
-The cache tests also protect observable request behavior: equivalent analysis inputs reuse a result through the 60-second freshness window, while a changed endpoint, diagram, selected rule, rule metadata, or server-default option triggers a fresh request. Rules are reused for the same endpoint through the five-minute freshness window, then fetched again. Both in-memory caches remain bounded to limit browser memory use. See [analysis cache behavior](tests/use-diagram-analysis-cache.test.ts), [analysis expiry behavior](tests/use-diagram-analysis.test.ts), [rules reconnect behavior](tests/use-rules-configuration.test.ts), and the [analysis](tests/analysis-cache.test.ts) and [rules cache](tests/rules-cache.test.ts) memory guardrails.
+The cache tests also protect observable request behavior: equivalent analysis inputs reuse a result through the 60-second freshness window, while a changed endpoint, diagram, selected rule, rule metadata, or server-default option triggers a fresh request. Successful semantic reviews are reused for the same endpoint and exact diagram for 60 seconds; **Review again** requests a fresh response. Rules are reused for the same endpoint through the five-minute freshness window, then fetched again. The in-memory caches have entry limits to bound browser memory use. See [analysis cache behavior](tests/use-diagram-analysis-cache.test.ts), [analysis expiry behavior](tests/use-diagram-analysis.test.ts), [rules reconnect behavior](tests/use-rules-configuration.test.ts), and the [analysis](tests/analysis-cache.test.ts), [rules cache](tests/rules-cache.test.ts), and [semantic review cache](tests/semantic-review-cache.test.ts) guardrails.
 
 ## Configuration
 

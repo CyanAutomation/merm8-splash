@@ -12,7 +12,7 @@ interface SemanticReviewResultsProps {
   error: string | null
   isLoading: boolean
   code: string
-  onBack: () => void
+  onHide: () => void
   onReviewAgain: () => void
   onJumpToLine?: (line: number) => void
   onApplySuggestedCode?: (code: string) => void
@@ -249,14 +249,14 @@ function ReviewOutcome({
   result,
   review,
   code,
-  onBack,
+  onHide,
   onJumpToLine,
   onApplySuggestedCode,
 }: {
   result: SemanticReviewResponse
   review: SemanticReview
   code: string
-  onBack: () => void
+  onHide: () => void
   onJumpToLine?: (line: number) => void
   onApplySuggestedCode?: (code: string) => void
 }) {
@@ -264,7 +264,7 @@ function ReviewOutcome({
   const branchInfo = hasBranching(result)
   const applySuggestedCode = (suggestedCode: string) => {
     onApplySuggestedCode?.(suggestedCode)
-    onBack()
+    onHide()
   }
 
   return (
@@ -311,7 +311,7 @@ export default function SemanticReviewResults({
   error,
   isLoading,
   code,
-  onBack,
+  onHide,
   onReviewAgain,
   onJumpToLine,
   onApplySuggestedCode,
@@ -322,20 +322,33 @@ export default function SemanticReviewResults({
     <section aria-label="Diagram review results" style={{ padding: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
         <h2 className="panel-heading" style={{ marginBottom: 0 }}>Diagram review</h2>
-        <Button onClick={onBack}>Back to results</Button>
+        <Button onClick={onHide}>Hide review</Button>
       </div>
 
       <ReviewStatusMessages result={result} error={error} isLoading={isLoading} />
 
       {result && review && (
         result.a2ui?.length ? (
-          <A2uiSurface messages={result.a2ui} />
+          <>
+            <A2uiSurface messages={result.a2ui} />
+            <section className="semantic-review-structured" aria-labelledby="semantic-review-structured-title">
+              <h3 id="semantic-review-structured-title">Structured review details</h3>
+              <ReviewOutcome
+                result={result}
+                review={review}
+                code={code}
+                onHide={onHide}
+                onJumpToLine={onJumpToLine}
+                onApplySuggestedCode={onApplySuggestedCode}
+              />
+            </section>
+          </>
         ) : (
           <ReviewOutcome
             result={result}
             review={review}
             code={code}
-            onBack={onBack}
+            onHide={onHide}
             onJumpToLine={onJumpToLine}
             onApplySuggestedCode={onApplySuggestedCode}
           />

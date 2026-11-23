@@ -2,7 +2,20 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
-import { Card, FormField, PageHeader, SettingsGroup, SettingsRow, Stack, StatusBadge, Text, ToolbarGroup } from '../app/components/ui'
+import {
+  Card,
+  Divider,
+  FormField,
+  Icon,
+  List,
+  PageHeader,
+  SettingsGroup,
+  SettingsRow,
+  Stack,
+  StatusBadge,
+  Text,
+  ToolbarGroup,
+} from '../app/components/ui'
 
 function parseMarkup(markup: string) {
   return new DOMParser().parseFromString(markup, 'text/html')
@@ -122,4 +135,25 @@ it('provides semantic reusable text variants', () => {
 
   expect(heading.querySelector('h3.ui-text--heading')?.textContent).toBe('Semantic signals')
   expect(caption.querySelector('p.ui-text--caption')?.textContent).toBe('Labels: clear')
+})
+
+it('provides reusable lists with semantic elements and layout direction', () => {
+  const document = parseMarkup(renderToStaticMarkup(createElement(List, {
+    direction: 'horizontal',
+    children: [createElement('li', { key: 'first' }, 'Summary'), createElement('li', { key: 'second' }, 'Findings')],
+  })))
+  const list = document.querySelector('ul.ui-list[data-direction="horizontal"]')
+
+  expect(list?.querySelectorAll(':scope > li')).toHaveLength(2)
+  expect(list?.textContent).toBe('SummaryFindings')
+})
+
+it('provides reusable separators and named decorative icons', () => {
+  const horizontal = parseMarkup(renderToStaticMarkup(createElement(Divider)))
+  const vertical = parseMarkup(renderToStaticMarkup(createElement(Divider, { axis: 'vertical' })))
+  const icon = parseMarkup(renderToStaticMarkup(createElement(Icon, { name: 'warning', label: 'Warning' })))
+
+  expect(horizontal.querySelector('hr.ui-divider')).not.toBeNull()
+  expect(vertical.querySelector('[role="separator"][aria-orientation="vertical"]')).not.toBeNull()
+  expect(icon.querySelector('svg.ui-icon[data-name="warning"][role="img"][aria-label="Warning"] path')).not.toBeNull()
 })
