@@ -37,7 +37,7 @@ it('renders A2UI Card, Column, and Text through reusable project UI primitives',
 
   expect(document.querySelector('[role="region"][aria-label="AI-authored diagram review"]')).not.toBeNull()
   expect(document.querySelector('article.ui-card')).not.toBeNull()
-  expect(document.querySelector('h3.ui-text--heading')?.textContent).toBe('Diagram review')
+  expect(document.querySelector('p.ui-text--body')?.textContent).toBe('Diagram review')
   expect(document.querySelector('p.ui-text--caption')?.textContent).toBe('Purpose: Process')
 })
 
@@ -46,7 +46,7 @@ it('renders model and diagram text as text instead of markup', () => {
   const document = parseMarkup(renderToStaticMarkup(createElement(A2uiSurface, { messages: payload })))
 
   expect(document.querySelector('img')).toBeNull()
-  expect(document.querySelector('h3')?.textContent).toBe('<img src=x onerror=alert(1)>')
+  expect(document.querySelector('p.ui-text--body')?.textContent).toBe('<img src=x onerror=alert(1)>')
 })
 
 it('rejects a surface that fails A2UI protocol validation', () => {

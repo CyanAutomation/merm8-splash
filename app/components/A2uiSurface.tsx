@@ -90,7 +90,7 @@ export default function A2uiSurface({ messages, label = 'AI-authored diagram rev
         return (
           <Text
             key={component.id}
-            variant={component.variant === 'body' ? 'heading' : 'caption'}
+            variant={component.variant === 'caption' ? 'caption' : 'body'}
             className="a2ui-text"
             data-a2ui-component-id={component.id}
           >
