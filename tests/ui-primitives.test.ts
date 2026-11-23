@@ -2,7 +2,7 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
-import { FormField, PageHeader, SettingsGroup, SettingsRow, StatusBadge, ToolbarGroup } from '../app/components/ui'
+import { Card, FormField, PageHeader, SettingsGroup, SettingsRow, Stack, StatusBadge, Text, ToolbarGroup } from '../app/components/ui'
 
 function parseMarkup(markup: string) {
   return new DOMParser().parseFromString(markup, 'text/html')
@@ -81,4 +81,45 @@ it('associates a form control with its label, help text, and validation feedback
   expect(describedBy).toEqual(['endpoint-description', 'endpoint-feedback'])
   expect(document.getElementById(describedBy[0])?.textContent).toBe('Use the endpoint you trust.')
   expect(document.getElementById(describedBy[1])?.getAttribute('role')).toBe('alert')
+})
+
+it('provides reusable cards with semantic element and density hooks', () => {
+  const document = parseMarkup(renderToStaticMarkup(createElement(Card, {
+    as: 'section',
+    density: 'compact',
+    'aria-label': 'Review summary',
+    children: 'Summary content',
+  })))
+  const card = document.querySelector('section.ui-card')
+
+  expect(card?.getAttribute('aria-label')).toBe('Review summary')
+  expect(card?.getAttribute('data-density')).toBe('compact')
+  expect(card?.textContent).toBe('Summary content')
+})
+
+it('provides reusable vertical and horizontal stacks', () => {
+  const document = parseMarkup(renderToStaticMarkup(createElement(Stack, {
+    direction: 'horizontal',
+    gap: 'large',
+    children: createElement('span', null, 'First'),
+  })))
+  const stack = document.querySelector('.ui-stack')
+
+  expect(stack?.getAttribute('data-direction')).toBe('horizontal')
+  expect(stack?.getAttribute('data-gap')).toBe('large')
+  expect(stack?.textContent).toBe('First')
+})
+
+it('provides semantic reusable text variants', () => {
+  const heading = parseMarkup(renderToStaticMarkup(createElement(Text, {
+    variant: 'heading',
+    children: 'Semantic signals',
+  })))
+  const caption = parseMarkup(renderToStaticMarkup(createElement(Text, {
+    variant: 'caption',
+    children: 'Labels: clear',
+  })))
+
+  expect(heading.querySelector('h3.ui-text--heading')?.textContent).toBe('Semantic signals')
+  expect(caption.querySelector('p.ui-text--caption')?.textContent).toBe('Labels: clear')
 })

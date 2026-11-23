@@ -1044,6 +1044,81 @@ a {
     margin-top: 4px;
   }
 
+/* Reusable primitives used by the A2UI review renderer and other workspace surfaces. */
+.ui-card {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-bg-primary);
+}
+
+.ui-card[data-density='compact'] {
+  padding: var(--space-2);
+}
+
+.ui-stack {
+  display: flex;
+  min-width: 0;
+}
+
+.ui-stack[data-direction='vertical'] {
+  flex-direction: column;
+}
+
+.ui-stack[data-direction='horizontal'] {
+  flex-direction: row;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.ui-stack[data-gap='small'] {
+  gap: var(--space-2);
+}
+
+.ui-stack[data-gap='medium'] {
+  gap: var(--space-3);
+}
+
+.ui-stack[data-gap='large'] {
+  gap: var(--space-4);
+}
+
+.ui-text {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-text--heading {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.ui-text--body {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+}
+
+.ui-text--caption {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  white-space: pre-line;
+}
+
+.a2ui-surface {
+  min-width: 0;
+}
+
+.a2ui-surface > .ui-stack {
+  align-items: stretch;
+}
+
+.a2ui-card {
+  width: 100%;
+}
+
   .semantic-review-intro,
   .semantic-review-note,
   .semantic-review-model {

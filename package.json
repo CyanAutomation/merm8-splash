@@ -17,6 +17,7 @@
     "check:readme:links": "node scripts/check-readme.mjs --external"
   },
   "dependencies": {
+    "@a2ui/web_core": "0.15.0",
     "beautiful-mermaid": "^1.1.3",
     "mermaid": "^12.3.0",
     "next": "16.4.6",

@@ -3,6 +3,7 @@ import {
   isSemanticReviewResponse,
   normalizeSemanticReviewFindings,
 } from '../lib/api/semanticReview'
+import { A2UI_CATALOG_ID, A2UI_SURFACE_ID, type A2uiMessage } from '../lib/a2ui/types'
 
 const semanticReview = {
   purpose: { value: 'process', confidence: 0.9 },
@@ -13,8 +14,36 @@ const semanticReview = {
   'review-priority': { value: 'low', confidence: 0.85 },
 }
 
+const a2ui: A2uiMessage[] = [{
+  version: '1.0',
+  createSurface: {
+    surfaceId: A2UI_SURFACE_ID,
+    catalogId: A2UI_CATALOG_ID,
+    sendDataModel: false,
+    components: [
+      { id: 'root', component: 'Column', children: ['title'] },
+      { id: 'title', component: 'Text', variant: 'body', text: { '@path': '/summary/title' } },
+    ],
+    dataModel: {
+      presentation: { order: 'summary-first', density: 'concise' },
+      summary: { title: 'Diagram review' },
+    },
+  },
+}]
+
 it('accepts semantic review payloads with every scored judgement and model metadata', () => {
   expect(isSemanticReviewResponse({ 'semantic-review': semanticReview, meta: { model: 'test-model' } })).toBe(true)
+})
+
+it('accepts valid A2UI messages and keeps the field optional for older API endpoints', () => {
+  expect(isSemanticReviewResponse({ 'semantic-review': semanticReview, meta: { model: 'test-model' }, a2ui })).toBe(true)
+  expect(isSemanticReviewResponse({ 'semantic-review': semanticReview, meta: { model: 'test-model' } })).toBe(true)
+})
+
+it('rejects semantic review responses with invalid A2UI protocol messages', () => {
+  const invalid = structuredClone(a2ui)
+  invalid[0]!.createSurface.catalogId = 'https://example.test/unknown-catalog'
+  expect(isSemanticReviewResponse({ 'semantic-review': semanticReview, meta: { model: 'test-model' }, a2ui: invalid })).toBe(false)
 })
 
 it.each([

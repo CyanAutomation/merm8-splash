@@ -4,6 +4,7 @@ import type { SemanticReview, SemanticReviewFinding, SemanticReviewResponse } fr
 import { createCodeDiff, getReviewActions, getReviewItems, hasMixedReviewSignals } from '@/lib/semanticReview'
 import { severityColor } from '@/lib/severity'
 import type { CSSProperties } from 'react'
+import A2uiSurface from './A2uiSurface'
 import Button from './Button'
 
 interface SemanticReviewResultsProps {
@@ -327,14 +328,18 @@ export default function SemanticReviewResults({
       <ReviewStatusMessages result={result} error={error} isLoading={isLoading} />
 
       {result && review && (
-        <ReviewOutcome
-          result={result}
-          review={review}
-          code={code}
-          onBack={onBack}
-          onJumpToLine={onJumpToLine}
-          onApplySuggestedCode={onApplySuggestedCode}
-        />
+        result.a2ui?.length ? (
+          <A2uiSurface messages={result.a2ui} />
+        ) : (
+          <ReviewOutcome
+            result={result}
+            review={review}
+            code={code}
+            onBack={onBack}
+            onJumpToLine={onJumpToLine}
+            onApplySuggestedCode={onApplySuggestedCode}
+          />
+        )
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '18px' }}>
