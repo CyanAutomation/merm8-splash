@@ -364,6 +364,7 @@ async function handleApiRequest(request, response, scenario, apiPath) {
       return
     }
     if (!(await validateCodeRequest(request, response))) return
+    if (scenario === 'timeout') return
     if (scenario === 'invalid-mermaid') {
       sendJson(response, 400, {
         error: { code: 'invalid_mermaid', message: 'Mermaid source could not be parsed', details: syntaxErrorDetails() },

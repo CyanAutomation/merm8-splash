@@ -320,18 +320,20 @@ it('answers browser preflights for JSON and semantic-review authorization header
   expect(response.headers.get('access-control-allow-headers')).toContain('authorization')
 })
 
-it('supports a no-response scenario for checking client request timeouts', async () => {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 80)
+it('supports a no-response scenario for checking client request timeouts across API endpoints', async () => {
+  for (const apiPath of ['/v1/analyze', '/v1/semantic-review']) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 80)
 
-  try {
-    await expect(fetch(route('timeout', '/v1/analyze'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: 'flowchart TD\nA --> B' }),
-      signal: controller.signal,
-    })).rejects.toMatchObject({ name: 'AbortError' })
-  } finally {
-    clearTimeout(timeoutId)
+    try {
+      await expect(fetch(route('timeout', apiPath), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: 'flowchart TD\nA --> B' }),
+        signal: controller.signal,
+      })).rejects.toMatchObject({ name: 'AbortError' })
+    } finally {
+      clearTimeout(timeoutId)
+    }
   }
 })
