@@ -104,6 +104,12 @@ npm run test:coverage
 
 The project uses [Vitest](https://vitest.dev/) as the test runner. Test files are located in the `tests/` directory and follow the pattern `*.test.ts`. Coverage reports are written to `coverage/`.
 
+The test-only simulator is for repeatable frontend checks. The real Worker contract check requires a running local or deployed Worker and does not call the provider-backed semantic review endpoint:
+
+```bash
+MERM8_WORKER_URL=http://127.0.0.1:8787 npm run test:merm8-contract
+```
+
 ### Documentation check
 
 ```bash
@@ -166,6 +172,22 @@ NEXT_PUBLIC_MERM8_API_URL=http://localhost:8080 npm run dev
 ```
 
 The local API must be running and reachable from the browser. Local or private API addresses are allowed in development; production builds reject them.
+
+### Simulated API for UI testing
+
+Run the simulator and splash in separate terminals:
+
+```bash
+npm run merm8:simulator
+```
+
+```bash
+npm run dev
+```
+
+In **API Configuration**, test and save `http://127.0.0.1:8788/scenario/success`. To see another response state, change the last path segment to `empty`, `invalid-mermaid`, `rate-limited`, `unavailable`, or `timeout`. The timeout scenario leaves analysis unanswered so the splash's 10-second request timeout can be checked. The simulator binds to loopback, returns canned Worker-shaped responses, and does not run Mermaid analysis or call JEV.
+
+For an API compatibility check, run the [real merm8 Worker locally](https://github.com/CyanAutomation/merm8/blob/main/README.md#cloudflare-worker-quick-start) or use a trusted deployed Worker, then set `MERM8_WORKER_URL` to its base URL and run `npm run test:merm8-contract`. That check exercises health, rules, analysis, and SARIF endpoints against the actual Worker.
 
 ### Static hosting path settings
 
