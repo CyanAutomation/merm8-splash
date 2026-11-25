@@ -11,12 +11,30 @@ const SCENARIOS = new Set([
   'timeout',
 ])
 
+const MAX_FANOUT_LIMIT = 5
+const MAX_FANOUT_SAMPLE = MAX_FANOUT_LIMIT + 1
+const FANOUT_NODE_COUNT = MAX_FANOUT_SAMPLE + 1
+const FANOUT_ISSUE_MESSAGE = `Node 'A' has ${MAX_FANOUT_SAMPLE} outgoing edges, exceeds limit of ${MAX_FANOUT_LIMIT}`
+
+export const MERM8_SIMULATOR_SAMPLE_CODE = [
+  'flowchart TD',
+  '  A[Hub] --> B[North]',
+  '  A --> C[South]',
+  '  A --> D[East]',
+  '  A --> E[West]',
+  '  A --> F[Up]',
+  '  A --> G[Down]',
+].join('\n')
+
+const CLEAN_FLOWCHART_NODE_COUNT = 2
+const CLEAN_FLOWCHART_EDGE_COUNT = 1
+
 const RULES = [
   {
     id: 'max-fanout',
     description: 'Limit the number of outgoing connections from a node.',
     severity: 'warning',
-    'default-config': { limit: 5 },
+    'default-config': { limit: MAX_FANOUT_LIMIT },
   },
   {
     id: 'no-cycles',
@@ -112,11 +130,54 @@ async function readJsonBody(request) {
   }
 }
 
+function requestBodyError(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { code: 'invalid_request', message: 'request body must be an object' }
+  }
+  if (typeof body.code !== 'string') {
+    return { code: 'invalid_request', message: 'code must be a string' }
+  }
+  return null
+}
+
+async function validateCodeRequest(request, response) {
+  let body
+  try {
+    body = await readJsonBody(request)
+  } catch (error) {
+    const code = error instanceof Error ? error.message : 'invalid_json'
+    const payloadTooLarge = code === 'payload_too_large'
+    sendJson(response, payloadTooLarge ? 413 : 400, {
+      error: {
+        code: payloadTooLarge ? 'payload_too_large' : 'invalid_json',
+        message: payloadTooLarge ? 'request body must not exceed 1 MiB' : 'invalid JSON body',
+      },
+    })
+    return false
+  }
+
+  const error = requestBodyError(body)
+  if (error) {
+    sendJson(response, 400, { error })
+    return false
+  }
+  return true
+}
+
+function syntaxErrorDetails() {
+  return {
+    code: 'syntax_error',
+    message: 'Flowchart relation is missing a destination node',
+    line: 2,
+    column: 1,
+  }
+}
+
 function analysisResponse(empty = false) {
   const issues = empty ? [] : [{
     'rule-id': 'max-fanout',
     severity: 'warning',
-    message: 'Demo finding: this node has several outgoing connections.',
+    message: FANOUT_ISSUE_MESSAGE,
     'node-id': 'A',
     line: 2,
   }]
@@ -127,12 +188,12 @@ function analysisResponse(empty = false) {
     'lint-supported': true,
     issues,
     metrics: {
-      'node-count': 3,
-      'edge-count': 2,
+      'node-count': empty ? CLEAN_FLOWCHART_NODE_COUNT : FANOUT_NODE_COUNT,
+      'edge-count': empty ? CLEAN_FLOWCHART_EDGE_COUNT : MAX_FANOUT_SAMPLE,
       'disconnected-node-count': 0,
       'duplicate-node-count': 0,
       'max-fanin': 1,
-      'max-fanout': empty ? 1 : 2,
+      'max-fanout': empty ? 1 : MAX_FANOUT_SAMPLE,
       'diagram-type': 'flowchart',
       'issue-counts': empty
         ? { 'by-severity': {}, 'by-rule': {} }
@@ -141,9 +202,12 @@ function analysisResponse(empty = false) {
   }
 }
 
-function semanticReviewResponse() {
+function semanticReviewResponse(empty = false) {
+  const analysis = analysisResponse(empty)
+  const issue = analysis.issues[0]
+
   return {
-    ...analysisResponse(true),
+    ...analysis,
     'semantic-review': {
       purpose: { value: 'process', confidence: 0.91 },
       'label-clarity': { value: true, probability: 0.88 },
@@ -152,16 +216,6 @@ function semanticReviewResponse() {
       ambiguity: { value: true, probability: 0.67 },
       'review-priority': { value: 'medium', confidence: 0.82 },
     },
-    'review-findings': [{
-      id: 'clarify-branch',
-      category: 'branch-clarity',
-      priority: 'medium',
-      title: 'Make the branch condition explicit',
-      rationale: 'A branch label should tell the reader what is being decided.',
-      suggestion: 'Replace the generic label with a specific condition.',
-      evidence: [{ 'node-id': 'A', label: 'Decision', 'source-line': 2 }],
-      'suggested-code': 'flowchart TD\nA[Is the request valid?] --> B',
-    }],
     a2ui: [{
       version: '1.0',
       createSurface: {
@@ -169,14 +223,40 @@ function semanticReviewResponse() {
         catalogId: A2UI_CATALOG_ID,
         sendDataModel: false,
         components: [
-          { id: 'root', component: 'Column', children: ['summaryCard'] },
+          { id: 'root', component: 'Column', children: ['summaryCard', 'semanticCard', 'issuesCard'] },
           { id: 'summaryCard', component: 'Card', child: 'summaryContent' },
-          { id: 'summaryContent', component: 'Column', children: ['summaryTitle'] },
+          { id: 'summaryContent', component: 'Column', children: ['summaryTitle', 'purposeText', 'priorityText'] },
           { id: 'summaryTitle', component: 'Text', variant: 'body', text: { '@path': '/summary/title' } },
+          { id: 'purposeText', component: 'Text', variant: 'caption', text: { '@path': '/summary/purpose' } },
+          { id: 'priorityText', component: 'Text', variant: 'caption', text: { '@path': '/summary/priority' } },
+          { id: 'semanticCard', component: 'Card', child: 'semanticContent' },
+          { id: 'semanticContent', component: 'Column', children: ['semanticTitle', 'semanticSummary'] },
+          { id: 'semanticTitle', component: 'Text', variant: 'body', text: { '@path': '/semantic/title' } },
+          { id: 'semanticSummary', component: 'Text', variant: 'caption', text: { '@path': '/semantic/summary' } },
+          { id: 'issuesCard', component: 'Card', child: 'issuesContent' },
+          { id: 'issuesContent', component: 'Column', children: ['issuesTitle', 'issuesSummary', 'issuesDetails'] },
+          { id: 'issuesTitle', component: 'Text', variant: 'body', text: { '@path': '/issues/title' } },
+          { id: 'issuesSummary', component: 'Text', variant: 'caption', text: { '@path': '/issues/summary' } },
+          { id: 'issuesDetails', component: 'Text', variant: 'caption', text: { '@path': '/issues/details' } },
         ],
         dataModel: {
           presentation: { order: 'summary-first', density: 'concise' },
-          summary: { title: 'Diagram review' },
+          summary: {
+            title: 'Diagram review',
+            purpose: 'Purpose: Process · 91% model confidence',
+            priority: 'Review priority: Medium · 82% model confidence',
+          },
+          semantic: {
+            title: 'Semantic signals',
+            summary: 'Labels: Clear · Branches: Needs clarification · Abstraction: Consistent · Ambiguity: Detected',
+          },
+          issues: {
+            title: 'Deterministic checks',
+            summary: issue ? `${analysis.issues.length} deterministic issues.` : 'No deterministic issues found.',
+            details: issue
+              ? `WARNING · max-fanout · line 2: ${FANOUT_ISSUE_MESSAGE}`
+              : 'No issue details to display.',
+          },
         },
       },
     }],
@@ -184,11 +264,11 @@ function semanticReviewResponse() {
   }
 }
 
-function sarifResponse() {
+function sarifResponse(empty = false) {
   const issue = {
     ruleId: 'max-fanout',
     level: 'warning',
-    message: { text: 'Demo finding: this node has several outgoing connections.' },
+    message: { text: FANOUT_ISSUE_MESSAGE },
     locations: [{ physicalLocation: {
       artifactLocation: { uri: 'diagram.mmd' },
       region: { startLine: 2 },
@@ -200,13 +280,17 @@ function sarifResponse() {
     version: '2.1.0',
     '$schema': 'https://json.schemastore.org/sarif-2.1.0.json',
     runs: [{
-      tool: { driver: { name: 'merm8', rules: [{
-        id: 'max-fanout',
-        shortDescription: { text: RULES[0].description },
-        defaultConfiguration: { level: 'warning' },
-      }] } },
-      artifacts: [{ location: { uri: 'diagram.mmd' } }],
-      results: [issue],
+      tool: { driver: {
+        name: 'merm8',
+        informationUri: 'https://github.com/CyanAutomation/merm8',
+        rules: empty ? [] : [{
+          id: 'max-fanout',
+          shortDescription: { text: RULES[0].description },
+          defaultConfiguration: { level: 'warning' },
+        }],
+      } },
+      ...(!empty ? { artifacts: [{ location: { uri: 'diagram.mmd' }, contents: { text: MERM8_SIMULATOR_SAMPLE_CODE } }] } : {}),
+      results: empty ? [] : [issue],
       invocations: [{ executionSuccessful: true, properties: { 'request-uri': '/v1/analyze/sarif' } }],
     }],
   }
@@ -224,38 +308,22 @@ async function handleApiRequest(request, response, scenario, apiPath) {
   }
 
   if (request.method === 'POST' && apiPath === '/v1/analyze') {
-    if (scenario === 'timeout') return
     if (scenario === 'rate-limited') {
-      sendJson(response, 429, { error: { code: 'rate_limited', message: 'Too many analysis requests.' } }, { 'retry-after': '60' })
+      sendJson(response, 429, { error: { code: 'rate_limited', message: 'Analysis limit exceeded; try again later' } }, { 'retry-after': '60' })
       return
     }
     if (scenario === 'unavailable') {
-      sendJson(response, 503, { error: { code: 'rate_limit_unavailable', message: 'Analysis is temporarily unavailable.' } }, { 'retry-after': '60' })
+      sendJson(response, 503, { error: { code: 'rate_limit_unavailable', message: 'Analysis is temporarily unavailable' } }, { 'retry-after': '60' })
       return
     }
+    if (!(await validateCodeRequest(request, response))) return
+    if (scenario === 'timeout') return
     if (scenario === 'invalid-mermaid') {
       sendJson(response, 200, {
         valid: false,
         issues: [],
-        error: {
-          code: 'syntax_error',
-          message: 'Mermaid source could not be parsed.',
-          details: { line: 2, reason: 'Expected a node after the arrow.' },
-        },
+        error: syntaxErrorDetails(),
       })
-      return
-    }
-
-    try {
-      const body = await readJsonBody(request)
-      if (!body || typeof body.code !== 'string') {
-        sendJson(response, 400, { error: { code: 'invalid_request', message: 'The request must include Mermaid source in `code`.' } })
-        return
-      }
-    } catch (error) {
-      const code = error instanceof Error ? error.message : 'invalid_json'
-      const status = code === 'payload_too_large' ? 413 : 400
-      sendJson(response, status, { error: { code, message: code === 'payload_too_large' ? 'The request body is too large.' : 'The request body must be valid JSON.' } })
       return
     }
 
@@ -264,51 +332,46 @@ async function handleApiRequest(request, response, scenario, apiPath) {
   }
 
   if (request.method === 'POST' && apiPath === '/v1/analyze/sarif') {
-    if (scenario === 'timeout') return
     if (scenario === 'rate-limited') {
-      sendJson(response, 429, { error: { code: 'rate_limited', message: 'Too many analysis requests.' } }, { 'retry-after': '60' })
+      sendJson(response, 429, { error: { code: 'rate_limited', message: 'Analysis limit exceeded; try again later' } }, { 'retry-after': '60' })
       return
     }
     if (scenario === 'unavailable') {
-      sendJson(response, 503, { error: { code: 'rate_limit_unavailable', message: 'Analysis is temporarily unavailable.' } }, { 'retry-after': '60' })
+      sendJson(response, 503, { error: { code: 'rate_limit_unavailable', message: 'Analysis is temporarily unavailable' } }, { 'retry-after': '60' })
       return
     }
+    if (!(await validateCodeRequest(request, response))) return
+    if (scenario === 'timeout') return
     if (scenario === 'invalid-mermaid') {
-      sendJson(response, 400, { error: { code: 'syntax_error', message: 'Mermaid source could not be parsed.' } })
+      const details = syntaxErrorDetails()
+      sendJson(response, 400, {
+        error: { code: details.code, message: details.message, details },
+      })
       return
     }
 
-    try {
-      const body = await readJsonBody(request)
-      if (!body || typeof body.code !== 'string') {
-        sendJson(response, 400, { error: { code: 'invalid_request', message: 'The request must include Mermaid source in `code`.' } })
-        return
-      }
-    } catch (error) {
-      const code = error instanceof Error ? error.message : 'invalid_json'
-      const status = code === 'payload_too_large' ? 413 : 400
-      sendJson(response, status, { error: { code, message: code === 'payload_too_large' ? 'The request body is too large.' : 'The request body must be valid JSON.' } })
-      return
-    }
-
-    sendJson(response, 200, sarifResponse(), { 'content-type': 'application/sarif+json; charset=utf-8' })
+    sendJson(response, 200, sarifResponse(scenario === 'empty'), { 'content-type': 'application/sarif+json; charset=utf-8' })
     return
   }
 
   if (request.method === 'POST' && apiPath === '/v1/semantic-review') {
     if (scenario === 'rate-limited') {
-      sendJson(response, 429, { error: { code: 'rate_limited', message: 'Semantic review is temporarily rate-limited.' } }, { 'retry-after': '60' })
+      sendJson(response, 429, { error: { code: 'rate_limited', message: 'Semantic review limit exceeded; try again later' } }, { 'retry-after': '60' })
       return
     }
     if (scenario === 'unavailable') {
-      sendJson(response, 503, { error: { code: 'rate_limit_unavailable', message: 'Semantic review is temporarily unavailable.' } }, { 'retry-after': '60' })
+      sendJson(response, 503, { error: { code: 'rate_limit_unavailable', message: 'Semantic review is temporarily unavailable' } }, { 'retry-after': '60' })
       return
     }
+    if (!(await validateCodeRequest(request, response))) return
+    if (scenario === 'timeout') return
     if (scenario === 'invalid-mermaid') {
-      sendJson(response, 400, { error: { code: 'invalid_mermaid', message: 'The diagram contains a Mermaid syntax error.' } })
+      sendJson(response, 400, {
+        error: { code: 'invalid_mermaid', message: 'Mermaid source could not be parsed', details: syntaxErrorDetails() },
+      })
       return
     }
-    sendJson(response, 200, semanticReviewResponse())
+    sendJson(response, 200, semanticReviewResponse(scenario === 'empty'))
     return
   }
 

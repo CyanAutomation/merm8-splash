@@ -185,9 +185,21 @@ npm run merm8:simulator
 npm run dev
 ```
 
-In **API Configuration**, test and save `http://127.0.0.1:8788/scenario/success`. To see another response state, change the last path segment to `empty`, `invalid-mermaid`, `rate-limited`, `unavailable`, or `timeout`. The timeout scenario leaves analysis unanswered so the splash's 10-second request timeout can be checked. The simulator binds to loopback, returns canned Worker-shaped responses, and does not run Mermaid analysis or call JEV.
+In **API Configuration**, test and save `http://127.0.0.1:8788/scenario/success`. To see another response state, change the last path segment to `empty`, `invalid-mermaid`, `rate-limited`, `unavailable`, or `timeout`. The timeout scenario leaves analysis unanswered so the splash's 10-second request timeout can be checked. The simulator binds to loopback, returns fixed scenario responses, and does not run Mermaid analysis or call JEV. Its wildcard CORS is for local browser testing and does not check the real Worker's origin allowlist.
 
-For an API compatibility check, run the [real merm8 Worker locally](https://github.com/CyanAutomation/merm8/blob/main/README.md#cloudflare-worker-quick-start) or use a trusted deployed Worker, then set `MERM8_WORKER_URL` to its base URL and run `npm run test:merm8-contract`. That check exercises health, rules, analysis, and SARIF endpoints against the actual Worker.
+The success fixture reports a `max-fanout` warning. To make its fixed result match the diagram in the editor, use:
+
+```mermaid
+flowchart TD
+  A[Hub] --> B[North]
+  A --> C[South]
+  A --> D[East]
+  A --> E[West]
+  A --> F[Up]
+  A --> G[Down]
+```
+
+For an API compatibility check, run the [real merm8 Worker locally](https://github.com/CyanAutomation/merm8/blob/main/README.md#cloudflare-worker-quick-start) or use a trusted deployed Worker, then set `MERM8_WORKER_URL` to its base URL and run `npm run test:merm8-contract`. That check exercises health, rules, valid and invalid analysis, and SARIF endpoints against the actual Worker. Set `MERM8_CORS_ORIGIN` to an allowed browser origin to check its CORS preflight too. The contract check does not call the provider-backed semantic-review endpoint.
 
 ### Static hosting path settings
 

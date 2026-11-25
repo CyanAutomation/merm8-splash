@@ -5,6 +5,7 @@ const configuredEndpoint = process.env.MERM8_WORKER_URL
 if (!configuredEndpoint) {
   throw new Error('Set MERM8_WORKER_URL to a local or deployed merm8 Worker URL before running this contract check.')
 }
+const configuredCorsOrigin = process.env.MERM8_CORS_ORIGIN?.trim()
 
 const endpoint = new URL(configuredEndpoint.endsWith('/') ? configuredEndpoint : `${configuredEndpoint}/`)
 const sampleCode = 'flowchart TD\n  Start[Start] --> Finish[Finish]'
@@ -71,6 +72,31 @@ test('Worker analysis returns valid Mermaid, lint-support, issues, and metric fi
   assert.equal(typeof body?.metrics?.['issue-counts']?.['by-rule'], 'object')
 })
 
+test('Worker analysis and SARIF preserve parser diagnostics for invalid Mermaid', async () => {
+  const invalidCode = 'flowchart TD\n  A -->'
+  const { response: analyzeResponse, body: analysis } = await requestJson('v1/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: invalidCode }),
+  })
+
+  assert.equal(analyzeResponse.status, 200, `POST /v1/analyze returned HTTP ${analyzeResponse.status}`)
+  assert.equal(analysis?.valid, false)
+  assert.equal(analysis?.error?.code, 'syntax_error')
+  assert.equal(analysis?.error?.line, 2)
+
+  const { response: sarifResponse, body: sarifError } = await requestJson('v1/analyze/sarif', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: invalidCode }),
+  })
+
+  assert.equal(sarifResponse.status, 400, `POST /v1/analyze/sarif returned HTTP ${sarifResponse.status}`)
+  assert.equal(sarifError?.error?.code, 'syntax_error')
+  assert.equal(sarifError?.error?.details?.code, 'syntax_error')
+  assert.equal(sarifError?.error?.details?.line, 2)
+})
+
 test('Worker SARIF endpoint returns SARIF 2.1.0', async () => {
   const { response, body } = await requestJson('v1/analyze/sarif', {
     method: 'POST',
@@ -81,5 +107,23 @@ test('Worker SARIF endpoint returns SARIF 2.1.0', async () => {
   assert.equal(response.status, 200, `POST /v1/analyze/sarif returned HTTP ${response.status}`)
   assert.equal(body?.version, '2.1.0')
   assert.ok(Array.isArray(body?.runs), 'SARIF runs must be an array')
+})
+
+test('Worker CORS preflight allows the configured browser origin', { skip: !configuredCorsOrigin }, async () => {
+  const response = await fetch(apiUrl('v1/analyze'), {
+    method: 'OPTIONS',
+    headers: {
+      Origin: configuredCorsOrigin,
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'content-type',
+    },
+    signal: AbortSignal.timeout(10_000),
+  })
+
+  assert.equal(response.status, 204, `OPTIONS /v1/analyze returned HTTP ${response.status}`)
+  assert.equal(response.headers.get('access-control-allow-origin'), configuredCorsOrigin)
+  assert.match(response.headers.get('access-control-allow-methods') ?? '', /POST/)
+  assert.match(response.headers.get('access-control-allow-headers') ?? '', /content-type/i)
+  assert.match(response.headers.get('access-control-expose-headers') ?? '', /retry-after/i)
 })
 
