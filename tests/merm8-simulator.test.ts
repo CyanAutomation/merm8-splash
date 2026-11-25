@@ -136,6 +136,16 @@ it('supports a successful empty-results scenario', async () => {
   expect(payload.issues).toEqual([])
 })
 
+it('rejects malformed or missing Mermaid source on SARIF requests', async () => {
+  const emptyBody = await fetch(route('success', '/v1/analyze/sarif'), { method: 'POST' })
+  expect(emptyBody.status).toBe(400)
+  expect(await emptyBody.json()).toMatchObject({ error: { code: 'invalid_json' } })
+
+  const missingCode = await postJson(route('success', '/v1/analyze/sarif'), { diagram: 'flowchart TD\nA --> B' })
+  expect(missingCode.status).toBe(400)
+  expect(await missingCode.json()).toMatchObject({ error: { code: 'invalid_request' } })
+})
+
 it('returns realistic Worker error envelopes for invalid Mermaid, rate limits, and outages', async () => {
   const invalidMermaid = await postJson(route('invalid-mermaid', '/v1/analyze'), { code: 'flowchart TD\nA -->' })
   expect(invalidMermaid.status).toBe(200)

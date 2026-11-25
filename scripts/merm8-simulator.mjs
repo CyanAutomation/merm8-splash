@@ -277,6 +277,20 @@ async function handleApiRequest(request, response, scenario, apiPath) {
       sendJson(response, 400, { error: { code: 'syntax_error', message: 'Mermaid source could not be parsed.' } })
       return
     }
+
+    try {
+      const body = await readJsonBody(request)
+      if (!body || typeof body.code !== 'string') {
+        sendJson(response, 400, { error: { code: 'invalid_request', message: 'The request must include Mermaid source in `code`.' } })
+        return
+      }
+    } catch (error) {
+      const code = error instanceof Error ? error.message : 'invalid_json'
+      const status = code === 'payload_too_large' ? 413 : 400
+      sendJson(response, status, { error: { code, message: code === 'payload_too_large' ? 'The request body is too large.' : 'The request body must be valid JSON.' } })
+      return
+    }
+
     sendJson(response, 200, sarifResponse(), { 'content-type': 'application/sarif+json; charset=utf-8' })
     return
   }
