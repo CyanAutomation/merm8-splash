@@ -357,6 +357,160 @@ it('cancelAnalysis aborts in-flight analysis and resets state', async () => {
   expect(rerenderedHook.analyzeError).toBe(null)
 })
 
+it('retries transient analysis failures with an abortable bounded backoff', async () => {
+  const failure = Object.assign(new Error('Temporary server failure'), {
+    status: 503,
+    data: null,
+    headers: new Headers(),
+  })
+  let calls = 0
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      calls += 1
+      if (calls < 3) throw failure
+      return { diagram_type: 'flowchart', results: [] }
+    },
+    isApiRequestErrorImpl: (error) => error === failure,
+  })
+
+  reactMock.__prepareRender()
+  useDiagramAnalysis().forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  expect(calls).toBe(1)
+  await timerControls.advanceBy(999)
+  expect(calls).toBe(1)
+  await timerControls.advanceBy(1)
+  await new Promise((resolve) => setImmediate(resolve))
+  expect(calls).toBe(2)
+
+  await timerControls.advanceBy(2000)
+  await new Promise((resolve) => setImmediate(resolve))
+  expect(calls).toBe(3)
+})
+
+it('uses a short Retry-After value for a transient analysis retry', async () => {
+  const failure = Object.assign(new Error('Temporary server failure'), {
+    status: 503,
+    data: null,
+    headers: new Headers({ 'retry-after': '2' }),
+  })
+  let calls = 0
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      calls += 1
+      if (calls === 1) throw failure
+      return { diagram_type: 'flowchart', results: [] }
+    },
+    isApiRequestErrorImpl: (error) => error === failure,
+  })
+
+  reactMock.__prepareRender()
+  useDiagramAnalysis().forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+  await timerControls.advanceBy(1999)
+  expect(calls).toBe(1)
+  await timerControls.advanceBy(1)
+  await new Promise((resolve) => setImmediate(resolve))
+
+  expect(calls).toBe(2)
+})
+
+it('uses the fallback backoff when Retry-After is zero', async () => {
+  const failure = Object.assign(new Error('Temporary server failure'), {
+    status: 503,
+    data: null,
+    headers: new Headers({ 'retry-after': '0' }),
+  })
+  let calls = 0
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      calls += 1
+      if (calls === 1) throw failure
+      return { diagram_type: 'flowchart', results: [] }
+    },
+    isApiRequestErrorImpl: (error) => error === failure,
+  })
+
+  reactMock.__prepareRender()
+  useDiagramAnalysis().forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+  await timerControls.advanceBy(999)
+  expect(calls).toBe(1)
+  await timerControls.advanceBy(1)
+  await new Promise((resolve) => setImmediate(resolve))
+
+  expect(calls).toBe(2)
+})
+
+it('honors Retry-After and skips automatic retries beyond its five-second budget', async () => {
+  const failure = Object.assign(new Error('Temporary server failure'), {
+    status: 503,
+    data: null,
+    headers: new Headers({ 'retry-after': '60' }),
+  })
+  let calls = 0
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      calls += 1
+      throw failure
+    },
+    isApiRequestErrorImpl: (error) => error === failure,
+  })
+
+  reactMock.__prepareRender()
+  useDiagramAnalysis().forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+  await timerControls.advanceBy(10_000)
+
+  expect(calls).toBe(1)
+})
+
+it('does not send a retry after analysis is cancelled during backoff', async () => {
+  const failure = Object.assign(new Error('Temporary server failure'), {
+    status: 503,
+    data: null,
+    headers: new Headers(),
+  })
+  let calls = 0
+  const { useDiagramAnalysis, reactMock, timerControls } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      calls += 1
+      throw failure
+    },
+    isApiRequestErrorImpl: (error) => error === failure,
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+  hook.cancelAnalysis()
+  await timerControls.advanceBy(5000)
+
+  expect(calls).toBe(1)
+})
+
+it('does not cache malformed analysis failures as empty success results', async () => {
+  let calls = 0
+  const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
+    analyzeCodeImpl: async () => {
+      calls += 1
+      if (calls === 1) throw new Error('The API returned an invalid analysis response.')
+      return { diagram_type: 'flowchart', results: [] }
+    },
+  })
+
+  reactMock.__prepareRender()
+  const hook = useDiagramAnalysis()
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+  hook.forceAnalysis('https://example.test', 'graph TD\nA-->B', [], [])
+  await new Promise((resolve) => setImmediate(resolve))
+
+  expect(calls).toBe(2)
+})
+
 it('preserves completed results and marks them stale as soon as the diagram code changes', async () => {
   const { useDiagramAnalysis, reactMock } = loadUseDiagramAnalysisModule({
     analyzeCodeImpl: async () => ({

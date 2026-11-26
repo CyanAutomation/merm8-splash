@@ -375,31 +375,23 @@ it('analyzeCode sends compatibility payload with empty rules when using server d
   expect(requestBody.config['schema-version']).toBe('v1')
   expect(requestBody.config.rules).toEqual({})
 })
-it('analyzeCode normalizes missing results to empty array', async () => {
+it('rejects analysis responses that omit the result array', async () => {
   const { fetchImpl } = mockJsonFetch([{ diagram_type: 'flowchart' }])
   const { analyzeCode } = loadApiModule({ fetchImpl })
-  const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-  expect(Array.isArray(response.results)).toBeTruthy()
-  expect(response.results.length).toBe(0)
-  expect(response.diagram_type).toBe('flowchart')
+  await expect(analyzeCode('https://api.example.com', 'graph TD; A-->B', [], []))
+    .rejects.toThrow('The API returned an invalid analysis response.')
 })
 
-it('analyzeCode normalizes null and non-array results without throwing', async () => {
-  const { fetchImpl } = mockJsonFetch([
-    { diagram_type: 'sequence', results: null },
-    { diagram_type: 'class', results: 'not-an-array' },
-  ]
-  )
+it.each([
+  { diagram_type: 'sequence', results: null },
+  { diagram_type: 'class', results: 'not-an-array' },
+])('rejects malformed result arrays %#', async (payload) => {
+  const { fetchImpl } = mockJsonFetch(payload)
   const { analyzeCode } = loadApiModule({ fetchImpl })
 
-  const first = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-  const second = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
-
-  expect(first.results.length).toBe(0)
-  expect(second.results.length).toBe(0)
-  expect(Array.isArray(first.results)).toBeTruthy()
-  expect(Array.isArray(second.results)).toBeTruthy()
+  await expect(analyzeCode('https://api.example.com', 'graph TD; A-->B', [], []))
+    .rejects.toThrow('The API returned an invalid analysis response.')
 })
 
 it('analyzeCode accepts the Worker kebab-case analysis response', async () => {
@@ -467,14 +459,12 @@ it('combines API error suggestions with hints and preserves optional response fi
   })
 })
 
-it('analyzeCode normalizes missing data payload to UI-safe defaults', async () => {
+it('rejects a missing analysis data payload', async () => {
   const { fetchImpl } = mockJsonFetch(undefined)
   const { analyzeCode } = loadApiModule({ fetchImpl })
-  const response = await analyzeCode('https://api.example.com', 'graph TD; A-->B', [], [])
 
-  expect(Array.isArray(response.results)).toBeTruthy()
-  expect(response.results.length).toBe(0)
-  expect(response.diagram_type).toBe('')
+  await expect(analyzeCode('https://api.example.com', 'graph TD; A-->B', [], []))
+    .rejects.toThrow('The API returned an invalid analysis response.')
 })
 
 it('analyzeCode normalizes issue-count maps to finite numeric values', async () => {
@@ -894,7 +884,7 @@ describe('analyzeCode hint normalization', () => {
   })
 })
 
-it('analyzeCode filters malformed violations and keeps only safe entries', async () => {
+it('rejects partial analysis results that contain malformed violations', async () => {
   const { fetchImpl } = mockJsonFetch({
     diagram_type: 'flowchart',
     results: [
@@ -917,17 +907,9 @@ it('analyzeCode filters malformed violations and keeps only safe entries', async
     ],
   })
   const api = loadApiModule({ fetchImpl })
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-  const response = await api.analyzeCode('https://example.test', 'graph TD; A-->B', [], [])
-
-  expect(response.results).toEqual([{
-    rule_id: 'valid-rule',
-    severity: 'warning',
-    message: 'Keep labels short',
-    line: 12,
-  }])
-  expect(warn).toHaveBeenCalledWith(expect.stringContaining('invalid entries in `results`'))
+  await expect(api.analyzeCode('https://example.test', 'graph TD; A-->B', [], []))
+    .rejects.toThrow('The API returned an invalid analysis response.')
 })
 
 it('analyzeCode ignores non-numeric line values on violations', async () => {

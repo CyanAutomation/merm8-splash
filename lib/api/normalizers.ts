@@ -376,6 +376,41 @@ export function normalizeAnalyzeResponse(rawData: unknown): AnalyzeResponse {
   return normalized
 }
 
+export function isValidAnalyzeResponse(rawData: unknown): boolean {
+  if (!isRecord(rawData)) return false
+
+  const rawResults = readFirstPresentField(rawData, ['results', 'issues'])
+  if (!Array.isArray(rawResults) || rawResults.some((result) => normalizeViolation(result) === null)) {
+    return false
+  }
+
+  const rawDiagramType = readFirstPresentField(rawData, ['diagram_type', 'diagram-type'])
+  if (rawDiagramType !== undefined && typeof rawDiagramType !== 'string') return false
+
+  const rawMetrics = readFirstPresentField(rawData, ['metrics'])
+  if (rawMetrics !== undefined && !isRecord(rawMetrics)) return false
+  const metricDiagramType = isRecord(rawMetrics) ? rawMetrics['diagram-type'] : undefined
+  const hasDiagramType =
+    (typeof rawDiagramType === 'string' && rawDiagramType.trim().length > 0) ||
+    (typeof metricDiagramType === 'string' && metricDiagramType.trim().length > 0)
+
+  const rawError = readFirstPresentField(rawData, ['error'])
+  const hasSyntaxError = rawData.valid === false && isRecord(rawError) &&
+    typeof rawError.code === 'string' && typeof rawError.message === 'string'
+  if (!hasDiagramType && !hasSyntaxError) return false
+
+  if ('valid' in rawData && typeof rawData.valid !== 'boolean') return false
+  if ('lint-supported' in rawData && typeof rawData['lint-supported'] !== 'boolean') return false
+  if ('lintSupported' in rawData && typeof rawData.lintSupported !== 'boolean') return false
+
+  if (rawError !== undefined && rawError !== null &&
+    (!isRecord(rawError) || typeof rawError.code !== 'string' || typeof rawError.message !== 'string')) {
+    return false
+  }
+
+  return true
+}
+
 export function validateHealthzResponse(rawData: unknown): HealthzResponse {
   if (
     !rawData ||
