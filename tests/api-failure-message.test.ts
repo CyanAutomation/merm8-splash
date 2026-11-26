@@ -52,6 +52,13 @@ describe('getApiFailureMessage', () => {
       expected: 'The API is temporarily unavailable (HTTP 503). Try again later.',
     },
     {
+      name: 'semantic review server failures with a retry delay',
+      context: 'semantic-review' as const,
+      status: 503,
+      retryAfter: '3',
+      expected: 'The semantic review service is temporarily unavailable (HTTP 503). Try again in 3 seconds.',
+    },
+    {
       name: 'connection server failures',
       context: 'connection' as const,
       status: 503,
@@ -81,8 +88,12 @@ describe('getApiFailureMessage', () => {
       status: 422,
       expected: 'The endpoint responded with HTTP 422 during its health check. Check the endpoint and its access settings.',
     },
-  ])('preserves $name', ({ context, status, expected }) => {
-    expect(getApiFailureMessage({ status }, context)).toBe(expected)
+  ])('preserves $name', ({ context, status, retryAfter, expected }) => {
+    const error = {
+      status,
+      ...(retryAfter ? { headers: new Headers({ 'retry-after': retryAfter }) } : {}),
+    }
+    expect(getApiFailureMessage(error, context)).toBe(expected)
   })
 
   it.each([
@@ -115,6 +126,15 @@ describe('getApiFailureMessage', () => {
   ])('shows the semantic review retry delay when the API provides %s seconds', (retryAfter, expected) => {
     expect(getApiFailureMessage({ status: 429, headers: new Headers({ 'retry-after': retryAfter }) }, 'semantic-review'))
       .toBe(expected)
+  })
+
+  it('shows Retry-After guidance for analysis rate limits and outages', () => {
+    const headers = new Headers({ 'retry-after': '60' })
+
+    expect(getApiFailureMessage({ status: 429, headers }, 'analysis'))
+      .toBe('The API is rate-limiting requests. Try again in 60 seconds.')
+    expect(getApiFailureMessage({ status: 503, headers }, 'analysis'))
+      .toBe('The API is temporarily unavailable (HTTP 503). Try again in 60 seconds.')
   })
 
   it('returns null for errors without a known recovery message', () => {

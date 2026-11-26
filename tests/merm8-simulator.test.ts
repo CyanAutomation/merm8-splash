@@ -293,7 +293,7 @@ it('surfaces deterministic failure scenarios through the splash API error format
     [],
   ).catch((error: unknown) => error)
   expect(getApiFailureMessage(rateLimitError, 'analysis'))
-    .toBe('The API is rate-limiting requests. Wait a moment and try again.')
+    .toBe('The API is rate-limiting requests. Try again in 60 seconds.')
 
   const unavailableError = await analyzeCode(
     `${baseUrl}/scenario/unavailable`,
@@ -302,7 +302,71 @@ it('surfaces deterministic failure scenarios through the splash API error format
     [],
   ).catch((error: unknown) => error)
   expect(getApiFailureMessage(unavailableError, 'analysis'))
-    .toBe('The API is temporarily unavailable (HTTP 503). Try again later.')
+    .toBe('The API is temporarily unavailable (HTTP 503). Try again in 60 seconds.')
+})
+
+it.each(['malformed-json', 'malformed-payload'])('rejects %s analysis responses instead of presenting clean results', async (scenario) => {
+  await expect(analyzeCode(
+    `${baseUrl}/scenario/${scenario}`,
+    FANOUT_SAMPLE_CODE,
+    ['max-fanout'],
+    [],
+  )).rejects.toThrow('The API returned an invalid analysis response.')
+})
+
+it('rejects a malformed semantic-review response', async () => {
+  await expect(reviewCodeSemantics(
+    `${baseUrl}/scenario/malformed-payload`,
+    FANOUT_SAMPLE_CODE,
+  )).rejects.toThrow('The API returned an invalid semantic review response.')
+})
+
+it('marks malformed rule and health responses as unavailable', async () => {
+  const endpoint = `${baseUrl}/scenario/malformed-payload`
+
+  await expect(fetchHealthz(endpoint)).rejects.toThrow('API health check failed')
+  await expect(fetchRules(endpoint)).resolves.toMatchObject({ rules: [], status: 'malformed_payload' })
+})
+
+it('simulates a connection reset and formats it as a recoverable network failure', async () => {
+  const error = await analyzeCode(
+    `${baseUrl}/scenario/connection-reset`,
+    FANOUT_SAMPLE_CODE,
+    [],
+    [],
+  ).catch((requestError: unknown) => requestError)
+
+  expect(getApiFailureMessage(error, 'analysis'))
+    .toBe('Could not connect to the API endpoint. Check the URL, network connection, and server status.')
+})
+
+it('recovers from a transient simulator outage on a subsequent request', async () => {
+  const endpoint = `${baseUrl}/scenario/recover-once`
+  const request = { code: FANOUT_SAMPLE_CODE, config: { 'schema-version': 'v1', rules: {} } }
+
+  const failed = await postJson(`${endpoint}/v1/analyze`, request)
+  expect(failed.status).toBe(503)
+
+  const recovered = await analyzeCode(endpoint, FANOUT_SAMPLE_CODE, ['max-fanout'], [])
+  expect(recovered.results).toHaveLength(1)
+})
+
+it('allows callers to cancel a controlled simulator delay', async () => {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 20)
+
+  try {
+    await expect(analyzeCode(
+      `${baseUrl}/scenario/delay-150`,
+      FANOUT_SAMPLE_CODE,
+      [],
+      [],
+      {},
+      controller.signal,
+    )).rejects.toMatchObject({ name: 'AbortError' })
+  } finally {
+    clearTimeout(timeoutId)
+  }
 })
 
 it('answers browser preflights for JSON and semantic-review authorization headers', async () => {

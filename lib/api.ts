@@ -1,5 +1,5 @@
 import { parseDiagramType, filterRulesByDiagramType } from './diagramTypes'
-import { normalizeAnalyzeResponse, normalizeRulesResponse, validateHealthzResponse } from './api/normalizers'
+import { isValidAnalyzeResponse, normalizeAnalyzeResponse, normalizeRulesResponse, validateHealthzResponse } from './api/normalizers'
 import { isSemanticReviewResponse, normalizeSemanticReviewFindings } from './api/semanticReview'
 import { isRecord } from './api/valueGuards'
 import type { A2uiMessage } from './a2ui/types'
@@ -205,19 +205,35 @@ function getRateLimitFailureMessage(status: number | null, context: ApiFailureCo
       }
       return 'Semantic review is temporarily rate-limited. Wait a moment and try again.'
     case 'analysis':
+      if (retryAfterSeconds !== null) {
+        const unit = retryAfterSeconds === 1 ? 'second' : 'seconds'
+        return `The API is rate-limiting requests. Try again in ${retryAfterSeconds} ${unit}.`
+      }
       return 'The API is rate-limiting requests. Wait a moment and try again.'
   }
 }
 
-function getServerFailureMessage(status: number | null, context: ApiFailureContext): string | null {
+function getServerFailureMessage(
+  status: number | null,
+  context: ApiFailureContext,
+  retryAfterSeconds: number | null
+): string | null {
   if (status === null || status < 500) return null
 
   switch (context) {
     case 'connection':
       return `The endpoint returned a server error (HTTP ${status}). Try again later.`
     case 'semantic-review':
+      if (retryAfterSeconds !== null) {
+        const unit = retryAfterSeconds === 1 ? 'second' : 'seconds'
+        return `The semantic review service is temporarily unavailable (HTTP ${status}). Try again in ${retryAfterSeconds} ${unit}.`
+      }
       return `The semantic review service is temporarily unavailable (HTTP ${status}). Try again later.`
     case 'analysis':
+      if (retryAfterSeconds !== null) {
+        const unit = retryAfterSeconds === 1 ? 'second' : 'seconds'
+        return `The API is temporarily unavailable (HTTP ${status}). Try again in ${retryAfterSeconds} ${unit}.`
+      }
       return `The API is temporarily unavailable (HTTP ${status}). Try again later.`
   }
 }
@@ -245,7 +261,7 @@ function getStatusFailureMessage(
 ): string | null {
   return getAuthorizationFailureMessage(status, context)
     ?? getRateLimitFailureMessage(status, context, retryAfterSeconds)
-    ?? getServerFailureMessage(status, context)
+    ?? getServerFailureMessage(status, context, retryAfterSeconds)
     ?? getNotFoundFailureMessage(status, context)
     ?? getConnectionClientFailureMessage(status, context)
 }
@@ -256,7 +272,12 @@ function getRetryAfterSeconds(errorRecord: Record<string, unknown> | null): numb
   const value = headers.get('retry-after')
   if (typeof value !== 'string') return null
   const seconds = Number(value)
-  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : null
+  if (Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds)
+
+  const retryAt = Date.parse(value)
+  if (!Number.isFinite(retryAt)) return null
+  const secondsUntilRetry = Math.ceil((retryAt - Date.now()) / 1000)
+  return secondsUntilRetry > 0 ? secondsUntilRetry : null
 }
 
 function getTimeoutFailureMessage(details: ApiFailureDetails, context: ApiFailureContext): string | null {
@@ -415,11 +436,16 @@ export async function analyzeCode(
 ): Promise<AnalyzeResponse> {
   const request = buildAnalyzeRequest(code, enabledRules, rulesMetadata, options)
 
-  const response = await requestApi<AnalyzeResponse | undefined>(endpoint, '/v1/analyze', {
+  const response = await requestApi<unknown>(endpoint, '/v1/analyze', {
     method: 'POST',
     body: request,
     signal,
   })
+
+  if (!isValidAnalyzeResponse(response)) {
+    throw new Error('The API returned an invalid analysis response.')
+  }
+
   return normalizeAnalyzeResponse(response)
 }
 

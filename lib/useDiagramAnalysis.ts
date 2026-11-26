@@ -65,6 +65,7 @@ interface AnalysisSchedulingOptions {
 const ANALYSIS_CACHE_CLEANUP_INTERVAL_MS = 30_000
 const ANALYSIS_MAX_RETRIES = 2
 const ANALYSIS_RETRY_DELAY_MS = 1000
+const ANALYSIS_MAX_RETRY_AFTER_MS = 5000
 
 interface InFlightAnalysisRequest {
   promise: Promise<AnalyzeResponse>
@@ -116,8 +117,47 @@ function isRetryableError(err: unknown): boolean {
   return err.status === 504 || err.status === 503 || hasRetryableParserTimeout(err.data)
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+function getRetryAfterMilliseconds(error: unknown): number | null {
+  if (!isApiRequestError(error)) return null
+  const headers = error.headers
+  if (!headers || typeof headers.get !== 'function') return null
+  const value = headers.get('retry-after')
+  if (!value) return null
+
+  const seconds = Number(value)
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds * 1000)
+
+  const retryAt = Date.parse(value)
+  return Number.isFinite(retryAt) ? Math.max(0, retryAt - Date.now()) : null
+}
+
+function getRetryDelayMilliseconds(error: unknown, attempt: number): number | null {
+  if (!isRetryableError(error)) return null
+
+  const retryAfterMs = getRetryAfterMilliseconds(error)
+  if (retryAfterMs !== null) {
+    return retryAfterMs <= ANALYSIS_MAX_RETRY_AFTER_MS ? retryAfterMs : null
+  }
+
+  return ANALYSIS_RETRY_DELAY_MS * (attempt + 1)
+}
+
+function delay(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.reject(createCanceledError())
+
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    const onAbort = () => {
+      clearTimeout(timeoutId)
+      signal.removeEventListener('abort', onAbort)
+      reject(createCanceledError())
+    }
+
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
 }
 
 function waitForPromiseWithSignal<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -442,10 +482,13 @@ class AnalysisRequestCoordinator {
     args: AnalysisRequestArgs,
     signal: AbortSignal
   ): Promise<AnalyzeResponse> {
-    for (let attempt = 0; attempt <= ANALYSIS_MAX_RETRIES; attempt += 1) {
-      if (attempt > 0) await delay(ANALYSIS_RETRY_DELAY_MS * attempt)
+    const retryDelays: number[] = []
 
+    for (let attempt = 0; attempt <= ANALYSIS_MAX_RETRIES; attempt += 1) {
       try {
+        if (attempt > 0) await delay(retryDelays[attempt - 1] ?? 0, signal)
+        if (signal.aborted) throw createCanceledError()
+
         return await analyzeCode(
           args.endpoint,
           args.code,
@@ -456,7 +499,9 @@ class AnalysisRequestCoordinator {
         )
       } catch (error) {
         if (isCancellationError(error)) throw error
-        if (!isRetryableError(error) || attempt === ANALYSIS_MAX_RETRIES) throw error
+        const retryDelay = getRetryDelayMilliseconds(error, attempt)
+        if (retryDelay === null || attempt === ANALYSIS_MAX_RETRIES) throw error
+        retryDelays.push(retryDelay)
       }
     }
 

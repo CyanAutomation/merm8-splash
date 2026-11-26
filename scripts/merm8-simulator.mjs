@@ -9,7 +9,15 @@ const SCENARIOS = new Set([
   'rate-limited',
   'unavailable',
   'timeout',
+  'malformed-json',
+  'malformed-payload',
+  'connection-reset',
+  'recover-once',
 ])
+const MAX_SIMULATOR_DELAY_MS = 30_000
+const SCENARIO_LIST = [...SCENARIOS, 'delay-<milliseconds>']
+const CODE_API_PATHS = new Set(['/v1/analyze', '/v1/analyze/sarif', '/v1/semantic-review'])
+const SUPPORTED_API_PATHS = new Set(['/v1/healthz', '/v1/rules', ...CODE_API_PATHS])
 
 const MAX_FANOUT_LIMIT = 5
 const MAX_FANOUT_SAMPLE = MAX_FANOUT_LIMIT + 1
@@ -99,6 +107,14 @@ function sendJson(response, status, payload, headers = {}) {
   response.end(JSON.stringify(payload))
 }
 
+function sendMalformedJson(response) {
+  response.writeHead(200, {
+    ...corsHeaders(),
+    'content-type': 'application/json; charset=utf-8',
+  })
+  response.end('{"error":')
+}
+
 function readRoute(request) {
   const pathname = new URL(request.url ?? '/', 'http://localhost').pathname
   const segments = pathname.split('/').filter(Boolean)
@@ -111,6 +127,16 @@ function readRoute(request) {
   }
 
   return { scenario: 'success', apiPath: pathname }
+}
+
+function getScenarioDelayMs(scenario) {
+  const match = /^delay-(\d+)$/.exec(scenario)
+  if (!match) return null
+
+  const delayMs = Number(match[1])
+  return Number.isInteger(delayMs) && delayMs >= 0 && delayMs <= MAX_SIMULATOR_DELAY_MS
+    ? delayMs
+    : null
 }
 
 async function readJsonBody(request) {
@@ -161,6 +187,56 @@ async function validateCodeRequest(request, response) {
     sendJson(response, 400, { error })
     return false
   }
+  return true
+}
+
+async function handleFaultScenario(request, response, scenario, apiPath, attempts) {
+  if (scenario === 'connection-reset') {
+    response.destroy()
+    return true
+  }
+
+  if (scenario === 'recover-once' && request.method === 'POST' && CODE_API_PATHS.has(apiPath)) {
+    const attempt = attempts.get(apiPath) ?? 0
+    attempts.set(apiPath, attempt + 1)
+    if (attempt === 0) {
+      sendJson(response, 503, {
+        error: { code: 'temporary_unavailable', message: 'A simulated upstream request failed once.' },
+      })
+      return true
+    }
+  }
+
+  if (!SUPPORTED_API_PATHS.has(apiPath) ||
+    !['malformed-json', 'malformed-payload'].includes(scenario)) {
+    return false
+  }
+
+  if (request.method === 'POST' && CODE_API_PATHS.has(apiPath)) {
+    if (!(await validateCodeRequest(request, response))) return true
+  }
+
+  if (scenario === 'malformed-json') {
+    sendMalformedJson(response)
+    return true
+  }
+
+  if (apiPath === '/v1/healthz') {
+    sendJson(response, 200, { status: 'unknown' })
+  } else if (apiPath === '/v1/rules') {
+    sendJson(response, 200, { rules: 'not-an-array' })
+  } else if (apiPath === '/v1/analyze') {
+    sendJson(response, 200, { 'diagram-type': 'flowchart', issues: 'not-an-array' })
+  } else if (apiPath === '/v1/analyze/sarif') {
+    sendJson(response, 200, { version: '2.1.0', runs: 'not-an-array' }, {
+      'content-type': 'application/sarif+json; charset=utf-8',
+    })
+  } else if (apiPath === '/v1/semantic-review') {
+    const payload = semanticReviewResponse()
+    delete payload['semantic-review'].ambiguity
+    sendJson(response, 200, payload)
+  }
+
   return true
 }
 
@@ -296,7 +372,9 @@ function sarifResponse(empty = false) {
   }
 }
 
-async function handleApiRequest(request, response, scenario, apiPath) {
+async function handleApiRequest(request, response, scenario, apiPath, attempts) {
+  if (await handleFaultScenario(request, response, scenario, apiPath, attempts)) return
+
   if (request.method === 'GET' && apiPath === '/v1/healthz') {
     sendJson(response, 200, { status: 'ok' })
     return
@@ -384,6 +462,8 @@ async function handleApiRequest(request, response, scenario, apiPath) {
 }
 
 export function createMerm8Simulator() {
+  const attempts = new Map()
+
   return createServer(async (request, response) => {
     if (request.method === 'OPTIONS') {
       response.writeHead(204, corsHeaders())
@@ -396,18 +476,24 @@ export function createMerm8Simulator() {
       sendJson(response, 200, {
         service: 'merm8-simulator',
         testOnly: true,
-        scenarios: [...SCENARIOS],
+        scenarios: SCENARIO_LIST,
         apiEndpoints: ['/v1/healthz', '/v1/rules', '/v1/analyze', '/v1/analyze/sarif', '/v1/semantic-review'],
       })
       return
     }
 
-    if (!SCENARIOS.has(scenario)) {
+    const delayMs = getScenarioDelayMs(scenario)
+    if (!SCENARIOS.has(scenario) && delayMs === null) {
       sendJson(response, 404, { error: { code: 'unknown_scenario', message: `Unknown simulator scenario: ${scenario || '(empty)'}` } })
       return
     }
 
-    await handleApiRequest(request, response, scenario, apiPath)
+    if (delayMs !== null && delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+      if (response.destroyed) return
+    }
+
+    await handleApiRequest(request, response, scenario, apiPath, attempts)
   })
 }
 
@@ -427,7 +513,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       const port = address && typeof address !== 'string' ? address.port : requestedPort
       console.log(`merm8 simulator listening at http://127.0.0.1:${port}`)
       console.log('Use the API Configuration panel to select http://127.0.0.1:' + port + '/scenario/success')
-      console.log(`Scenarios: ${[...SCENARIOS].join(', ')}`)
+      console.log(`Scenarios: ${SCENARIO_LIST.join(', ')}`)
     })
   }
 }
