@@ -272,7 +272,7 @@ function getRetryAfterSeconds(errorRecord: Record<string, unknown> | null): numb
   const value = headers.get('retry-after')
   if (typeof value !== 'string') return null
   const seconds = Number(value)
-  if (Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds)
+  if (Number.isFinite(seconds)) return seconds > 0 ? Math.ceil(seconds) : null
 
   const retryAt = Date.parse(value)
   if (!Number.isFinite(retryAt)) return null

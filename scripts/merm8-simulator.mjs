@@ -493,7 +493,13 @@ export function createMerm8Simulator() {
       if (response.destroyed) return
     }
 
+    const recovering = scenario === 'recover-once' &&
+      request.method === 'POST' && CODE_API_PATHS.has(apiPath) && (attempts.get(apiPath) ?? 0) > 0
     await handleApiRequest(request, response, scenario, apiPath, attempts)
+
+    if (recovering && response.statusCode >= 200 && response.statusCode < 300) {
+      attempts.delete(apiPath)
+    }
   })
 }
 

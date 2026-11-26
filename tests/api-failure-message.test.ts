@@ -135,6 +135,8 @@ describe('getApiFailureMessage', () => {
       .toBe('The API is rate-limiting requests. Try again in 60 seconds.')
     expect(getApiFailureMessage({ status: 503, headers }, 'analysis'))
       .toBe('The API is temporarily unavailable (HTTP 503). Try again in 60 seconds.')
+    expect(getApiFailureMessage({ status: 429, headers: new Headers({ 'retry-after': '0' }) }, 'analysis'))
+      .toBe('The API is rate-limiting requests. Wait a moment and try again.')
   })
 
   it('returns null for errors without a known recovery message', () => {

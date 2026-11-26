@@ -125,7 +125,9 @@ function getRetryAfterMilliseconds(error: unknown): number | null {
   if (!value) return null
 
   const seconds = Number(value)
-  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds * 1000)
+  if (Number.isFinite(seconds)) {
+    return seconds > 0 ? Math.ceil(seconds * 1000) : null
+  }
 
   const retryAt = Date.parse(value)
   return Number.isFinite(retryAt) ? Math.max(0, retryAt - Date.now()) : null

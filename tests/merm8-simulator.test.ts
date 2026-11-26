@@ -349,6 +349,12 @@ it('recovers from a transient simulator outage on a subsequent request', async (
 
   const recovered = await analyzeCode(endpoint, FANOUT_SAMPLE_CODE, ['max-fanout'], [])
   expect(recovered.results).toHaveLength(1)
+
+  const nextFailure = await postJson(`${endpoint}/v1/analyze`, request)
+  expect(nextFailure.status).toBe(503)
+
+  const nextRecovery = await analyzeCode(endpoint, FANOUT_SAMPLE_CODE, ['max-fanout'], [])
+  expect(nextRecovery.results).toHaveLength(1)
 })
 
 it('allows callers to cancel a controlled simulator delay', async () => {

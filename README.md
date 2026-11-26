@@ -190,7 +190,7 @@ In **API Configuration**, test and save `http://127.0.0.1:8788/scenario/success`
 - `empty`, `invalid-mermaid`, `rate-limited`, and `unavailable` return representative API outcomes.
 - `timeout` leaves requests unanswered; `delay-2000` waits two seconds, and `delay-12000` exceeds the splash's 10-second request timeout. Delay scenarios accept 0–30000 milliseconds.
 - `malformed-json` returns invalid JSON; `malformed-payload` returns valid JSON with invalid endpoint shapes.
-- `connection-reset` drops the connection; `recover-once` returns a transient 503 once per API route, then succeeds.
+- `connection-reset` drops the connection; `recover-once` returns a transient 503 per API route, then re-arms after a successful response so another recovery cycle can be tested.
 
 The simulator binds to loopback, returns fixed scenario responses, and does not run Mermaid analysis or call JEV/OpenRouter. Semantic-review scenarios exercise the response merm8-splash receives from merm8. The wildcard CORS is for local browser testing and does not check the real Worker's origin allowlist.
 
